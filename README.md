@@ -17,7 +17,7 @@ Administrators can add or remove whole chips with an optional reason recorded in
 - Roulette: the supplied 24-pocket wheel; individual player stakes, history and rebet snapshots. Custom chips apply their exact amount to categories or numbers.
 - Lucky 777: directly touch physical bet buttons, tap SPIN or pull the red lever. Panels start hidden; Show controls restores camera and sound controls. Custom bet remains available with panels hidden. Triples return 50× for 777, 25× for diamonds, 20× for BAR, 15× for bells, 10× for clovers, 5× for cherries. Double sevens return 5×; one or two cherries return 1× or 2×. Outcomes, card consumption and wallet changes save before the animation completes.
 - Blackjack: six decks, dealer stands on all 17s, natural blackjack pays 3:2, ordinary wins pay 1:1 and pushes return the stake. Split equal-value cards once; double after split; split aces receive one card each. Odd natural wagers round half chips down. Pending hands and dealer turns resume after reload.
-- All games support custom whole-chip wagers from 1 to 1,000,000, with wallet and payout caps. Empty wallets require gifts or borrowing; no automatic refill.
+- All games support custom whole-chip wagers from 1 to 1,000,000, with wallet and payout caps. Ordinary empty wallets require gifts or borrowing. Negative mode provides the separate ten-chip game allowance described below.
 
 Left Shift + F is a hidden jackpot shortcut on game tabs. Roulette targets the highest combined payout among the current bets (or first places the selected chip on zero); 777 spins a paid jackpot without consuming an equipped merchant card; blackjack deals a paid natural or settles existing hands at the maximum standard return for their existing stakes. The shortcut ignores text fields, right Shift, extra modifiers, repeat keys and stale key state after blur. Slots and blackjack reject duplicate requests during animations.
 
@@ -42,6 +42,12 @@ The bank adds 15% interest per period (debt multiplies by 1.15); the shark adds 
 Interest uses actual wall time, including offline time and time spent on other profiles. Every completed period rounds its interest up to a whole chip and adds it to the outstanding debt. Borrowing into an existing bank/shark balance preserves that account's current period; partial repayment also preserves its clock. Paying off the balance clears its clock. Reload settles elapsed periods once and persists the new boundary. Debt is capped at 1,000,000,000 per account/agreement. A backwards clock adjustment does not charge periods twice. Existing round-based saves retain their debts and begin the new timer when first opened after this update.
 
 Loan-shark borrowing appears only when bank credit is exhausted, cash is zero or negative, and there are no unsettled roulette stakes or active games. Repayment remains available while a shark balance exists. Interest may push debt above its borrowing ceiling; repay to restore room.
+
+When a player first qualifies for shark borrowing, a red fullscreen dialog appears over whichever view is open, including ADMIN, with the message “你没钱了! 你现在只能选择 借高利贷”. Its button opens the bank and focuses the shark borrowing form. The whole shark card is red. The glow animates slowly and respects reduced-motion preferences. The dialog waits for active games to finish; returning to another view without borrowing shows it again.
+
+After a player's shark-funded wallet is exhausted, negative mode begins at `-0` with a ten-chip game allowance. Each settled round applies its **net** outcome, including roulette, slots and blackjack: losing ten adds ten to the deficit; a deficit of 200 and a net win of twenty becomes 180, with ten chips for the next round. Stakes already on the wheel or in an unfinished blackjack hand are never refilled on reload. Bank and shark debts remain separate and continue accruing their own interest.
+
+When a positive outcome clears the deficit, normal play resumes with ten plus the surplus: a deficit of twenty and a net win of thirty produces a normal wallet of twenty. Incoming gifts and administrator credits also reduce the deficit first. The ten-chip allowance cannot be gifted, lent, used to buy cards, or used for loan repayments; it is reserved for games. Recovery state and adjustments persist in D1 with the existing duplicate-request protection.
 
 ## Black market
 

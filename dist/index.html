@@ -116,6 +116,29 @@
 .market-card-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 15px 0; border-top: 1px solid #ffffff10; font-size: 14px; }
 .shark-panel { border-color: #c4505066; background: linear-gradient(145deg, #2b1421, #17121e); }
 #shark-panel h3 { color: #fda4af; font-size: 24px; margin-top: 8px; }
+#shark-panel { background: linear-gradient(125deg,#561020,#2d0914 75%); border-color: #ff526f80; box-shadow: inset 0 0 65px #ef204315,0 0 40px #a20d2626; color: #ffe3e8; }
+#shark-panel .club-muted { color: #e7a7b4; }
+#shark-panel .club-input { background: #23070f; border-color: #f2688266; }
+#shark-panel .club-action { background: #e83f5f; border-color: #ff8a9f80; color: #fff6f7; box-shadow: 0 0 24px #ff2b5133; }
+.shark-crisis[hidden],.club-recovery[hidden],#bank-recovery[hidden] { display: none !important; }
+.shark-crisis { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 24px; isolation: isolate; background: radial-gradient(ellipse at 50% 42%,#9f143b8c,#4a001be8 65%,#24000bf5); backdrop-filter: blur(9px); color: #fff0f3; }
+.shark-crisis::before { content: ''; position: absolute; inset: 5%; z-index: -1; border-radius: 50%; background: radial-gradient(ellipse,#ff3d6a50,transparent 65%); filter: blur(35px); animation: shark-glow 5s ease-in-out infinite; pointer-events: none; }
+.shark-crisis-card { position: relative; width: min(100%,560px); padding: clamp(30px,6vw,64px) clamp(24px,5vw,52px); text-align: center; border: 1px solid #ff788e70; border-radius: 28px; background: linear-gradient(145deg,#6e1028f5,#300611f5); box-shadow: 0 0 100px #fa255839,inset 0 0 50px #ff567012; }
+.shark-crisis-eyebrow { margin: 0 0 24px; font-size: 11px; letter-spacing: .5em; color: #f1a1b4; }
+.shark-crisis h2 { margin: 0 0 22px; font-size: clamp(40px,8vw,64px); font-weight: 900; letter-spacing: -.04em; text-shadow: 0 0 35px #ff7c9b80; }
+.shark-crisis-card > p:not(.shark-crisis-eyebrow):not(.shark-crisis-terms) { font-size: clamp(16px,3vw,21px); color: #eab4c0; line-height: 1.8; }
+.shark-crisis strong { color: #fff1f4; }
+#shark-crisis-go { margin-top: 32px; padding: 17px 30px; width: 100%; border-radius: 12px; border: 1px solid #ffadbd; background: linear-gradient(135deg,#fc5474,#cc2447); color: white; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 0 35px #ff3b6560; }
+#shark-crisis-go span { margin-left: 18px; }
+.shark-crisis-terms { margin: 18px 0 0; font-size: 11px; letter-spacing: .12em; color: #dd8fa2; }
+.shark-crisis-active .club-view { box-shadow: inset 0 0 180px #d31c3f24; }
+.club-recovery { position: fixed; z-index: 50; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; width: max-content; max-width: calc(100vw - 28px); padding: 12px 20px; border-radius: 12px; border: 1px solid #d54c6877; background: #350e1fee; box-shadow: 0 0 32px #d4194022; color: #e9b3c1; font-size: 11px; pointer-events: none; }
+.club-recovery strong { font-size: 20px; color: #ff8fa5; margin-left: 7px; }
+.club-recovery b { color: #fff0f4; }
+body:has(.club-recovery:not([hidden])) #roulette-controls { bottom: 76px; }
+.recovery-card { margin-top: 20px; background: #360e20; border-color: #e95b7c55; color: #f6c3d0; font-size: 13px; line-height: 1.7; }
+@keyframes shark-glow { 0%,100% { opacity: .5; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.06); } }
+@media(prefers-reduced-motion:reduce) { .shark-crisis::before { animation: none; } }
 @media(max-width: 700px) { .market-catalog { grid-template-columns: 1fr; } .club-tabs button { min-width: 0; } }
 .custom-bet-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #f7db8d; font-size: 12px; }
 .custom-bet-form label { font-weight: 700; }
@@ -433,6 +456,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     <div class="club-primary-links"><a href="/player">PLAYER</a><a href="/admin">ADMIN</a></div><div class="club-account"><span class="club-wallet" id="club-wallet">1,000 ₵</span><label for="club-user" class="sr-only">Active player</label><select id="club-user" class="club-select" aria-label="Active player"></select></div>
 </nav>
 <div id="club-migration-note" hidden>检测到此前的本地玩家存档。请先<a href="/admin">进入 ADMIN，设置通行密钥并导入</a>，以保留原有余额、欠款和卡包。</div>
+<div id="shark-crisis" class="shark-crisis" role="alertdialog" aria-modal="true" aria-labelledby="shark-crisis-title" aria-describedby="shark-crisis-description" hidden>
+  <div class="shark-crisis-card"><p class="shark-crisis-eyebrow">最后的选择</p><h2 id="shark-crisis-title">你没钱了!</h2><p id="shark-crisis-description">你现在只能选择 <strong>借高利贷</strong></p><button id="shark-crisis-go" type="button">点击前往 <span aria-hidden="true">→</span></button><p class="shark-crisis-terms">每 3 分钟 · 125% 利息</p></div>
+</div>
+<aside id="club-recovery" class="club-recovery" role="status" aria-live="polite" hidden><span>负数模式 <strong id="recovery-deficit">-0</strong></span><span>本局可用 <b id="recovery-budget">10</b> · 每局净盈利自动抵扣，下一局固定 10</span></aside>
 <section id="slots-view" class="club-view" role="tabpanel" aria-labelledby="tab-slots" hidden>
 
   <!-- 3D WebGL Viewport -->
@@ -573,6 +600,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       <div id="admin-legacy" class="club-card" hidden><h3>导入旧玩家存档</h3><p class="club-muted">发现此前保存在此浏览器的玩家数据。导入会保留原本地备份，并只在服务器尚未产生新记录时允许执行。</p><button id="admin-import" type="button" class="club-action">导入当前浏览器旧存档</button></div>
       <div class="club-grid">
         <form id="admin-adjust-form" class="club-card"><h3>增加 / 扣除筹码</h3>
+          <p class="club-muted">负数模式下，增加筹码先抵扣负数；扣除筹码增加负数记录。每局 10 筹码底金独立保留。</p>
           <label for="admin-adjust-player" class="club-field">目标玩家</label><select id="admin-adjust-player" class="club-select" required></select>
           <label for="admin-adjust-mode" class="club-field">调整方式</label><select id="admin-adjust-mode" class="club-select"><option value="add">增加筹码</option><option value="remove">扣除筹码</option></select>
           <label for="admin-adjust-amount" class="club-field">金额 / 筹码</label><input id="admin-adjust-amount" type="number" class="club-input" min="1" max="1000000000" step="1" inputmode="numeric" required>
@@ -612,6 +640,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     <p class="club-muted">当前玩家的银行借还款与高利贷。利息按现实时间计算，离线时继续累计，重新打开时结算；本金与利息均按整枚筹码计，每期利息向上取整。</p><p class="club-storage" id="club-storage-note" role="status"></p>
     <dl class="club-stat-row"><div><dt>钱包 / 筹码</dt><dd id="bank-wallet">1,000</dd></div><div><dt>银行欠款</dt><dd id="bank-debt">0</dd></div><div><dt>银行可借额度</dt><dd id="bank-credit">100,000</dd></div></dl>
     <p class="club-muted">银行 + 高利贷总欠款：<strong id="bank-total-debt">0</strong> 筹码。利息加入欠款，可能超过借款上限。</p>
+    <div id="bank-recovery" class="club-card recovery-card" hidden><h3>负数记录 <strong id="bank-recovery-deficit">-0</strong></h3><p>每局固定 10 筹码。净亏损增加负数，净盈利先抵负数；还清后，多出的盈利和 10 筹码底金恢复为正常余额。</p><p class="club-muted">这里的负数单独记账，银行与高利贷欠款仍然保留。10 筹码底金仅可用于游戏。</p></div>
     <div class="club-grid">
       <form id="bank-form" class="club-card club-wide"><h3>银行借款与还款</h3><p class="club-muted">借款额度 100,000；每 10 分钟，未还欠款加 15%。还款恢复可借额度。</p><p id="bank-interest-progress" class="club-muted"></p>
         <label class="club-field" for="bank-amount">金额 / 筹码</label><input id="bank-amount" class="club-input" type="number" min="1" max="1000000000" step="1" inputmode="numeric" required placeholder="例如 500">
@@ -875,6 +904,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     }
     function validEconomy(user) {
         return integer(user.sharkDebt) && timestamp(user.bankInterestAt) && timestamp(user.sharkInterestAt) && timestamp(user.marketAvailableAt)
+            && (user.recovery == null || (typeof user.recovery === 'object' && integer(user.recovery.deficit)))
             && Array.isArray(user.cards) && user.cards.length <= 50
             && user.cards.every(card => card && typeof card.id === 'string' && Object.hasOwn(cards, card.type)
                 && integer(card.stake, 1000000) && card.stake > 0)
@@ -934,13 +964,33 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
                 this.storageWarning = 'Saved profiles could not be read. This session starts with fresh local profiles.';
             }
             this.accrueInterest();
+            for (const user of this.data.users) this.prepareRecovery(user);
             this.save();
         }
         get active() { return this.data.users.find(u => u.id === this.data.activeId); }
         get availableCredit() { return Math.max(0, LIMIT - this.active.debt); }
         get availableSharkCredit() { return Math.max(0, SHARK_LIMIT - this.active.sharkDebt); }
-        get canBorrowShark() { return !this.lock && this.availableCredit === 0 && this.active.balance <= 0 && sumBets(this.active.bets) === 0 && this.availableSharkCredit > 0; }
+        get canBorrowShark() { return !this.lock && !this.active.recovery && this.availableCredit === 0 && this.active.balance <= 0 && sumBets(this.active.bets) === 0 && this.availableSharkCredit > 0; }
         get armedCard() { return this.active.cards.find(card => card.id === this.active.armedCardId) || null; }
+        prepareRecovery(user = this.active) {
+            if (!user || user.recovery || user.balance > 0 || !(user.sharkDebt > 0)
+                || sumBets(user.bets) || user.pendingRoulette || (user.blackjack && user.blackjack.phase !== 'settled')) return false;
+            user.recovery = { deficit: Math.max(0, -user.balance) }; user.balance = 10;
+            this.record(`${user.name} · 高利贷筹码已用尽，进入负数模式：-${user.recovery.deficit.toLocaleString()}，每局可用 10。`);
+            return true;
+        }
+        ensureCashWallet(user = this.active) {
+            if (user.recovery) throw new Error('负数模式的 10 筹码仅用于游戏，不能赠送、出借、购买或还款。盈利先抵扣负数。');
+        }
+        recoveryNet(user, net) {
+            const remaining = user.recovery.deficit - net;
+            if (net > 0 && remaining <= 0) { user.recovery = null; user.balance = 10 - remaining; }
+            else { user.recovery.deficit = Math.min(MAX, Math.max(0, remaining)); user.balance = 10; }
+        }
+        credit(user, amount) {
+            if (user.recovery) this.recoveryNet(user, amount);
+            else user.balance += amount;
+        }
         ensureIdle() {
             if (this.lock) throw new Error('Wait for the current spin to finish.');
             if (this.accrueInterest()) this.save();
@@ -988,6 +1038,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         }
         offerLoan(borrowerId, value, ratePercent, minutes = 10) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const lender = this.active, borrower = this.data.users.find(user => user.id === borrowerId), principal = this.amount(value);
             if (!borrower || borrower === lender) throw new Error('请选择另一位借款玩家。');
             const rateBps = Math.round(ratePercent * 100);
@@ -1008,6 +1059,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             if (!loan || loan.status !== 'pending' || loan.borrowerId !== this.active.id) throw new Error('只有借款人能确认这份待处理协议。');
             if (!accept) { loan.status = 'declined'; this.record(`${loan.borrowerName} 拒绝了 ${loan.lenderName} 的借款协议。`); this.save(); return; }
             const lender = this.data.users.find(user => user.id === loan.lenderId), borrower = this.active;
+            this.ensureCashWallet(borrower); if (lender) this.ensureCashWallet(lender);
             if (!lender || lender.balance < loan.principal) throw new Error('出借人当前余额不足，尚未扣款。');
             if (borrower.balance + loan.principal > MAX) throw new Error('借款人钱包已接近上限。');
             lender.balance -= loan.principal; borrower.balance += loan.principal;
@@ -1023,12 +1075,13 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         }
         repayLoan(id, value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const loan = this.data.loans.find(item => item.id === id), amount = this.amount(value, MAX);
             if (!loan || loan.status !== 'active' || loan.borrowerId !== this.active.id) throw new Error('只能偿还自己的有效借款。');
             const lender = this.data.users.find(user => user.id === loan.lenderId), borrower = this.active;
             if (amount > loan.balance || amount > borrower.balance) throw new Error('还款超过欠款或钱包余额。');
             if (!lender || lender.balance + amount > MAX) throw new Error('出借人钱包已接近上限。');
-            borrower.balance -= amount; lender.balance += amount; loan.balance -= amount;
+            borrower.balance -= amount; this.credit(lender, amount); loan.balance -= amount;
             if (loan.balance === 0) { loan.status = 'repaid'; loan.interestAt = null; }
             this.record(`${borrower.name} → ${lender.name}: 偿还玩家借款 ${amount.toLocaleString()}。`); this.save();
         }
@@ -1037,7 +1090,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             const user = this.data.users.find(item => item.id === id);
             if (!user) throw new Error('该玩家不存在。');
             if (this.data.users.length === 1) throw new Error('至少保留一名玩家。');
-            if (user.debt || user.sharkDebt || sumBets(user.bets) || user.pendingRoulette || (user.blackjack && user.blackjack.phase !== 'settled')
+            if (user.debt || user.sharkDebt || user.recovery?.deficit || sumBets(user.bets) || user.pendingRoulette || (user.blackjack && user.blackjack.phase !== 'settled')
                 || this.data.loans.some(loan => ['pending', 'active'].includes(loan.status) && [loan.lenderId, loan.borrowerId].includes(id))) throw new Error('请先结清欠款、借出款、待确认协议和游戏下注，再删除玩家。');
             this.data.users = this.data.users.filter(item => item.id !== id);
             if (this.data.activeId === id) this.data.activeId = this.data.users[0].id;
@@ -1049,25 +1102,33 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             if (!user || !['add', 'remove'].includes(mode)) throw new Error('请选择玩家及有效的调整方式。');
             if (typeof reason !== 'string' || reason.length > 120) throw new Error('备注最多 120 个字符。');
             const delta = mode === 'add' ? amount : -amount;
-            if (user.balance + delta > MAX || user.balance + delta < 0) throw new Error('调整后余额必须在 0–1,000,000,000 之间。');
-            user.balance += delta;
+            if (user.recovery) {
+                if (mode === 'remove' && user.recovery.deficit + amount > MAX) throw new Error('负数记录已接近上限。');
+                if (mode === 'add' && amount - user.recovery.deficit + 10 > MAX) throw new Error('钱包已接近上限。');
+                this.recoveryNet(user, delta);
+            } else {
+                if (user.balance + delta > MAX || user.balance + delta < 0) throw new Error('调整后余额必须在 0–1,000,000,000 之间。');
+                user.balance += delta;
+            }
             this.record(`管理员 · ${user.name} ${mode === 'add' ? '增加' : '扣除'} ${amount.toLocaleString()} 筹码${reason.trim() ? ' · ' + reason.trim() : ''}。`);
             this.save();
         }
         transfer(id, value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const n = this.amount(value), from = this.active;
             const to = this.data.users.find(u => u.id === id);
             if (!to || to === from) throw new Error('Choose another player to receive the chips.');
             if (n > from.balance) throw new Error('Your wallet does not have enough chips.');
             if (to.balance + n > MAX) throw new Error('The receiving wallet has reached its chip limit.');
             from.balance -= n;
-            to.balance += n;
+            this.credit(to, n);
             this.record(`${from.name} → ${to.name}: ${n.toLocaleString()} chips transferred.`);
             this.save();
         }
         borrow(value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const n = this.amount(value), u = this.active;
             if (n > this.availableCredit) throw new Error(`You can borrow up to ${this.availableCredit.toLocaleString()} more chips.`);
             if (u.balance + n > MAX) throw new Error('Your wallet has reached its chip limit.');
@@ -1079,6 +1140,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         }
         repay(value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const n = this.amount(value, MAX), u = this.active;
             if (n > u.debt) throw new Error('That amount is greater than your outstanding debt.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips to repay that amount.');
@@ -1100,6 +1162,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         }
         repayShark(value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const n = this.amount(value, MAX), user = this.active;
             if (n > user.sharkDebt) throw new Error('还款不能超过高利贷欠款。');
             if (n > user.balance) throw new Error('钱包余额不足以还款。');
@@ -1108,7 +1171,14 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             this.record(`${user.name} → 高利贷: 偿还 ${n.toLocaleString()}。`);
             this.save();
         }
-        completeRound() { this.accrueInterest(); }
+        completeRound(net = 0) {
+            this.accrueInterest();
+            const user = this.active;
+            if (user.recovery) {
+                this.recoveryNet(user, net);
+                this.record(`${user.name} · 负数模式净输赢 ${net >= 0 ? '+' : ''}${net.toLocaleString()}；${user.recovery ? '记录 -' + user.recovery.deficit.toLocaleString() + '，下一局可用 10' : '已还清负数，恢复正常余额 ' + user.balance.toLocaleString()}。`);
+            } else this.prepareRecovery(user);
+        }
         accrueInterest() {
             const now = this.now(); let changed = false;
             const accrue = (target, debt, clock, period, rate, label) => {
@@ -1139,6 +1209,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         }
         buyCard(type, value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const item = Object.hasOwn(cards, type) ? cards[type] : null;
             if (!item) throw new Error('请选择有效的黑市卡。');
             const stake = this.amount(value), price = stake * item.factor, user = this.active;
@@ -1182,6 +1253,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
                 return Math.floor(roll * reelStrip.length);
             }) : forcedIndices;
             const result = this.slotResult(reels, n);
+            result.walletAfterWager = u.balance - n;
             u.balance += result.net;
             if (card) {
                 u.cards = u.cards.filter(item => item.id !== card.id); u.armedCardId = null;
@@ -1189,7 +1261,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
                 this.record(`${u.name} · 已消耗${result.cardName}，绑定下注 ${n.toLocaleString()}。`);
             }
             this.record(`${u.name} · 777${forcedIndices === null ? '' : ' (forced jackpot)'}: wager ${n.toLocaleString()}, payout ${result.payout.toLocaleString()} (${result.symbols.map(i => symbols[i]).join(' / ')}).`);
-            this.completeRound();
+            this.completeRound(result.net);
             this.lock = 'slots';
             this.save();
             return result;
@@ -2644,7 +2716,7 @@ function createLuckyMachine(engine, callbacks, host) {
       const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
       isSpinning = true;
       if (engine.remote) engine.lock = 'slots';
-      visualBalance = engine.active.balance - spinResult.payout;
+      visualBalance = spinResult.walletAfterWager ?? engine.active.balance - spinResult.payout;
       credits = visualBalance;
       lastWinAmount = 0;
       callbacks.changed();
@@ -2966,7 +3038,7 @@ function createLuckyMachine(engine, callbacks, host) {
       get dragging() { return isDraggingArm; },
       get displayBalance() { return visualBalance; },
       update() { credits = visualBalance ?? engine.active.balance; refreshAllUI(); },
-      resetPlayer() { lastWinAmount = 0; selectedBetMode = 100; credits = engine.active.balance; refreshAllUI(); setStatus('Playing as ' + engine.active.name + '. Tap a bet button and pull the red lever.'); },
+      resetPlayer() { lastWinAmount = 0; selectedBetMode = engine.active.recovery ? 10 : 100; credits = engine.active.balance; refreshAllUI(); setStatus('Playing as ' + engine.active.name + '. Tap a bet button and pull the red lever.'); },
       setVisible(value) {
         visible = value;
         if (value) {
@@ -3220,7 +3292,7 @@ function createLucky777(engine, callbacks) {
             this.engine.active.balance += payout;
             this.engine.lock = null;
             this.engine.record(`${this.engine.active.name} · Blackjack: wager ${wager.toLocaleString()}, payout ${payout.toLocaleString()} (${hands.map(h => h.label).join(' / ')}).`);
-            this.engine.completeRound();
+            this.engine.completeRound(r.result.net);
             this._save(); return r;
         }
     }
@@ -3669,7 +3741,7 @@ function createEconomyUI(engine, callbacks) {
     }
     function render() {
         const user = engine.active, locked = callbacks.locked(), stake = validStake();
-        $('bank-borrow').disabled = locked || engine.availableCredit === 0;
+        $('bank-borrow').disabled = locked || Boolean(user.recovery) || engine.availableCredit === 0;
         $('shark-panel').hidden = !engine.canBorrowShark && user.sharkDebt === 0;
         $('shark-offer').hidden = !engine.canBorrowShark;
         $('shark-repayment').hidden = user.sharkDebt === 0;
@@ -3685,7 +3757,7 @@ function createEconomyUI(engine, callbacks) {
             card.append(element('p', stake === null ? '请输入 1–1,000,000 的整数下注。' : `卡价 ${fmt(stake * item.factor)} · 使用时另扣 ${fmt(stake)}`, 'market-price'));
             card.append(element('p', stake === null ? '' : `保底返回 ${fmt(stake * item.multiplier)} · 扣除卡价与下注后净赚 ${fmt(stake * (item.multiplier - item.factor - 1))}`, 'club-muted'));
             const button = element('button', '购买此卡', 'club-action'); button.type = 'button';
-            button.disabled = locked || stake === null || user.cards.length >= 50 || (stake !== null && stake * (item.factor + 1) > user.balance);
+            button.disabled = locked || Boolean(user.recovery) || stake === null || user.cards.length >= 50 || (stake !== null && stake * (item.factor + 1) > user.balance);
             buyButtons.push({button, blocked: button.disabled});
             button.addEventListener('click', () => callbacks.transact(() => engine.buyCard(type, validStake()), '卡片已放入当前玩家的卡包。'));
             card.append(button); return card;
@@ -3779,6 +3851,46 @@ function createPlayerLoansUI(engine, callbacks) {
     return { render, tick };
 }
 
+function createDistressUI(engine, callbacks) {
+    const $ = id => document.getElementById(id), overlay = $('shark-crisis'), go = $('shark-crisis-go');
+    let bankAcknowledged = null, previousFocus = null;
+    const inertNodes = new Map();
+    function render(view) {
+        const user = engine.active, recovery = user.recovery;
+        const eligible = !recovery && engine.availableCredit === 0 && user.balance <= 0
+            && CasinoEngine.sumBets(user.bets) === 0 && engine.availableSharkCredit > 0;
+        const crisis = eligible && !callbacks.locked();
+        if (!eligible || bankAcknowledged !== user.id || view !== 'bank') bankAcknowledged = null;
+        const show = crisis && !(view === 'bank' && bankAcknowledged === user.id);
+        const wasHidden = overlay.hidden;
+        overlay.hidden = !show;
+        if (show && wasHidden) {
+            for (const node of document.body.children || []) if (node !== overlay) { inertNodes.set(node, node.inert); node.inert = true; }
+        } else if (!show && !wasHidden) {
+            for (const [node, inert] of inertNodes) node.inert = inert;
+            inertNodes.clear();
+        }
+        document.body.classList.toggle('shark-crisis-active', eligible);
+        $('club-recovery').hidden = !recovery;
+        $('recovery-deficit').textContent = recovery ? '-' + recovery.deficit.toLocaleString() : '-0';
+        $('recovery-budget').textContent = user.balance.toLocaleString();
+        $('bank-recovery').hidden = !recovery;
+        $('bank-recovery-deficit').textContent = recovery ? '-' + recovery.deficit.toLocaleString() : '-0';
+        if (show && wasHidden) { previousFocus = document.activeElement; go.focus(); }
+        if (!show && !wasHidden && previousFocus?.isConnected) previousFocus.focus();
+    }
+    go.addEventListener('click', () => {
+        bankAcknowledged = engine.active.id;
+        callbacks.openBank();
+        $('shark-panel').scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+        $('shark-borrow-amount').focus();
+    });
+    overlay.addEventListener('keydown', event => {
+        if (event.key === 'Tab' || event.key === 'Escape') { event.preventDefault(); go.focus(); }
+    });
+    return { render, get blocking() { return !overlay.hidden; } };
+}
+
 function createAdminUI(engine, callbacks) {
     const $=id=>document.getElementById(id);let auth=engine.auth||{enrolled:false,admin:false,canEnroll:false},working=false;
     let legacy=null;try{const raw=localStorage.getItem('roulette-club-v1');if(raw)legacy=JSON.parse(raw);}catch{}
@@ -3795,7 +3907,7 @@ function createAdminUI(engine, callbacks) {
         $('admin-legacy').hidden=!legacy||engine.revision!==0;
         $('club-migration-note').hidden=!engine.legacyPending||window.location.pathname==='/admin';
         const selected=$('admin-adjust-player').value;
-        $('admin-adjust-player').replaceChildren(...engine.data.users.map(user=>{const option=document.createElement('option');option.value=user.id;option.textContent=user.name+' · '+user.balance.toLocaleString();return option;}));
+        $('admin-adjust-player').replaceChildren(...engine.data.users.map(user=>{const option=document.createElement('option');option.value=user.id;option.textContent=user.name+' · '+(user.recovery?'-'+user.recovery.deficit.toLocaleString()+' · 可用 ':'')+user.balance.toLocaleString();return option;}));
         if(engine.data.users.some(user=>user.id===selected))$('admin-adjust-player').value=selected;
         document.querySelectorAll('[data-admin-action]').forEach(button=>button.disabled=working||!auth.admin||callbacks.locked());
     }
@@ -3834,7 +3946,7 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, admin, pendingDelete = null;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, admin, distress, recoveryPlayer = null, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -3855,13 +3967,18 @@ function createCasinoClub(roulette) {
     function render() {
         admin?.render();
         const u = engine.active;
+        if (u.recovery && recoveryPlayer !== u.id) {
+            recoveryPlayer = u.id; roulette.selectedChip = 10; roulette.customBet = false;
+            $('bj-wager').value = '10'; lucky?.resetPlayer();
+            $('roulette-custom-selected').textContent = '负数模式 · 本局可用 10 筹码';
+        } else if (!u.recovery) recoveryPlayer = null;
         const selectedRecipient = $('transfer-user').value;
         $('club-user').replaceChildren(...engine.data.users.map(option));
         $('club-user').value = u.id;
         $('club-user').disabled = viewLocked();
         $('transfer-user').replaceChildren(...engine.data.users.filter(p => p.id !== u.id).map(option));
         if ([...$('transfer-user').options].some(o => o.value === selectedRecipient)) $('transfer-user').value = selectedRecipient;
-        $('club-wallet').textContent = `${fmt(lucky?.displayBalance ?? u.balance)} ₵`;
+        $('club-wallet').textContent = u.recovery ? `-${fmt(u.recovery.deficit)} · 可用 ${fmt(lucky?.displayBalance ?? u.balance)} ₵` : `${fmt(lucky?.displayBalance ?? u.balance)} ₵`;
         $('bank-greeting').textContent = `${u.name}’s wallet & bank`;
         $('bank-wallet').textContent = fmt(u.balance);
         $('bank-debt').textContent = fmt(u.debt);
@@ -3873,7 +3990,7 @@ function createCasinoClub(roulette) {
             const data = document.createElement('div'); data.className = 'club-player-data';
             const name = document.createElement('div'); name.className = 'club-player-name'; name.textContent = p.name;
             const detail = document.createElement('div'); detail.className = 'club-player-detail';
-            detail.textContent = `${fmt(p.balance)} chips · ${fmt(p.debt + p.sharkDebt)} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
+            detail.textContent = `${p.recovery ? '-' + fmt(p.recovery.deficit) + ' · 可用 ' : ''}${fmt(p.balance)} chips · ${fmt(p.debt + p.sharkDebt)} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
             data.append(name, detail);
             const button = document.createElement('button'); button.type = 'button'; button.className = 'club-action secondary';
             button.textContent = p.id === u.id ? 'Playing' : 'Switch';
@@ -3900,6 +4017,7 @@ function createCasinoClub(roulette) {
         if (!entries.length) { const li = document.createElement('li'); li.textContent = 'Your table activity will appear here.'; entries.push(li); }
         $('club-ledger').replaceChildren(...entries);
         document.querySelectorAll('[data-idle-only]').forEach(el => { el.disabled = viewLocked(); });
+        document.querySelectorAll('#transfer-form button, #peer-loan-form button, #bank-form button, #shark-repay-form button').forEach(el => { el.disabled = viewLocked() || Boolean(u.recovery); });
         document.querySelectorAll('[data-view]').forEach(el => { el.disabled = viewLocked(); });
         lucky?.update(viewLocked());
         customRoulette?.update(viewLocked());
@@ -3907,6 +4025,7 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('#roulette-controls [data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
         economy?.render();
         playerLoans?.render();
+        distress?.render(view);
     }
     function refresh() { engine.save(); render(); }
     function paintView() {
@@ -3950,6 +4069,7 @@ function createCasinoClub(roulette) {
     }
     function init() {
         bindJackpotShortcut(window, () => {
+            if (distress?.blocking) return false;
             if (!['roulette', 'slots', 'blackjack'].includes(view)) return false;
             if (roulette.isChargingSpin || roulette.isDraggingTurret || lucky?.dragging) { toast('Release the controls before using the shortcut.', true); return; }
             if (view === 'blackjack') blackjack.forceJackpot();
@@ -3975,6 +4095,7 @@ function createCasinoClub(roulette) {
             notify: toast
         });
         admin = createAdminUI(engine, {locked:viewLocked,transact,changed:()=>{lucky.resetPlayer();render();}});
+        distress = createDistressUI(engine, {locked:viewLocked,openBank:()=>setView('bank')});
         if(engine.remote) engine.onChange = render;
         document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
         document.querySelectorAll('[data-go-bank]').forEach(b => b.addEventListener('click', () => setView('bank')));
@@ -4000,6 +4121,7 @@ function createCasinoClub(roulette) {
         $('reset-chips-btn').addEventListener('click', () => setView('bank'));
         // Space activates the focused UI normally, and controls the wheel only on the roulette table.
         window.addEventListener('keydown', e => {
+            if (distress?.blocking && e.code === 'Space') { e.preventDefault(); e.stopImmediatePropagation(); return; }
             if (e.code === 'Space' && (view !== 'roulette' || e.target.closest('input, select, textarea, button'))) e.stopImmediatePropagation();
         });
         window.addEventListener('keyup', e => {
@@ -5166,7 +5288,6 @@ function createCasinoClub(roulette) {
             state.balance += totalPayout;
             casino.engine.lock = null;
             casino.engine.active.pendingRoulette = false;
-            if (totalWagered > 0) casino.engine.completeRound();
             casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);
 
             // Record in history ribbon
@@ -5180,6 +5301,8 @@ function createCasinoClub(roulette) {
             updateBettingHUD();
             renderNumberModalGrid();
 
+            if (totalWagered > 0) casino.engine.completeRound(totalPayout - totalWagered);
+            updateBettingHUD();
             // Display result banner
             showResultBanner(num, colorTag, totalWagered, totalPayout);
 

@@ -11,6 +11,10 @@
     <div class="club-primary-links"><a href="/player">PLAYER</a><a href="/admin">ADMIN</a></div><div class="club-account"><span class="club-wallet" id="club-wallet">1,000 ₵</span><label for="club-user" class="sr-only">Active player</label><select id="club-user" class="club-select" aria-label="Active player"></select></div>
 </nav>
 <div id="club-migration-note" hidden>检测到此前的本地玩家存档。请先<a href="/admin">进入 ADMIN，设置通行密钥并导入</a>，以保留原有余额、欠款和卡包。</div>
+<div id="shark-crisis" class="shark-crisis" role="alertdialog" aria-modal="true" aria-labelledby="shark-crisis-title" aria-describedby="shark-crisis-description" hidden>
+  <div class="shark-crisis-card"><p class="shark-crisis-eyebrow">最后的选择</p><h2 id="shark-crisis-title">你没钱了!</h2><p id="shark-crisis-description">你现在只能选择 <strong>借高利贷</strong></p><button id="shark-crisis-go" type="button">点击前往 <span aria-hidden="true">→</span></button><p class="shark-crisis-terms">每 3 分钟 · 125% 利息</p></div>
+</div>
+<aside id="club-recovery" class="club-recovery" role="status" aria-live="polite" hidden><span>负数模式 <strong id="recovery-deficit">-0</strong></span><span>本局可用 <b id="recovery-budget">10</b> · 每局净盈利自动抵扣，下一局固定 10</span></aside>
 <!-- LUCKY_777 -->
 <!-- BLACKJACK -->
 <!-- MARKET -->
@@ -41,6 +45,7 @@
     <p class="club-muted">当前玩家的银行借还款与高利贷。利息按现实时间计算，离线时继续累计，重新打开时结算；本金与利息均按整枚筹码计，每期利息向上取整。</p><p class="club-storage" id="club-storage-note" role="status"></p>
     <dl class="club-stat-row"><div><dt>钱包 / 筹码</dt><dd id="bank-wallet">1,000</dd></div><div><dt>银行欠款</dt><dd id="bank-debt">0</dd></div><div><dt>银行可借额度</dt><dd id="bank-credit">100,000</dd></div></dl>
     <p class="club-muted">银行 + 高利贷总欠款：<strong id="bank-total-debt">0</strong> 筹码。利息加入欠款，可能超过借款上限。</p>
+    <div id="bank-recovery" class="club-card recovery-card" hidden><h3>负数记录 <strong id="bank-recovery-deficit">-0</strong></h3><p>每局固定 10 筹码。净亏损增加负数，净盈利先抵负数；还清后，多出的盈利和 10 筹码底金恢复为正常余额。</p><p class="club-muted">这里的负数单独记账，银行与高利贷欠款仍然保留。10 筹码底金仅可用于游戏。</p></div>
     <div class="club-grid">
       <form id="bank-form" class="club-card club-wide"><h3>银行借款与还款</h3><p class="club-muted">借款额度 100,000；每 10 分钟，未还欠款加 15%。还款恢复可借额度。</p><p id="bank-interest-progress" class="club-muted"></p>
         <label class="club-field" for="bank-amount">金额 / 筹码</label><input id="bank-amount" class="club-input" type="number" min="1" max="1000000000" step="1" inputmode="numeric" required placeholder="例如 500">

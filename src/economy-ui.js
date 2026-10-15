@@ -21,7 +21,7 @@ function createEconomyUI(engine, callbacks) {
     }
     function render() {
         const user = engine.active, locked = callbacks.locked(), stake = validStake();
-        $('bank-borrow').disabled = locked || engine.availableCredit === 0;
+        $('bank-borrow').disabled = locked || Boolean(user.recovery) || engine.availableCredit === 0;
         $('shark-panel').hidden = !engine.canBorrowShark && user.sharkDebt === 0;
         $('shark-offer').hidden = !engine.canBorrowShark;
         $('shark-repayment').hidden = user.sharkDebt === 0;
@@ -37,7 +37,7 @@ function createEconomyUI(engine, callbacks) {
             card.append(element('p', stake === null ? '请输入 1–1,000,000 的整数下注。' : `卡价 ${fmt(stake * item.factor)} · 使用时另扣 ${fmt(stake)}`, 'market-price'));
             card.append(element('p', stake === null ? '' : `保底返回 ${fmt(stake * item.multiplier)} · 扣除卡价与下注后净赚 ${fmt(stake * (item.multiplier - item.factor - 1))}`, 'club-muted'));
             const button = element('button', '购买此卡', 'club-action'); button.type = 'button';
-            button.disabled = locked || stake === null || user.cards.length >= 50 || (stake !== null && stake * (item.factor + 1) > user.balance);
+            button.disabled = locked || Boolean(user.recovery) || stake === null || user.cards.length >= 50 || (stake !== null && stake * (item.factor + 1) > user.balance);
             buyButtons.push({button, blocked: button.disabled});
             button.addEventListener('click', () => callbacks.transact(() => engine.buyCard(type, validStake()), '卡片已放入当前玩家的卡包。'));
             card.append(button); return card;

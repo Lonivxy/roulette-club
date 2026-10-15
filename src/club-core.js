@@ -28,6 +28,7 @@
     }
     function validEconomy(user) {
         return integer(user.sharkDebt) && timestamp(user.bankInterestAt) && timestamp(user.sharkInterestAt) && timestamp(user.marketAvailableAt)
+            && (user.recovery == null || (typeof user.recovery === 'object' && integer(user.recovery.deficit)))
             && Array.isArray(user.cards) && user.cards.length <= 50
             && user.cards.every(card => card && typeof card.id === 'string' && Object.hasOwn(cards, card.type)
                 && integer(card.stake, 1000000) && card.stake > 0)
@@ -87,13 +88,33 @@
                 this.storageWarning = 'Saved profiles could not be read. This session starts with fresh local profiles.';
             }
             this.accrueInterest();
+            for (const user of this.data.users) this.prepareRecovery(user);
             this.save();
         }
         get active() { return this.data.users.find(u => u.id === this.data.activeId); }
         get availableCredit() { return Math.max(0, LIMIT - this.active.debt); }
         get availableSharkCredit() { return Math.max(0, SHARK_LIMIT - this.active.sharkDebt); }
-        get canBorrowShark() { return !this.lock && this.availableCredit === 0 && this.active.balance <= 0 && sumBets(this.active.bets) === 0 && this.availableSharkCredit > 0; }
+        get canBorrowShark() { return !this.lock && !this.active.recovery && this.availableCredit === 0 && this.active.balance <= 0 && sumBets(this.active.bets) === 0 && this.availableSharkCredit > 0; }
         get armedCard() { return this.active.cards.find(card => card.id === this.active.armedCardId) || null; }
+        prepareRecovery(user = this.active) {
+            if (!user || user.recovery || user.balance > 0 || !(user.sharkDebt > 0)
+                || sumBets(user.bets) || user.pendingRoulette || (user.blackjack && user.blackjack.phase !== 'settled')) return false;
+            user.recovery = { deficit: Math.max(0, -user.balance) }; user.balance = 10;
+            this.record(`${user.name} · 高利贷筹码已用尽，进入负数模式：-${user.recovery.deficit.toLocaleString()}，每局可用 10。`);
+            return true;
+        }
+        ensureCashWallet(user = this.active) {
+            if (user.recovery) throw new Error('负数模式的 10 筹码仅用于游戏，不能赠送、出借、购买或还款。盈利先抵扣负数。');
+        }
+        recoveryNet(user, net) {
+            const remaining = user.recovery.deficit - net;
+            if (net > 0 && remaining <= 0) { user.recovery = null; user.balance = 10 - remaining; }
+            else { user.recovery.deficit = Math.min(MAX, Math.max(0, remaining)); user.balance = 10; }
+        }
+        credit(user, amount) {
+            if (user.recovery) this.recoveryNet(user, amount);
+            else user.balance += amount;
+        }
         ensureIdle() {
             if (this.lock) throw new Error('Wait for the current spin to finish.');
             if (this.accrueInterest()) this.save();
@@ -141,6 +162,7 @@
         }
         offerLoan(borrowerId, value, ratePercent, minutes = 10) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const lender = this.active, borrower = this.data.users.find(user => user.id === borrowerId), principal = this.amount(value);
             if (!borrower || borrower === lender) throw new Error('请选择另一位借款玩家。');
             const rateBps = Math.round(ratePercent * 100);
@@ -161,6 +183,7 @@
             if (!loan || loan.status !== 'pending' || loan.borrowerId !== this.active.id) throw new Error('只有借款人能确认这份待处理协议。');
             if (!accept) { loan.status = 'declined'; this.record(`${loan.borrowerName} 拒绝了 ${loan.lenderName} 的借款协议。`); this.save(); return; }
             const lender = this.data.users.find(user => user.id === loan.lenderId), borrower = this.active;
+            this.ensureCashWallet(borrower); if (lender) this.ensureCashWallet(lender);
             if (!lender || lender.balance < loan.principal) throw new Error('出借人当前余额不足，尚未扣款。');
             if (borrower.balance + loan.principal > MAX) throw new Error('借款人钱包已接近上限。');
             lender.balance -= loan.principal; borrower.balance += loan.principal;
@@ -176,12 +199,13 @@
         }
         repayLoan(id, value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const loan = this.data.loans.find(item => item.id === id), amount = this.amount(value, MAX);
             if (!loan || loan.status !== 'active' || loan.borrowerId !== this.active.id) throw new Error('只能偿还自己的有效借款。');
             const lender = this.data.users.find(user => user.id === loan.lenderId), borrower = this.active;
             if (amount > loan.balance || amount > borrower.balance) throw new Error('还款超过欠款或钱包余额。');
             if (!lender || lender.balance + amount > MAX) throw new Error('出借人钱包已接近上限。');
-            borrower.balance -= amount; lender.balance += amount; loan.balance -= amount;
+            borrower.balance -= amount; this.credit(lender, amount); loan.balance -= amount;
             if (loan.balance === 0) { loan.status = 'repaid'; loan.interestAt = null; }
             this.record(`${borrower.name} → ${lender.name}: 偿还玩家借款 ${amount.toLocaleString()}。`); this.save();
         }
@@ -190,7 +214,7 @@
             const user = this.data.users.find(item => item.id === id);
             if (!user) throw new Error('该玩家不存在。');
             if (this.data.users.length === 1) throw new Error('至少保留一名玩家。');
-            if (user.debt || user.sharkDebt || sumBets(user.bets) || user.pendingRoulette || (user.blackjack && user.blackjack.phase !== 'settled')
+            if (user.debt || user.sharkDebt || user.recovery?.deficit || sumBets(user.bets) || user.pendingRoulette || (user.blackjack && user.blackjack.phase !== 'settled')
                 || this.data.loans.some(loan => ['pending', 'active'].includes(loan.status) && [loan.lenderId, loan.borrowerId].includes(id))) throw new Error('请先结清欠款、借出款、待确认协议和游戏下注，再删除玩家。');
             this.data.users = this.data.users.filter(item => item.id !== id);
             if (this.data.activeId === id) this.data.activeId = this.data.users[0].id;
@@ -202,25 +226,33 @@
             if (!user || !['add', 'remove'].includes(mode)) throw new Error('请选择玩家及有效的调整方式。');
             if (typeof reason !== 'string' || reason.length > 120) throw new Error('备注最多 120 个字符。');
             const delta = mode === 'add' ? amount : -amount;
-            if (user.balance + delta > MAX || user.balance + delta < 0) throw new Error('调整后余额必须在 0–1,000,000,000 之间。');
-            user.balance += delta;
+            if (user.recovery) {
+                if (mode === 'remove' && user.recovery.deficit + amount > MAX) throw new Error('负数记录已接近上限。');
+                if (mode === 'add' && amount - user.recovery.deficit + 10 > MAX) throw new Error('钱包已接近上限。');
+                this.recoveryNet(user, delta);
+            } else {
+                if (user.balance + delta > MAX || user.balance + delta < 0) throw new Error('调整后余额必须在 0–1,000,000,000 之间。');
+                user.balance += delta;
+            }
             this.record(`管理员 · ${user.name} ${mode === 'add' ? '增加' : '扣除'} ${amount.toLocaleString()} 筹码${reason.trim() ? ' · ' + reason.trim() : ''}。`);
             this.save();
         }
         transfer(id, value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const n = this.amount(value), from = this.active;
             const to = this.data.users.find(u => u.id === id);
             if (!to || to === from) throw new Error('Choose another player to receive the chips.');
             if (n > from.balance) throw new Error('Your wallet does not have enough chips.');
             if (to.balance + n > MAX) throw new Error('The receiving wallet has reached its chip limit.');
             from.balance -= n;
-            to.balance += n;
+            this.credit(to, n);
             this.record(`${from.name} → ${to.name}: ${n.toLocaleString()} chips transferred.`);
             this.save();
         }
         borrow(value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const n = this.amount(value), u = this.active;
             if (n > this.availableCredit) throw new Error(`You can borrow up to ${this.availableCredit.toLocaleString()} more chips.`);
             if (u.balance + n > MAX) throw new Error('Your wallet has reached its chip limit.');
@@ -232,6 +264,7 @@
         }
         repay(value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const n = this.amount(value, MAX), u = this.active;
             if (n > u.debt) throw new Error('That amount is greater than your outstanding debt.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips to repay that amount.');
@@ -253,6 +286,7 @@
         }
         repayShark(value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const n = this.amount(value, MAX), user = this.active;
             if (n > user.sharkDebt) throw new Error('还款不能超过高利贷欠款。');
             if (n > user.balance) throw new Error('钱包余额不足以还款。');
@@ -261,7 +295,14 @@
             this.record(`${user.name} → 高利贷: 偿还 ${n.toLocaleString()}。`);
             this.save();
         }
-        completeRound() { this.accrueInterest(); }
+        completeRound(net = 0) {
+            this.accrueInterest();
+            const user = this.active;
+            if (user.recovery) {
+                this.recoveryNet(user, net);
+                this.record(`${user.name} · 负数模式净输赢 ${net >= 0 ? '+' : ''}${net.toLocaleString()}；${user.recovery ? '记录 -' + user.recovery.deficit.toLocaleString() + '，下一局可用 10' : '已还清负数，恢复正常余额 ' + user.balance.toLocaleString()}。`);
+            } else this.prepareRecovery(user);
+        }
         accrueInterest() {
             const now = this.now(); let changed = false;
             const accrue = (target, debt, clock, period, rate, label) => {
@@ -292,6 +333,7 @@
         }
         buyCard(type, value) {
             this.ensureIdle();
+            this.ensureCashWallet();
             const item = Object.hasOwn(cards, type) ? cards[type] : null;
             if (!item) throw new Error('请选择有效的黑市卡。');
             const stake = this.amount(value), price = stake * item.factor, user = this.active;
@@ -335,6 +377,7 @@
                 return Math.floor(roll * reelStrip.length);
             }) : forcedIndices;
             const result = this.slotResult(reels, n);
+            result.walletAfterWager = u.balance - n;
             u.balance += result.net;
             if (card) {
                 u.cards = u.cards.filter(item => item.id !== card.id); u.armedCardId = null;
@@ -342,7 +385,7 @@
                 this.record(`${u.name} · 已消耗${result.cardName}，绑定下注 ${n.toLocaleString()}。`);
             }
             this.record(`${u.name} · 777${forcedIndices === null ? '' : ' (forced jackpot)'}: wager ${n.toLocaleString()}, payout ${result.payout.toLocaleString()} (${result.symbols.map(i => symbols[i]).join(' / ')}).`);
-            this.completeRound();
+            this.completeRound(result.net);
             this.lock = 'slots';
             this.save();
             return result;

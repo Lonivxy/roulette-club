@@ -176,7 +176,7 @@
             this.engine.active.balance += payout;
             this.engine.lock = null;
             this.engine.record(`${this.engine.active.name} · Blackjack: wager ${wager.toLocaleString()}, payout ${payout.toLocaleString()} (${hands.map(h => h.label).join(' / ')}).`);
-            this.engine.completeRound();
+            this.engine.completeRound(r.result.net);
             this._save(); return r;
         }
     }

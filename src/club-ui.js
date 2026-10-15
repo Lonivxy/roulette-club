@@ -8,7 +8,7 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, admin, pendingDelete = null;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, admin, distress, recoveryPlayer = null, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -29,13 +29,18 @@ function createCasinoClub(roulette) {
     function render() {
         admin?.render();
         const u = engine.active;
+        if (u.recovery && recoveryPlayer !== u.id) {
+            recoveryPlayer = u.id; roulette.selectedChip = 10; roulette.customBet = false;
+            $('bj-wager').value = '10'; lucky?.resetPlayer();
+            $('roulette-custom-selected').textContent = '负数模式 · 本局可用 10 筹码';
+        } else if (!u.recovery) recoveryPlayer = null;
         const selectedRecipient = $('transfer-user').value;
         $('club-user').replaceChildren(...engine.data.users.map(option));
         $('club-user').value = u.id;
         $('club-user').disabled = viewLocked();
         $('transfer-user').replaceChildren(...engine.data.users.filter(p => p.id !== u.id).map(option));
         if ([...$('transfer-user').options].some(o => o.value === selectedRecipient)) $('transfer-user').value = selectedRecipient;
-        $('club-wallet').textContent = `${fmt(lucky?.displayBalance ?? u.balance)} ₵`;
+        $('club-wallet').textContent = u.recovery ? `-${fmt(u.recovery.deficit)} · 可用 ${fmt(lucky?.displayBalance ?? u.balance)} ₵` : `${fmt(lucky?.displayBalance ?? u.balance)} ₵`;
         $('bank-greeting').textContent = `${u.name}’s wallet & bank`;
         $('bank-wallet').textContent = fmt(u.balance);
         $('bank-debt').textContent = fmt(u.debt);
@@ -47,7 +52,7 @@ function createCasinoClub(roulette) {
             const data = document.createElement('div'); data.className = 'club-player-data';
             const name = document.createElement('div'); name.className = 'club-player-name'; name.textContent = p.name;
             const detail = document.createElement('div'); detail.className = 'club-player-detail';
-            detail.textContent = `${fmt(p.balance)} chips · ${fmt(p.debt + p.sharkDebt)} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
+            detail.textContent = `${p.recovery ? '-' + fmt(p.recovery.deficit) + ' · 可用 ' : ''}${fmt(p.balance)} chips · ${fmt(p.debt + p.sharkDebt)} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
             data.append(name, detail);
             const button = document.createElement('button'); button.type = 'button'; button.className = 'club-action secondary';
             button.textContent = p.id === u.id ? 'Playing' : 'Switch';
@@ -74,6 +79,7 @@ function createCasinoClub(roulette) {
         if (!entries.length) { const li = document.createElement('li'); li.textContent = 'Your table activity will appear here.'; entries.push(li); }
         $('club-ledger').replaceChildren(...entries);
         document.querySelectorAll('[data-idle-only]').forEach(el => { el.disabled = viewLocked(); });
+        document.querySelectorAll('#transfer-form button, #peer-loan-form button, #bank-form button, #shark-repay-form button').forEach(el => { el.disabled = viewLocked() || Boolean(u.recovery); });
         document.querySelectorAll('[data-view]').forEach(el => { el.disabled = viewLocked(); });
         lucky?.update(viewLocked());
         customRoulette?.update(viewLocked());
@@ -81,6 +87,7 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('#roulette-controls [data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
         economy?.render();
         playerLoans?.render();
+        distress?.render(view);
     }
     function refresh() { engine.save(); render(); }
     function paintView() {
@@ -124,6 +131,7 @@ function createCasinoClub(roulette) {
     }
     function init() {
         bindJackpotShortcut(window, () => {
+            if (distress?.blocking) return false;
             if (!['roulette', 'slots', 'blackjack'].includes(view)) return false;
             if (roulette.isChargingSpin || roulette.isDraggingTurret || lucky?.dragging) { toast('Release the controls before using the shortcut.', true); return; }
             if (view === 'blackjack') blackjack.forceJackpot();
@@ -149,6 +157,7 @@ function createCasinoClub(roulette) {
             notify: toast
         });
         admin = createAdminUI(engine, {locked:viewLocked,transact,changed:()=>{lucky.resetPlayer();render();}});
+        distress = createDistressUI(engine, {locked:viewLocked,openBank:()=>setView('bank')});
         if(engine.remote) engine.onChange = render;
         document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
         document.querySelectorAll('[data-go-bank]').forEach(b => b.addEventListener('click', () => setView('bank')));
@@ -174,6 +183,7 @@ function createCasinoClub(roulette) {
         $('reset-chips-btn').addEventListener('click', () => setView('bank'));
         // Space activates the focused UI normally, and controls the wheel only on the roulette table.
         window.addEventListener('keydown', e => {
+            if (distress?.blocking && e.code === 'Space') { e.preventDefault(); e.stopImmediatePropagation(); return; }
             if (e.code === 'Space' && (view !== 'roulette' || e.target.closest('input, select, textarea, button'))) e.stopImmediatePropagation();
         });
         window.addEventListener('keyup', e => {

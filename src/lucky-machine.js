@@ -1347,7 +1347,7 @@ function createLuckyMachine(engine, callbacks, host) {
       const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
       isSpinning = true;
       if (engine.remote) engine.lock = 'slots';
-      visualBalance = engine.active.balance - spinResult.payout;
+      visualBalance = spinResult.walletAfterWager ?? engine.active.balance - spinResult.payout;
       credits = visualBalance;
       lastWinAmount = 0;
       callbacks.changed();
@@ -1669,7 +1669,7 @@ function createLuckyMachine(engine, callbacks, host) {
       get dragging() { return isDraggingArm; },
       get displayBalance() { return visualBalance; },
       update() { credits = visualBalance ?? engine.active.balance; refreshAllUI(); },
-      resetPlayer() { lastWinAmount = 0; selectedBetMode = 100; credits = engine.active.balance; refreshAllUI(); setStatus('Playing as ' + engine.active.name + '. Tap a bet button and pull the red lever.'); },
+      resetPlayer() { lastWinAmount = 0; selectedBetMode = engine.active.recovery ? 10 : 100; credits = engine.active.balance; refreshAllUI(); setStatus('Playing as ' + engine.active.name + '. Tap a bet button and pull the red lever.'); },
       setVisible(value) {
         visible = value;
         if (value) {

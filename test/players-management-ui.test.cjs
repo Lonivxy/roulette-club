@@ -11,7 +11,7 @@ function ui() {
     let club;const empty=()=>({render(){},tick(){}}),controller=()=>({update(){},setVisible(){},resetPlayer(){},pending:false,animating:false});
     const context={CasinoEngine,document:{getElementById:get,createElement:()=>new Element(),querySelectorAll:()=>[]},
         window:{location:{hash:'#players'},history:{replaceState(){}},addEventListener(){}},setTimeout(){},clearTimeout(){},setInterval(){},
-        bindJackpotShortcut(){},bindCustomBet:()=>({update(){}}),createAdminUI:()=>({render(){},unlocked:true}),createEconomyUI:empty,createPlayerLoansUI:empty,createBlackjackTable:controller,createLucky777:controller,
+        bindJackpotShortcut(){},bindCustomBet:()=>({update(){}}),createDistressUI:empty,createAdminUI:()=>({render(){},unlocked:true}),createEconomyUI:empty,createPlayerLoansUI:empty,createBlackjackTable:controller,createLucky777:controller,
         updateBettingHUD:()=>club.refresh(),renderHistoryRibbon(){},renderNumberModalGrid(){},hideBanner(){}};
     vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/club-ui.js'),'utf8'),context);
     club=context.createCasinoClub({});club.init();return {club,get};

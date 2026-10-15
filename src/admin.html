@@ -11,6 +11,7 @@
       <div id="admin-legacy" class="club-card" hidden><h3>导入旧玩家存档</h3><p class="club-muted">发现此前保存在此浏览器的玩家数据。导入会保留原本地备份，并只在服务器尚未产生新记录时允许执行。</p><button id="admin-import" type="button" class="club-action">导入当前浏览器旧存档</button></div>
       <div class="club-grid">
         <form id="admin-adjust-form" class="club-card"><h3>增加 / 扣除筹码</h3>
+          <p class="club-muted">负数模式下，增加筹码先抵扣负数；扣除筹码增加负数记录。每局 10 筹码底金独立保留。</p>
           <label for="admin-adjust-player" class="club-field">目标玩家</label><select id="admin-adjust-player" class="club-select" required></select>
           <label for="admin-adjust-mode" class="club-field">调整方式</label><select id="admin-adjust-mode" class="club-select"><option value="add">增加筹码</option><option value="remove">扣除筹码</option></select>
           <label for="admin-adjust-amount" class="club-field">金额 / 筹码</label><input id="admin-adjust-amount" type="number" class="club-input" min="1" max="1000000000" step="1" inputmode="numeric" required>

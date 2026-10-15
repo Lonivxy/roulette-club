@@ -39,8 +39,12 @@ function rouletteSpin(engine, jackpot) {
     if(!wager)fail('请先放置筹码。');
     const bets=structuredClone(user.bets),number=jackpot?bestRoulette(bets):Math.floor(engine.random()*24),payout=roulettePayout(bets,number);
     if(user.balance+payout>1000000000)fail('钱包已接近上限。');
-    user.balance+=payout;user.lastBets=bets;user.bets=Engine.emptyBets();
+    const recoveryBefore=structuredClone(user.recovery||null);
+    user.balance+=payout;user.lastBets=bets;user.bets=Engine.emptyBets();user.pendingRoulette=false;
     const result={roundId:crypto.randomUUID(),number,index:number,wager,payout,bets,rigged:Boolean(jackpot)};
+    engine.completeRound(payout-wager);
+    result.recoveryBefore=recoveryBefore;
+    result.settlement={balance:user.balance,recovery:structuredClone(user.recovery||null)};
     user.lastRoulette=result;user.history.unshift({num:number,colorTag:number===0?'GREEN':number%2?'RED':'BLACK'});user.history=user.history.slice(0,10);
     engine.record(`${user.name} · Roulette ${number}: wager ${wager.toLocaleString()}, payout ${payout.toLocaleString()}.`);
     return result;
@@ -75,8 +79,12 @@ export async function applyCommand(engine, command, args, admin) {
         engine.ensureIdle();const user=engine.active,last=user.lastRoulette;
         if(!last||last.roundId!==args[0])fail('这轮轮盘已经结束。');
         const number=bestRoulette(last.bets),payout=roulettePayout(last.bets,number),delta=payout-last.payout;
+        if(!delta)return last;
+        if(last.settlement&&(user.balance!==last.settlement.balance||JSON.stringify(user.recovery||null)!==JSON.stringify(last.settlement.recovery)))fail('账户已发生其他变动，不能再调整这轮结果。');
         if(user.balance+delta>1000000000)fail('钱包已接近上限。');
+        if(!last.recoveryBefore&&last.settlement?.recovery){user.recovery=null;user.balance-=10;}
         user.balance+=delta;last.number=last.index=number;last.payout=payout;last.rigged=true;
+        engine.completeRound(delta);last.settlement={balance:user.balance,recovery:structuredClone(user.recovery||null)};
         if(user.history[0])user.history[0]={num:number,colorTag:number===0?'GREEN':number%2?'RED':'BLACK'};
         if(delta)engine.record(`${user.name} · Roulette jackpot adjustment +${delta.toLocaleString()}.`);return last;
     }

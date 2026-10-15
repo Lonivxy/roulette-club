@@ -128,6 +128,24 @@ test('server persists the new bank and shark interest once at their respective r
     assert.equal(persisted.users[0].debt,115000);assert.equal(persisted.users[0].sharkDebt,2250);
 });
 
+test('negative-mode balances persist in D1, never refill an unfinished stake and never settle a replay twice',async()=>{
+    const t=await fixture();await t.request('/api/state');
+    const row=t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club'),data=JSON.parse(row.snapshot);
+    data.users[0].sharkDebt=100;data.users[0].balance=0;data.users[0].sharkInterestPolicy=2;data.users[0].sharkInterestAt=Date.now();
+    t.sql.prepare('UPDATE casino_state SET snapshot=? WHERE id=?').run(JSON.stringify(data),'club');
+    let state=await (await t.request('/api/state')).json();assert.equal(state.data.users[0].balance,10);assert.equal(state.data.users[0].recovery.deficit,0);
+    state.data.users[0].recovery.deficit=200;
+    t.sql.prepare('UPDATE casino_state SET snapshot=? WHERE id=?').run(JSON.stringify(state.data),'club');
+    assert.equal((await t.cmd('gift',['jamie',1])).status,400);
+    assert.equal((await t.cmd('roulette.bet',['RED',10])).status,200);
+    state=await (await t.request('/api/state')).json();assert.equal(state.data.users[0].balance,0);assert.equal(state.data.users[0].recovery.deficit,200);
+    const id=crypto.randomUUID();const spin=await t.cmd('roulette.spin',[true],{id});assert.equal(spin.status,200);
+    const once=await spin.json();assert.equal(once.data.users[0].balance,10);assert.equal(once.data.users[0].recovery.deficit,190);
+    const replay=await (await t.cmd('roulette.spin',[true],{id})).json();assert.equal(replay.data.users[0].balance,10);assert.equal(replay.data.users[0].recovery.deficit,190);
+    const persisted=JSON.parse(t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot);
+    assert.equal(persisted.users[0].recovery.deficit,190);assert.equal(persisted.users[0].sharkDebt,100);
+});
+
 test('PLAYER contains player finance while management forms are confined to ADMIN',async()=>{
     const html=fs.readFileSync(path.join(__dirname,'../dist/index.html'),'utf8'),start=html.indexOf('<section id="players-view"'),end=html.indexOf('<section id="bank-view"');
     assert.ok(start>=0&&end>start);const players=html.slice(start,end);

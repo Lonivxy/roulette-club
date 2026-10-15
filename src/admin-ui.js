@@ -14,7 +14,7 @@ function createAdminUI(engine, callbacks) {
         $('admin-legacy').hidden=!legacy||engine.revision!==0;
         $('club-migration-note').hidden=!engine.legacyPending||window.location.pathname==='/admin';
         const selected=$('admin-adjust-player').value;
-        $('admin-adjust-player').replaceChildren(...engine.data.users.map(user=>{const option=document.createElement('option');option.value=user.id;option.textContent=user.name+' · '+user.balance.toLocaleString();return option;}));
+        $('admin-adjust-player').replaceChildren(...engine.data.users.map(user=>{const option=document.createElement('option');option.value=user.id;option.textContent=user.name+' · '+(user.recovery?'-'+user.recovery.deficit.toLocaleString()+' · 可用 ':'')+user.balance.toLocaleString();return option;}));
         if(engine.data.users.some(user=>user.id===selected))$('admin-adjust-player').value=selected;
         document.querySelectorAll('[data-admin-action]').forEach(button=>button.disabled=working||!auth.admin||callbacks.locked());
     }
