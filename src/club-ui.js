@@ -1,4 +1,4 @@
-function createCasinoClub(roulette, sound) {
+function createCasinoClub(roulette) {
     'use strict';
     let browserStorage;
     try { browserStorage = window.localStorage; } catch { /* Session mode is supported. */ }
@@ -8,7 +8,7 @@ function createCasinoClub(roulette, sound) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, slotTimer, displayedSlotBalance = null;
+    let view = 'roulette', toastTimer, lucky;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -34,7 +34,7 @@ function createCasinoClub(roulette, sound) {
         $('club-user').disabled = viewLocked();
         $('transfer-user').replaceChildren(...engine.data.users.filter(p => p.id !== u.id).map(option));
         if ([...$('transfer-user').options].some(o => o.value === selectedRecipient)) $('transfer-user').value = selectedRecipient;
-        $('club-wallet').textContent = `${fmt(displayedSlotBalance ?? u.balance)} ₵`;
+        $('club-wallet').textContent = `${fmt(lucky?.displayBalance ?? u.balance)} ₵`;
         $('bank-greeting').textContent = `${u.name}’s wallet & bank`;
         $('bank-wallet').textContent = fmt(u.balance);
         $('bank-debt').textContent = fmt(u.debt);
@@ -64,8 +64,7 @@ function createCasinoClub(roulette, sound) {
         $('club-ledger').replaceChildren(...entries);
         document.querySelectorAll('[data-idle-only]').forEach(el => { el.disabled = viewLocked(); });
         document.querySelectorAll('[data-view]').forEach(el => { el.disabled = viewLocked(); });
-        $('slot-spin').disabled = viewLocked();
-        $('slot-wager').disabled = busy();
+        lucky?.update(viewLocked());
         document.querySelectorAll('[data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
     }
     function refresh() { engine.save(); render(); }
@@ -73,6 +72,7 @@ function createCasinoClub(roulette, sound) {
         if (!['roulette', 'slots', 'bank'].includes(next)) return;
         if (viewLocked()) { toast('Finish the current spin before changing tables.', true); return; }
         view = next;
+        lucky.setVisible(view === 'slots');
         $('number-modal').classList.add('hidden'); $('number-modal').classList.remove('flex');
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
         document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === view)));
@@ -86,9 +86,7 @@ function createCasinoClub(roulette, sound) {
             if (viewLocked()) throw new Error('Finish the current spin before switching players.');
             engine.switchUser(id);
             updateBettingHUD(); renderHistoryRibbon(); renderNumberModalGrid(); hideBanner();
-            $('slot-result-title').textContent = 'Feeling lucky?';
-            $('slot-result-detail').textContent = `Playing as ${engine.active.name}. Choose your wager and spin.`;
-            document.querySelectorAll('.slot-reel').forEach(el => { el.dataset.symbol = '0'; el.firstElementChild.textContent = '7'; });
+            lucky.resetPlayer();
             toast(`Now playing as ${engine.active.name}.`);
         } catch (e) { render(); toast(e.message, true); }
     }
@@ -99,53 +97,12 @@ function createCasinoClub(roulette, sound) {
             return true;
         } catch (e) { toast(e.message, true); return false; }
     }
-    function spinSlots() {
-        let result;
-        try {
-            if (viewLocked()) throw new Error('Wait for the current spin to finish.');
-            result = engine.spinSlots(Number($('slot-wager').value));
-        } catch (e) { toast(e.message, true); return; }
-        // The complete financial result is saved before animation, so closing the page cannot lose a payout.
-        const ownerName = engine.active.name;
-        displayedSlotBalance = engine.active.balance - result.payout;
-        sound.init();
-        $('slot-cabinet').classList.remove('jackpot');
-        $('slot-result-title').textContent = 'Spinning…';
-        $('slot-result-detail').textContent = `${ownerName} · ${fmt(result.wager)} chips wagered`;
-        $('slot-spin').textContent = 'GOOD LUCK…';
-        const reels = [...document.querySelectorAll('.slot-reel')];
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const duration = reducedMotion ? 0 : 1900;
-        const start = performance.now();
-        reels.forEach(el => el.classList.add('spinning'));
-        render();
-        const drawSymbol = (el, index) => { el.dataset.symbol = String(index); el.firstElementChild.textContent = CasinoEngine.symbols[index]; };
-        function finish() {
-            clearInterval(slotTimer);
-            reels.forEach((el, i) => { el.classList.remove('spinning'); drawSymbol(el, result.reels[i]); });
-            $('slot-reels').setAttribute('aria-label', `Slot reels: ${result.reels.map(i => CasinoEngine.symbols[i]).join(', ')}`);
-            engine.lock = null;
-            displayedSlotBalance = null;
-            const signedNet = `${result.net >= 0 ? '+' : '−'}${fmt(Math.abs(result.net))}`;
-            $('slot-result-title').textContent = result.multiplier === 100 ? '777 JACKPOT!' : result.payout > 0 ? `WIN · ${fmt(result.payout)} CHIPS` : 'No match this spin';
-            $('slot-result-detail').textContent = `Wager ${fmt(result.wager)} · Returned ${fmt(result.payout)} · Net ${signedNet}`;
-            if (result.multiplier === 100) $('slot-cabinet').classList.add('jackpot');
-            if (result.payout) sound.playWinSound(result.multiplier === 100); else sound.playLoseSound();
-            $('slot-spin').textContent = `SPIN · ${$('slot-wager').value} CHIPS`;
-            updateBettingHUD();
-        }
-        if (reducedMotion) finish();
-        else slotTimer = setInterval(() => {
-            const elapsed = performance.now() - start;
-            reels.forEach((el, i) => {
-                if (elapsed >= 850 + i * 450) {
-                    if (el.classList.contains('spinning')) { el.classList.remove('spinning'); drawSymbol(el, result.reels[i]); sound.playPocketClick(0.4); }
-                } else drawSymbol(el, Math.floor(Math.random() * 6));
-            });
-            if (elapsed >= duration) finish();
-        }, 65);
-    }
     function init() {
+        lucky = createLucky777(engine, {
+            locked: viewLocked,
+            changed: () => updateBettingHUD(),
+            notify: toast
+        });
         document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
         document.querySelectorAll('[data-go-bank]').forEach(b => b.addEventListener('click', () => setView('bank')));
         $('club-user').addEventListener('change', e => switchPlayer(e.target.value));
@@ -162,11 +119,9 @@ function createCasinoClub(roulette, sound) {
             e.preventDefault();
             if (transact(() => engine.addUser($('player-name').value), 'Player added with 1,000 starter chips.')) {
                 $('player-form').reset(); renderHistoryRibbon(); renderNumberModalGrid(); hideBanner();
-                $('slot-result-title').textContent = 'Feeling lucky?'; $('slot-result-detail').textContent = `Playing as ${engine.active.name}.`;
+                lucky.resetPlayer();
             }
         });
-        $('slot-spin').addEventListener('click', spinSlots);
-        $('slot-wager').addEventListener('change', () => { $('slot-spin').textContent = `SPIN · ${$('slot-wager').value} CHIPS`; });
         $('reset-chips-btn').textContent = 'Bank';
         $('reset-chips-btn').title = 'Borrow chips or repay your bank debt';
         $('reset-chips-btn').addEventListener('click', () => setView('bank'));

@@ -4,8 +4,9 @@
     const KEY = 'roulette-club-v1';
     const LIMIT = 5000;
     const MAX = 1000000000;
-    const symbols = ['7', 'BAR', '★', '🔔', '🍋', '🍒'];
-    const triples = [100, 30, 20, 12, 8, 5];
+    const symbols = ['7', '💎', 'BAR', '🔔', '🍀', '🍒'];
+    const triples = [50, 25, 20, 15, 10, 5];
+    const reelStrip = [0, 5, 3, 1, 4, 2, 0, 5, 4, 3, 5, 1];
     const emptyBets = () => ({ RED: 0, BLACK: 0, GREEN: 0, ODD: 0, EVEN: 0, numbers: {} });
     const sumBets = bets => ['RED', 'BLACK', 'GREEN', 'ODD', 'EVEN'].reduce((s, k) => s + bets[k], 0)
         + Object.values(bets.numbers).reduce((s, v) => s + v, 0);
@@ -128,24 +129,28 @@
             this.save();
         }
         slotResult(reels, wager) {
-            if (!Array.isArray(reels) || reels.length !== 3 || !reels.every(i => integer(i, 5))) throw new Error('Invalid reels.');
-            const multiplier = reels.every(i => i === reels[0]) ? triples[reels[0]] : reels.filter(i => i === 5).length === 2 ? 2 : 0;
-            return { reels, multiplier, wager, payout: wager * multiplier, net: wager * (multiplier - 1) };
+            if (!Array.isArray(reels) || reels.length !== 3 || !reels.every(i => integer(i, 11))) throw new Error('Invalid reels.');
+            const landed = reels.map(i => reelStrip[i]);
+            const cherries = landed.filter(i => i === 5).length;
+            const sevens = landed.filter(i => i === 0).length;
+            const multiplier = landed.every(i => i === landed[0]) ? triples[landed[0]]
+                : sevens === 2 ? 5 : cherries === 2 ? 2 : cherries === 1 ? 1 : 0;
+            return { reels: [...reels], symbols: landed, multiplier, wager, payout: wager * multiplier, net: wager * (multiplier - 1) };
         }
-        spinSlots(value) {
+        spinSlots(value, forcedIndices = null) {
             this.ensureIdle();
             const n = this.amount(value), u = this.active;
-            if (![10, 25, 50, 100, 500].includes(n)) throw new Error('Choose a listed slot wager.');
+            if (n < 10 || n > 100 || n % 10 !== 0) throw new Error('Choose a wager from 10 to 100 in steps of 10.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips for this spin.');
-            if (u.balance + n * 99 > MAX) throw new Error('Your wallet is too close to its chip limit.');
-            const reels = Array.from({ length: 3 }, () => {
+            if (u.balance + n * 49 > MAX) throw new Error('Your wallet is too close to its chip limit.');
+            const reels = forcedIndices === null ? Array.from({ length: 3 }, () => {
                 const roll = this.random();
                 if (!(roll >= 0 && roll < 1)) throw new Error('Could not generate a valid spin. Try again.');
-                return Math.floor(roll * symbols.length);
-            });
+                return Math.floor(roll * reelStrip.length);
+            }) : forcedIndices;
             const result = this.slotResult(reels, n);
             u.balance += result.net;
-            this.record(`${u.name} · 777: wager ${n.toLocaleString()}, payout ${result.payout.toLocaleString()} (${reels.map(i => symbols[i]).join(' / ')}).`);
+            this.record(`${u.name} · 777${forcedIndices === null ? '' : ' (forced jackpot)'}: wager ${n.toLocaleString()}, payout ${result.payout.toLocaleString()} (${result.symbols.map(i => symbols[i]).join(' / ')}).`);
             this.lock = 'slots';
             this.save();
             return result;
@@ -153,6 +158,7 @@
     }
     CasinoEngine.symbols = symbols;
     CasinoEngine.triples = triples;
+    CasinoEngine.reelStrip = reelStrip;
     CasinoEngine.creditLimit = LIMIT;
     CasinoEngine.emptyBets = emptyBets;
     CasinoEngine.sumBets = sumBets;

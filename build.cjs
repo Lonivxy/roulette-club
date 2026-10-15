@@ -3,17 +3,19 @@ const path = require('node:path');
 const base = __dirname;
 const read = name => fs.readFileSync(path.join(base, 'src', name), 'utf8').replace(/\r\n/g, '\n');
 let html = read('roulette.html');
+const lucky = require('./build-lucky.cjs')(read('lucky-reference.html'));
 function replace(from, to) {
     if (!html.includes(from)) throw new Error('Missing integration marker: ' + from.slice(0, 80));
     html = html.replace(from, to);
 }
 replace('<title>3D Low-Poly Roulette</title>', '<title>Roulette Club · 777 & Player Bank</title>\n    <meta name="description" content="Play 3D roulette and Lucky 777 with local player wallets, chip transfers, and a house bank.">');
-replace('    </style>', read('club.css') + '\n    </style>');
-replace('<body>', '<body>\n' + read('club.html'));
+replace('</head>', '<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">\n</head>');
+replace('    </style>', read('club.css') + lucky.css + read('lucky-layout.css') + '\n    </style>');
+replace('<body>', '<body>\n' + read('club.html').replace('<!-- LUCKY_777 -->', lucky.html));
 replace('class="fixed top-0 left-0 right-0 z-20', 'class="club-roulette-hud fixed top-0 left-0 right-0 z-20');
 replace('<div class="fixed bottom-0', '<div id="roulette-controls" class="fixed bottom-0');
-replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
-replace('        // Helper to determine pocket color', '        const casino = createCasinoClub(state, sfx);\n        casino.init();\n        updateBettingHUD();\n        renderHistoryRibbon();\n\n        // Helper to determine pocket color');
+replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + lucky.script + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
+replace('        // Helper to determine pocket color', '        const casino = createCasinoClub(state);\n        casino.init();\n        updateBettingHUD();\n        renderHistoryRibbon();\n\n        // Helper to determine pocket color');
 replace("            sfx.init();\n            hideBanner();", "            if (casino.busy() || casino.view !== 'roulette') return;\n            casino.engine.lock = 'roulette';\n            casino.engine.active.pendingRoulette = true;\n            casino.refresh();\n            sfx.init();\n            hideBanner();");
 replace('            state.balance += totalPayout;', "            state.balance += totalPayout;\n            casino.engine.lock = null;\n            casino.engine.active.pendingRoulette = false;\n            casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);");
 replace("            document.getElementById('balance-display').textContent = state.balance.toLocaleString();", "            casino.refresh();\n            document.getElementById('balance-display').textContent = state.balance.toLocaleString();");

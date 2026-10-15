@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LUCKY 777 — 2.5D/3D Arcade Slot Machine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Chakra+Petch:wght@600;700&display=swap');
+
+    :root {
+      --cabinet-rot-x: 8deg;
+      --cabinet-rot-y: 0deg;
+      --cabinet-rot-z: 0deg;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% 25%, rgba(220, 38, 38, 0.22), transparent 55%),
+        radial-gradient(circle at 80% 80%, rgba(234, 179, 8, 0.15), transparent 50%),
+        radial-gradient(circle at 20% 80%, rgba(147, 51, 234, 0.18), transparent 50%),
+        #07060c;
+      font-family: 'Chakra Petch', sans-serif;
+      color: #fff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Subtle 3D perspective floor grid */
+    .arcade-floor {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(234, 179, 8, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(234, 179, 8, 0.06) 1px, transparent 1px);
+      background-size: 48px 48px;
+      transform: perspective(600px) rotateX(68deg) translateY(220px) scale(2.4);
+      transform-origin: center bottom;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 3D Scene Container */
+    .scene-viewport {
+      perspective: 1300px;
+      perspective-origin: 50% 44%;
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    /* 3D Slot Cabinet */
+    .slot-cabinet {
+      position: relative;
+      width: 500px;
+      transform-style: preserve-3d;
+      transform:
+        rotateX(var(--cabinet-rot-x))
+        rotateY(var(--cabinet-rot-y))
+        rotateZ(var(--cabinet-rot-z));
+      transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* 3D Side Depth Walls of Cabinet */
+    .cabinet-body {
+      position: relative;
+      background: linear-gradient(180deg, #2a0912 0%, #16060b 55%, #0d0307 100%);
+      border: 4px solid #f59e0b;
+      border-radius: 28px 28px 18px 18px;
+      padding: 20px 24px 24px;
+      box-shadow:
+        0 30px 70px rgba(0, 0, 0, 0.85),
+        0 0 40px rgba(245, 158, 11, 0.22),
+        inset 0 2px 12px rgba(255, 255, 255, 0.25),
+        inset 0 -12px 28px rgba(0, 0, 0, 0.8);
+      transform-style: preserve-3d;
+    }
+
+    /* Left & Right 3D Extruded Sides */
+    .cabinet-side-left,
+    .cabinet-side-right {
+      position: absolute;
+      top: 14px;
+      bottom: 14px;
+      width: 56px;
+      background: linear-gradient(180deg, #450a0a 0%, #1c0508 50%, #090204 100%);
+      border: 2px solid #b45309;
+      pointer-events: none;
+    }
+
+    .cabinet-side-left {
+      left: 0;
+      transform-origin: left center;
+      transform: rotateY(-90deg);
+      border-radius: 10px;
+    }
+
+    .cabinet-side-right {
+      right: 0;
+      transform-origin: right center;
+      transform: rotateY(90deg);
+      border-radius: 10px;
+    }
+
+    /* Top Marquee Crown (Extruded forward in Z) */
+    .marquee-crown {
+      position: relative;
+      transform: translateZ(26px);
+      background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 50%, #450a0a 100%);
+      border: 3px solid #fde047;
+      border-radius: 20px;
+      padding: 12px 16px;
+      text-align: center;
+      box-shadow:
+        0 12px 24px rgba(0, 0, 0, 0.65),
+        0 0 28px rgba(250, 204, 21, 0.35),
+        inset 0 0 18px rgba(254, 240, 138, 0.35);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .marquee-title {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      letter-spacing: 0.14em;
+      color: #fef08a;
+      text-shadow:
+        0 0 10px #facc15,
+        0 0 22px #ef4444,
+        0 3px 0 #713f12;
+      line-height: 1.05;
+    }
+
+    /* Chase Lights */
+    .bulb-strip {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      padding: 0 6px;
+    }
+
+    .bulb {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #fef08a;
+      box-shadow: 0 0 8px #facc15, 0 0 14px #f59e0b;
+      animation: bulbChase 0.8s infinite alternate;
+    }
+
+    .bulb:nth-child(even) {
+      animation-delay: 0.4s;
+      background: #f87171;
+      box-shadow: 0 0 8px #ef4444, 0 0 14px #dc2626;
+    }
+
+    @keyframes bulbChase {
+      0% { opacity: 0.3; transform: scale(0.82); }
+      100% { opacity: 1; transform: scale(1.15); }
+    }
+
+    /* Recessed 3D Reel Housing */
+    .reel-window-frame {
+      position: relative;
+      height: 230px;
+      background: #050508;
+      border: 5px solid #d97706;
+      border-radius: 18px;
+      box-shadow:
+        inset 0 18px 34px rgba(0, 0, 0, 0.95),
+        inset 0 -18px 34px rgba(0, 0, 0, 0.95),
+        0 4px 0 rgba(254, 240, 138, 0.35);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 12px 16px;
+      overflow: hidden;
+      transform: translateZ(8px);
+      transform-style: preserve-3d;
+    }
+
+    /* Curved Glass Overlay + Depth Shading */
+    .reel-glass-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 25;
+      background:
+        linear-gradient(
+          180deg,
+          rgba(0, 0, 0, 0.88) 0%,
+          rgba(0, 0, 0, 0.18) 24%,
+          rgba(255, 255, 255, 0.07) 47%,
+          rgba(255, 255, 255, 0.0) 52%,
+          rgba(0, 0, 0, 0.22) 76%,
+          rgba(0, 0, 0, 0.9) 100%
+        );
+    }
+
+    /* Neon Payline Laser across the center */
+    .payline-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 4px;
+      transform: translateY(-50%);
+      background: linear-gradient(90deg, #ef4444, #fde047, #ef4444);
+      box-shadow: 0 0 12px #ef4444, 0 0 24px #facc15;
+      opacity: 0.65;
+      z-index: 26;
+      pointer-events: none;
+      transition: all 0.25s ease;
+    }
+
+    .payline-bar.win-active {
+      height: 6px;
+      opacity: 1;
+      background: linear-gradient(90deg, #22c55e, #fef08a, #22c55e);
+      box-shadow: 0 0 18px #4ade80, 0 0 36px #facc15;
+      animation: paylinePulse 0.35s infinite alternate;
+    }
+
+    @keyframes paylinePulse {
+      from { transform: translateY(-50%) scaleY(1); }
+      to { transform: translateY(-50%) scaleY(1.9); }
+    }
+
+    .payline-badge {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 27;
+      background: #dc2626;
+      border: 2px solid #fde047;
+      color: #fef08a;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 2px 5px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+    }
+
+    .payline-badge.left { left: 4px; }
+    .payline-badge.right { right: 4px; }
+
+    /* Individual Reel Slot Column */
+    .reel-column {
+      position: relative;
+      height: 100%;
+      perspective: 900px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #1e1b2e 0%, #09080f 100%);
+      border-left: 2px solid rgba(250, 204, 21, 0.22);
+      border-right: 2px solid rgba(250, 204, 21, 0.22);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    /* 3D Cylindrical Drum (12 facets x 30deg = 360deg) */
+    .reel-cylinder {
+      position: relative;
+      width: 100%;
+      height: 72px;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+
+    .reel-facet {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #fffbeb 0%, #fde68a 50%, #f59e0b 100%);
+      border-top: 2px solid rgba(255, 255, 255, 0.85);
+      border-bottom: 2px solid rgba(146, 64, 14, 0.65);
+      border-radius: 8px;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.6);
+    }
+
+    .reel-facet.lucky-seven-tile {
+      background: linear-gradient(180deg, #fef08a 0%, #facc15 45%, #dc2626 100%);
+      border-color: #fef9c3;
+    }
+
+    .reel-facet.win-highlight {
+      animation: tileWinGlow 0.45s infinite alternate;
+    }
+
+    @keyframes tileWinGlow {
+      from {
+        filter: brightness(1.05);
+        box-shadow: inset 0 0 12px #fef08a, 0 0 18px #facc15;
+      }
+      to {
+        filter: brightness(1.35);
+        box-shadow: inset 0 0 26px #ffffff, 0 0 28px #22c55e;
+      }
+    }
+
+    .symbol-glyph {
+      font-size: 2.25rem;
+      line-height: 1;
+      filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.35));
+    }
+
+    .symbol-seven {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 2.45rem;
+      line-height: 1;
+      background: linear-gradient(180deg, #ffffff 0%, #fef08a 30%, #ef4444 75%, #7f1d1d 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 2px 0 #450a0a) drop-shadow(0 0 8px rgba(250, 204, 21, 0.7));
+    }
+
+    .symbol-bar {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1.25rem;
+      letter-spacing: 0.08em;
+      color: #fef08a;
+      background: linear-gradient(180deg, #312e81 0%, #111827 100%);
+      border: 2px solid #facc15;
+      padding: 3px 10px;
+      border-radius: 6px;
+      box-shadow: 0 3px 0 #000;
+    }
+
+    .symbol-tag {
+      font-size: 0.58rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #451a03;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    /* Digital Readout LED Panel */
+    .led-dashboard {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+      transform: translateZ(18px);
+    }
+
+    .led-box {
+      background: #090a10;
+      border: 2px solid #b45309;
+      border-radius: 12px;
+      padding: 7px 10px;
+      text-align: center;
+      box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.9);
+    }
+
+    .led-label {
+      font-size: 0.65rem;
+      color: #fbbf24;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .led-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #4ade80;
+      text-shadow: 0 0 10px rgba(74, 222, 128, 0.6);
+    }
+
+    .led-value.gold {
+      color: #facc15;
+      text-shadow: 0 0 10px rgba(250, 204, 21, 0.65);
+    }
+
+    /* 3D Protruding Control Deck */
+    .control-deck {
+      margin-top: 16px;
+      background: linear-gradient(180deg, #3f121d 0%, #1f080e 100%);
+      border: 3px solid #f59e0b;
+      border-radius: 16px;
+      padding: 14px;
+      transform: translateZ(34px) rotateX(10deg);
+      box-shadow:
+        0 16px 26px rgba(0, 0, 0, 0.75),
+        inset 0 2px 6px rgba(255, 255, 255, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    /* 3D Arcade Push Buttons */
+    .arcade-btn {
+      position: relative;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s;
+      text-transform: uppercase;
+    }
+
+    .arcade-btn:active:not(:disabled) {
+      transform: translateY(4px);
+    }
+
+    .arcade-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-bet {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+      color: #fff;
+      padding: 10px 12px;
+      font-size: 0.75rem;
+      border: 2px solid #bae6fd;
+      box-shadow: 0 5px 0 #075985, 0 8px 14px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-max {
+      background: linear-gradient(180deg, #c084fc 0%, #7e22ce 100%);
+      color: #fff;
+      padding: 10px 12px;
+      font-size: 0.72rem;
+      border: 2px solid #e9d5ff;
+      box-shadow: 0 5px 0 #4c1d95, 0 8px 14px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-spin {
+      flex: 1;
+      background: linear-gradient(180deg, #fde047 0%, #eab308 45%, #dc2626 100%);
+      color: #450a0a;
+      padding: 12px 18px;
+      font-size: 1.05rem;
+      letter-spacing: 0.08em;
+      border: 2px solid #fef9c3;
+      box-shadow:
+        0 6px 0 #7f1d1d,
+        0 0 22px rgba(250, 204, 21, 0.55),
+        0 10px 18px rgba(0, 0, 0, 0.65);
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .btn-spin:hover:not(:disabled) {
+      filter: brightness(1.1);
+    }
+
+    /* 3D Mechanical Pull Lever on Right Side of Cabinet */
+    .lever-assembly {
+      position: absolute;
+      right: -58px;
+      top: 190px;
+      width: 58px;
+      height: 170px;
+      transform-style: preserve-3d;
+      transform: translateZ(6px);
+      cursor: pointer;
+    }
+
+    .lever-base {
+      position: absolute;
+      left: 0;
+      bottom: 24px;
+      width: 28px;
+      height: 64px;
+      background: linear-gradient(90deg, #78350f, #f59e0b, #78350f);
+      border: 2px solid #fde68a;
+      border-radius: 0 14px 14px 0;
+      box-shadow: 4px 8px 16px rgba(0, 0, 0, 0.7);
+    }
+
+    .lever-pivot {
+      position: absolute;
+      left: 16px;
+      bottom: 52px;
+      width: 14px;
+      height: 120px;
+      transform-origin: bottom center;
+      transform-style: preserve-3d;
+      transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .lever-pivot.pulled {
+      transform: rotateX(-68deg);
+      transition: transform 0.16s ease-in;
+    }
+
+    .lever-shaft {
+      width: 12px;
+      height: 100px;
+      margin: 0 auto;
+      background: linear-gradient(90deg, #9ca3af, #f9fafb, #4b5563);
+      border-radius: 999px;
+      box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.6);
+    }
+
+    .lever-knob {
+      position: absolute;
+      top: -26px;
+      left: 50%;
+      width: 44px;
+      height: 44px;
+      transform: translateX(-50%) translateZ(8px);
+      border-radius: 50%;
+      background: radial-gradient(circle at 32% 30%, #fca5a5 0%, #ef4444 45%, #7f1d1d 100%);
+      border: 2px solid #fde047;
+      box-shadow:
+        0 6px 14px rgba(0, 0, 0, 0.75),
+        0 0 18px rgba(239, 68, 68, 0.75);
+    }
+
+    /* Status Ticker Banner */
+    .status-banner {
+      margin-top: 12px;
+      transform: translateZ(20px);
+      background: rgba(9, 10, 16, 0.9);
+      border: 1px solid rgba(250, 204, 21, 0.4);
+      border-radius: 10px;
+      padding: 6px 12px;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fde047;
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Paytable Pills */
+    .paytable-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 12px;
+      transform: translateZ(14px);
+    }
+
+    .pay-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(250, 204, 21, 0.25);
+      border-radius: 8px;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+    }
+
+    /* FX Coin Canvas */
+    #fxCanvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 40;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="arcade-floor"></div>
+  <canvas id="fxCanvas"></canvas>
+
+  <!-- Top Camera & Utility Bar -->
+  <div class="relative z-30 flex flex-wrap items-center justify-center gap-2 mb-3 px-4">
+    <div class="flex items-center bg-black/60 border border-amber-500/40 rounded-full p-1 gap-1 text-xs">
+      <button id="camTiltBtn" onclick="setCameraMode('tilt')" class="px-3 py-1 rounded-full bg-amber-500 text-black font-bold transition">
+        3D Mouse Tilt
+      </button>
+      <button id="camIsoBtn" onclick="setCameraMode('iso')" class="px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition">
+        3D Isometric
+      </button>
+      <button id="camFlatBtn" onclick="setCameraMode('flat')" class="px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition">
+        2.5D Front
+      </button>
+    </div>
+
+    <button onclick="forceLucky777()" class="px-3 py-1.5 rounded-full bg-red-600/80 hover:bg-red-500 border border-yellow-300/60 text-xs font-bold text-yellow-200 shadow-lg transition">
+      ⚡ Force 777 Jackpot
+    </button>
+
+    <button id="soundToggleBtn" onclick="toggleMute()" class="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold transition">
+      🔊 Audio: ON
+    </button>
+  </div>
+
+  <!-- 3D Viewport -->
+  <div class="scene-viewport" id="sceneViewport">
+    <div class="slot-cabinet" id="slotCabinet">
+      <div class="cabinet-body">
+        <div class="cabinet-side-left"></div>
+        <div class="cabinet-side-right"></div>
+
+        <!-- 3D Mechanical Lever -->
+        <div class="lever-assembly" id="leverAssembly" title="Pull Lever or Press Spacebar!">
+          <div class="lever-base"></div>
+          <div class="lever-pivot" id="leverPivot">
+            <div class="lever-knob"></div>
+            <div class="lever-shaft"></div>
+          </div>
+        </div>
+
+        <!-- Top Marquee -->
+        <div class="marquee-crown">
+          <div class="text-[10px] tracking-[0.28em] text-yellow-200/90 font-bold uppercase">
+            Triple Cylinder 3D Deluxe
+          </div>
+          <div class="marquee-title">LUCKY 777</div>
+          <div class="bulb-strip">
+            <span class="bulb"></span><span class="bulb"></span><span class="bulb"></span>
+            <span class="bulb"></span><span class="bulb"></span><span class="bulb"></span>
+            <span class="bulb"></span><span class="bulb"></span><span class="bulb"></span>
+            <span class="bulb"></span><span class="bulb"></span><span class="bulb"></span>
+          </div>
+        </div>
+
+        <!-- 3D Cylindrical Reel Window -->
+        <div class="reel-window-frame">
+          <div class="payline-badge left">PAY</div>
+          <div class="payline-badge right">LINE</div>
+          <div class="payline-bar" id="paylineBar"></div>
+          <div class="reel-glass-overlay"></div>
+
+          <div class="reel-column">
+            <div class="reel-cylinder" id="reel0"></div>
+          </div>
+          <div class="reel-column">
+            <div class="reel-cylinder" id="reel1"></div>
+          </div>
+          <div class="reel-column">
+            <div class="reel-cylinder" id="reel2"></div>
+          </div>
+        </div>
+
+        <!-- Payout Mini Reference -->
+        <div class="paytable-grid">
+          <div class="pay-pill"><span><b class="text-red-400">777</b> Jackpot</span><span class="text-yellow-300 font-bold">50×</span></div>
+          <div class="pay-pill"><span>💎💎💎 Diamond</span><span class="text-yellow-300 font-bold">25×</span></div>
+          <div class="pay-pill"><span>BAR×3 Triple</span><span class="text-yellow-300 font-bold">20×</span></div>
+          <div class="pay-pill"><span>🔔🔔🔔 Bell</span><span class="text-yellow-300 font-bold">15×</span></div>
+          <div class="pay-pill"><span>🍀🍀🍀 Clover</span><span class="text-yellow-300 font-bold">10×</span></div>
+          <div class="pay-pill"><span>🍒 Any 1 / 2 / 3</span><span class="text-yellow-300 font-bold">1×/2×/5×</span></div>
+        </div>
+
+        <!-- Digital LED Readouts -->
+        <div class="led-dashboard">
+          <div class="led-box">
+            <div class="led-label">Credits</div>
+            <div class="led-value" id="creditsDisplay">1,000</div>
+          </div>
+          <div class="led-box">
+            <div class="led-label">Bet</div>
+            <div class="led-value gold" id="betDisplay">20</div>
+          </div>
+          <div class="led-box">
+            <div class="led-label">Last Win</div>
+            <div class="led-value gold" id="winDisplay">0</div>
+          </div>
+        </div>
+
+        <!-- Status Ticker -->
+        <div class="status-banner" id="statusBanner">
+          Pull the 3D lever, press SPACE, or hit SPIN to roll!
+        </div>
+
+        <!-- 3D Protruding Button Deck -->
+        <div class="control-deck">
+          <button class="arcade-btn btn-bet" id="betDownBtn" onclick="changeBet(-10)">Bet -</button>
+          <button class="arcade-btn btn-bet" id="betUpBtn" onclick="changeBet(10)">Bet +</button>
+          <button class="arcade-btn btn-max" id="maxBetBtn" onclick="setMaxBet()">Max (100)</button>
+          <button class="arcade-btn btn-spin" id="spinBtn" onclick="triggerSpin()">SPIN 777</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       1. SYMBOL DEFINITIONS & 12-FACET CYLINDER REEL STRIP
+       ========================================================== */
+    const SYMBOLS = {
+      SEVEN:   { id: 'SEVEN',   label: 'LUCKY 7', mult3: 50, render: () => `<div class="symbol-seven">7</div><div class="symbol-tag">JACKPOT</div>` },
+      DIAMOND: { id: 'DIAMOND', label: 'DIAMOND', mult3: 25, render: () => `<div class="symbol-glyph">💎</div><div class="symbol-tag">25×</div>` },
+      BAR:     { id: 'BAR',     label: 'BAR',     mult3: 20, render: () => `<div class="symbol-bar">BAR</div><div class="symbol-tag">20×</div>` },
+      BELL:    { id: 'BELL',    label: 'BELL',    mult3: 15, render: () => `<div class="symbol-glyph">🔔</div><div class="symbol-tag">15×</div>` },
+      CLOVER:  { id: 'CLOVER',  label: 'CLOVER',  mult3: 10, render: () => `<div class="symbol-glyph">🍀</div><div class="symbol-tag">10×</div>` },
+      CHERRY:  { id: 'CHERRY',  label: 'CHERRY',  mult3: 5,  render: () => `<div class="symbol-glyph">🍒</div><div class="symbol-tag">CHERRY</div>` }
+    };
+
+    // 12 facets per 3D cylinder (30 deg per facet, radius = 134px)
+    const REEL_STRIP = [
+      SYMBOLS.SEVEN,
+      SYMBOLS.CHERRY,
+      SYMBOLS.BELL,
+      SYMBOLS.DIAMOND,
+      SYMBOLS.CLOVER,
+      SYMBOLS.BAR,
+      SYMBOLS.SEVEN,
+      SYMBOLS.CHERRY,
+      SYMBOLS.CLOVER,
+      SYMBOLS.BELL,
+      SYMBOLS.CHERRY,
+      SYMBOLS.DIAMOND
+    ];
+
+    const FACET_COUNT = REEL_STRIP.length; // 12
+    const STEP_DEG = 360 / FACET_COUNT;    // 30 deg
+    const CYLINDER_RADIUS = 134;           // px
+
+    /* ==========================================================
+       2. STATE & INITIALIZATION
+       ========================================================== */
+    let credits = 1000;
+    let currentBet = 20;
+    let isSpinning = false;
+    let soundMuted = false;
+    let cameraMode = 'tilt';
+
+    // Track current rotation angle (degrees) and landed index for each of the 3 reels
+    const reelStates = [
+      { el: null, angle: 0, targetIndex: 0 },
+      { el: null, angle: 0, targetIndex: 0 },
+      { el: null, angle: 0, targetIndex: 0 }
+    ];
+
+    function buildCylindricalReels() {
+      for (let r = 0; r < 3; r++) {
+        const container = document.getElementById(`reel${r}`);
+        reelStates[r].el = container;
+        container.innerHTML = '';
+
+        REEL_STRIP.forEach((sym, idx) => {
+          const facet = document.createElement('div');
+          facet.className = `reel-facet ${sym.id === 'SEVEN' ? 'lucky-seven-tile' : ''}`;
+          facet.dataset.index = idx;
+          // Position each facet on the 3D cylinder ring
+          facet.style.transform = `rotateX(${idx * STEP_DEG}deg) translateZ(${CYLINDER_RADIUS}px)`;
+          facet.innerHTML = sym.render();
+          container.appendChild(facet);
+        });
+
+        // Start on 7-7-7 for an iconic initial display
+        reelStates[r].angle = 0;
+        reelStates[r].el.style.transform = `rotateX(0deg)`;
+      }
+    }
+
+    /* ==========================================================
+       3. WEB AUDIO SYNTHESIZER (NO EXTERNAL ASSETS NEEDED)
+       ========================================================== */
+    let audioCtx = null;
+    function getAudio() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playTone(freq, type = 'triangle', duration = 0.08, gainLevel = 0.12) {
+      if (soundMuted) return;
+      try {
+        const ctx = getAudio();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(gainLevel, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playLeverSound() {
+      playTone(150, 'sawtooth', 0.12, 0.18);
+      setTimeout(() => playTone(95, 'square', 0.1, 0.16), 70);
+    }
+
+    function playReelStopSound(reelIdx) {
+      playTone(180 + reelIdx * 65, 'triangle', 0.14, 0.24);
+    }
+
+    function playWinFanfare(isJackpot) {
+      if (soundMuted) return;
+      const notes = isJackpot
+        ? [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5, 1318.5, 1567.98]
+        : [440, 554.37, 659.25, 880];
+      notes.forEach((freq, i) => {
+        setTimeout(() => playTone(freq, 'Byte' ? 'square' : 'triangle', 0.18, 0.16), i * 95);
+      });
+    }
+
+    function toggleMute() {
+      soundMuted = !soundMuted;
+      document.getElementById('soundToggleBtn').textContent = soundMuted ? '🔇 Audio: OFF' : '🔊 Audio: ON';
+    }
+
+    /* ==========================================================
+       4. SPIN PHYSICS & OUTCOME RESOLUTION
+       ========================================================== */
+    function changeBet(delta) {
+      if (isSpinning) return;
+      currentBet = Math.max(10, Math.min(100, currentBet + delta));
+      if (currentBet > credits && credits >= 10) currentBet = Math.floor(credits / 10) * 10;
+      playTone(420, 'sine', 0.05, 0.08);
+      updateHUD();
+    }
+
+    function setMaxBet() {
+      if (isSpinning) return;
+      currentBet = Math.min(100, Math.max(10, Math.floor(credits / 10) * 10));
+      playTone(620, 'sine', 0.08, 0.1);
+      updateHUD();
+    }
+
+    function forceLucky777() {
+      if (isSpinning) return;
+      // Indices 0 and 6 on REEL_STRIP are both SEVEN
+      triggerSpin([0, 6, 0]);
+    }
+
+    function triggerSpin(forcedIndices = null) {
+      if (isSpinning) return;
+
+      // Refill credits automatically if broke
+      if (credits < currentBet) {
+        credits = 1000;
+        setStatus('🎁 Free Arcade House Refill: +1,000 Credits!');
+        updateHUD();
+      }
+
+      isSpinning = true;
+      credits -= currentBet;
+      document.getElementById('winDisplay').textContent = '0';
+      document.getElementById('paylineBar').classList.remove('win-active');
+      clearFacetHighlights();
+      updateHUD();
+      setButtonsDisabled(true);
+
+      // Animate 3D lever pull
+      const leverPivot = document.getElementById('leverPivot');
+      leverPivot.classList.add('pulled');
+      playLeverSound();
+      setTimeout(() => leverPivot.classList.remove('pulled'), 280);
+
+      setStatus('🎰 Reels spinning... Good luck!');
+
+      // Choose target facet index (0..11) for each of the 3 reels
+      const chosenIndices = forcedIndices || [
+        Math.floor(Math.random() * FACET_COUNT),
+        Math.floor(Math.random() * FACET_COUNT),
+        Math.floor(Math.random() * FACET_COUNT)
+      ];
+
+      const spinDurations = [1400, 1950, 2550];
+      const extraRotations = [5, 7, 9];
+
+      reelStates.forEach((state, rIdx) => {
+        const targetIndex = chosenIndices[rIdx];
+        state.targetIndex = targetIndex;
+
+        const startAngle = state.angle;
+        // Align to next full negative 360 rotation so the cylinder spins downward smoothly
+        const baseFullTurns = Math.floor(startAngle / 360) * 360;
+        const targetAngle = baseFullTurns - (extraRotations[rIdx] * 360) - (targetIndex * STEP_DEG);
+
+        const duration = spinDurations[rIdx];
+        const startTime = performance.now();
+        let lastTickStep = Math.floor(startAngle / STEP_DEG);
+
+        function animateReel(now) {
+          const elapsed = now - startTime;
+          const t = Math.min(1, elapsed / duration);
+
+          // Custom easing with slight wind-up and realistic mechanical overshoot snap
+          let eased;
+          if (t < 0.08) {
+            // Slight upward wind-up before spinning down
+            const wt = t / 0.08;
+            eased = -0.012 * Math.sin(wt * Math.PI);
+          } else {
+            const st = (t - 0.08) / 0.92;
+            const c1 = 1.45;
+            const c3 = c1 + 1;
+            eased = 1 + c3 * Math.pow(st - 1, 3) + c1 * Math.pow(st - 1, 2);
+          }
+
+          const currentAngle = startAngle + (targetAngle - startAngle) * eased;
+          state.el.style.transform = `rotateX(${currentAngle.toFixed(2)}deg)`;
+
+          // Emit mechanical click sound every 30deg facet pass
+          const currentTickStep = Math.floor(currentAngle / STEP_DEG);
+          if (currentTickStep !== lastTickStep && t < 0.94) {
+            lastTickStep = currentTickStep;
+            playTone(260 + (rIdx * 40), 'sine', 0.025, 0.045);
+          }
+
+          if (t < 1) {
+            requestAnimationFrame(animateReel);
+          } else {
+            state.angle = targetAngle;
+            state.el.style.transform = `rotateX(${targetAngle}deg)`;
+            playReelStopSound(rIdx);
+
+            if (rIdx === 2) {
+              evaluateSpinOutcome(chosenIndices);
+            }
+          }
+        }
+
+        requestAnimationFrame(animateReel);
+      });
+    }
+
+    function evaluateSpinOutcome(indices) {
+      const landed = indices.map(i => REEL_STRIP[i]);
+      const [s0, s1, s2] = landed;
+
+      let winMultiplier = 0;
+      let winMessage = '';
+      let winningReels = [];
+
+      // 1. All 3 identical symbols
+      if (s0.id === s1.id && s1.id === s2.id) {
+        winMultiplier = s0.mult3;
+        winningReels = [0, 1, 2];
+        if (s0.id === 'SEVEN') {
+          winMessage = `🔥 GRAND 777 JACKPOT! ${winMultiplier}× PAYOUT! 🔥`;
+        } else {
+          winMessage = `✨ TRIPLE ${s0.label}! ${winMultiplier}× WIN! ✨`;
+        }
+      }
+      // 2. Two Lucky 7s
+      else if (landed.filter(s => s.id === 'SEVEN').length === 2) {
+        winMultiplier = 5;
+        winningReels = landed.map((s, idx) => s.id === 'SEVEN' ? idx : -1).filter(i => i !== -1);
+        winMessage = `⚡ DOUBLE LUCKY 7s! 5× Payout!`;
+      }
+      // 3. Cherry combinations (1 or 2 cherries anywhere on payline)
+      else {
+        const cherryCount = landed.filter(s => s.id === 'CHERRY').length;
+        if (cherryCount === 2) {
+          winMultiplier = 2;
+          winningReels = landed.map((s, idx) => s.id === 'CHERRY' ? idx : -1).filter(i => i !== -1);
+          winMessage = `🍒 Double Cherries! 2× Payout!`;
+        } else if (cherryCount === 1) {
+          winMultiplier = 1;
+          winningReels = landed.map((s, idx) => s.id === 'CHERRY' ? idx : -1).filter(i => i !== -1);
+          winMessage = `🍒 Single Cherry! 1× Bet Returned!`;
+        }
+      }
+
+      if (winMultiplier > 0) {
+        const payout = currentBet * winMultiplier;
+        credits += payout;
+        document.getElementById('winDisplay').textContent = payout.toLocaleString();
+        document.getElementById('paylineBar').classList.add('win-active');
+        setStatus(winMessage);
+
+        // Highlight winning facets on the 3D cylinder
+        winningReels.forEach(rIdx => {
+          const facetIdx = indices[rIdx];
+          const facetEl = reelStates[rIdx].el.querySelector(`[data-index="${facetIdx}"]`);
+          if (facetEl) facetEl.classList.add('win-highlight');
+        });
+
+        const isBigWin = winMultiplier >= 15;
+        playWinFanfare(isBigWin);
+        spawnCoins(isBigWin ? 90 : 32);
+      } else {
+        setStatus(`No match (${s0.label} · ${s1.label} · ${s2.label}) — Spin again!`);
+      }
+
+      updateHUD();
+      setButtonsDisabled(false);
+      isSpinning = false;
+    }
+
+    function clearFacetHighlights() {
+      document.querySelectorAll('.reel-facet.win-highlight').forEach(el => {
+        el.classList.remove('win-highlight');
+      });
+    }
+
+    function updateHUD() {
+      document.getElementById('creditsDisplay').textContent = credits.toLocaleString();
+      document.getElementById('betDisplay').textContent = currentBet.toLocaleString();
+    }
+
+    function setStatus(text) {
+      document.getElementById('statusBanner').textContent = text;
+    }
+
+    function setButtonsDisabled(disabled) {
+      ['spinBtn', 'betDownBtn', 'betUpBtn', 'maxBetBtn'].forEach(id => {
+        document.getElementById(id).disabled = disabled;
+      });
+    }
+
+    /* ==========================================================
+       5. 2.5D / 3D CAMERA PERSPECTIVE & MOUSE PARALLAX
+       ========================================================== */
+    function setCameraMode(mode) {
+      cameraMode = mode;
+      const root = document.documentElement;
+      const modes = ['tilt', 'iso', 'flat'];
+      modes.forEach(m => {
+        const btn = document.getElementById(
+          m === 'tilt' ? 'camTiltBtn' : m === 'iso' ? 'camIsoBtn' : 'camFlatBtn'
+        );
+        btn.className = m === mode
+          ? 'px-3 py-1 rounded-full bg-amber-500 text-black font-bold transition'
+          : 'px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition';
+      });
+
+      if (mode === 'iso') {
+        root.style.setProperty('--cabinet-rot-x', '12deg');
+        root.style.setProperty('--cabinet-rot-y', '-22deg');
+      } else if (mode === 'flat') {
+        root.style.setProperty('--cabinet-rot-x', '0deg');
+        root.style.setProperty('--cabinet-rot-y', '0deg');
+      } else {
+        root.style.setProperty('--cabinet-rot-x', '8deg');
+        root.style.setProperty('--cabinet-rot-y', '0deg');
+      }
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      if (cameraMode !== 'tilt') return;
+      const nx = (e.clientX / window.innerWidth - 0.5) * 2;  // -1 to 1
+      const ny = (e.clientY / window.innerHeight - 0.5) * 2; // -1 to 1
+      const rotY = nx * 16;
+      const rotX = 6 - ny * 11;
+      document.documentElement.style.setProperty('--cabinet-rot-x', `${rotX.toFixed(2)}deg`);
+      document.documentElement.style.setProperty('--cabinet-rot-y', `${rotY.toFixed(2)}deg`);
+    });
+
+    /* ==========================================================
+       6. 2.5D GOLD COIN FOUNTAIN (HTML5 CANVAS)
+       ========================================================== */
+    const canvas = document.getElementById('fxCanvas');
+    const ctx = canvas.getContext('2d');
+    let coins = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function spawnCoins(count) {
+      const originX = window.innerWidth / 2;
+      const originY = window.innerHeight * 0.48;
+      for (let i = 0; i < count; i++) {
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.35;
+        const speed = 7 + Math.random() * 11;
+        coins.push({
+          x: originX + (Math.random() - 0.5) * 160,
+          y: originY,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 4,
+          radius: 9 + Math.random() * 6,
+          spinPhase: Math.random() * Math.PI * 2,
+          spinSpeed: 0.14 + Math.random() * 0.18,
+          alpha: 1
+        });
+      }
+    }
+
+    function renderCoins() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = coins.length - 1; i >= 0; i--) {
+        const c = coins[i];
+        c.x += c.vx;
+        c.y += c.vy;
+        c.vy += 0.42; // Gravity
+        c.spinPhase += c.spinSpeed;
+
+        if (c.y > canvas.height + 40) {
+          coins.splice(i, 1);
+          continue;
+        }
+
+        const scaleX = Math.cos(c.spinPhase);
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.scale(scaleX, 1);
+
+        // Outer gold coin rim
+        ctx.beginPath();
+        ctx.arc(0, 0, c.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#facc15';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#b45309';
+        ctx.stroke();
+
+        // Inner star/emblem shine
+        ctx.beginPath();
+        ctx.arc(0, 0, c.radius * 0.62, 0, Math.PI * 2);
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+      requestAnimationFrame(renderCoins);
+    }
+    requestAnimationFrame(renderCoins);
+
+    /* ==========================================================
+       7. INPUT LISTENERS (LEVER CLICK & SPACEBAR)
+       ========================================================== */
+    document.getElementById('leverAssembly').addEventListener('click', () => triggerSpin());
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        triggerSpin();
+      }
+    });
+
+    // Boot up machine
+    buildCylindricalReels();
+    updateHUD();
+  </script>
+</body>
+</html>

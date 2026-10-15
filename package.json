@@ -4,6 +4,6 @@
   "private": true,
   "scripts": {
     "build": "node build.cjs",
-    "test": "node --test test/club.test.cjs"
+    "test": "node --test test/*.test.cjs"
   }
 }

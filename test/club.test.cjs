@@ -51,22 +51,46 @@ test('new players validate names and table capacity', () => {
     for (let i = 3; i < 12; i++) { const u = e.addUser('Player ' + i); assert.equal(u.balance, 1000); }
     assert.equal(e.data.users.length, 12); assert.throws(() => e.addUser('Player 13'));
 });
-test('777 jackpot returns 100 times stake once and persists before animation ends', () => {
+test('new 777 jackpot returns 50 times stake once and persists before animation ends', () => {
     const storage = memory(), e = new Engine(storage, () => 0);
     const r = e.spinSlots(10);
-    assert.equal(r.multiplier, 100); assert.equal(r.payout, 1000); assert.equal(r.net, 990);
-    assert.equal(e.active.balance, 1990); assert.equal(e.lock, 'slots');
+    assert.equal(r.multiplier, 50); assert.equal(r.payout, 500); assert.equal(r.net, 490);
+    assert.equal(e.active.balance, 1490); assert.equal(e.lock, 'slots');
     const restored = new Engine(storage);
-    assert.equal(restored.active.balance, 1990); assert.equal(restored.data.ledger.length, 1);
+    assert.equal(restored.active.balance, 1490); assert.equal(restored.data.ledger.length, 1);
 });
-test('all 216 possible reel combinations obey the advertised payout table', () => {
+test('all 1,728 facet combinations obey the supplied cabinet payout rules', () => {
     const e = engine(); let total = 0;
-    for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) for (let c = 0; c < 6; c++) {
+    const strip = ['7', 'CHERRY', 'BELL', 'DIAMOND', 'CLOVER', 'BAR', '7', 'CHERRY', 'CLOVER', 'BELL', 'CHERRY', 'DIAMOND'];
+    const payouts = { '7': 50, DIAMOND: 25, BAR: 20, BELL: 15, CLOVER: 10, CHERRY: 5 };
+    for (let a = 0; a < 12; a++) for (let b = 0; b < 12; b++) for (let c = 0; c < 12; c++) {
         const r = e.slotResult([a, b, c], 10);
-        const expected = a === b && b === c ? [100, 30, 20, 12, 8, 5][a] : [a, b, c].filter(i => i === 5).length === 2 ? 2 : 0;
+        const landed = [a, b, c].map(i => strip[i]);
+        const cherries = landed.filter(s => s === 'CHERRY').length;
+        const expected = landed.every(s => s === landed[0]) ? payouts[landed[0]]
+            : landed.filter(s => s === '7').length === 2 ? 5 : cherries === 2 ? 2 : cherries === 1 ? 1 : 0;
         assert.equal(r.payout, expected * 10); assert.equal(r.net, r.payout - 10); total += r.payout;
     }
-    assert.equal(total, 2050);
+    assert.equal(total, 27340);
+});
+test('Force 777 uses the shared wallet and cannot bypass funds or spin locks', () => {
+    const e = engine(() => { throw new Error('Forced spin should not roll random facets'); });
+    const result = e.spinSlots(20, [0, 6, 0]);
+    assert.equal(result.payout, 1000); assert.equal(e.active.balance, 1980);
+    assert.match(e.data.ledger[0].text, /forced jackpot/);
+    assert.throws(() => e.spinSlots(20, [0, 6, 0]), /current spin/);
+    e.lock = null; e.active.balance = 5;
+    assert.throws(() => e.spinSlots(10, [0, 6, 0]), /enough chips/);
+    assert.equal(e.active.balance, 5);
+});
+test('10–100 step wagers and invalid facet positions are validated before mutation', () => {
+    for (const n of [10,20,30,40,50,60,70,80,90,100]) {
+        const e = engine(() => 0); assert.equal(e.spinSlots(n).wager, n);
+    }
+    const e = engine(() => 0), snapshot = JSON.stringify(e.data);
+    for (const n of [5,15,25,110,500]) assert.throws(() => e.spinSlots(n));
+    for (const reels of [[0,6,12], [0,6,-1], [0,6], [0,6,1.5]]) assert.throws(() => e.spinSlots(20, reels));
+    assert.equal(JSON.stringify(e.data), snapshot);
 });
 test('losing spin debits only its stake and insufficient or invalid wagers are atomic', () => {
     let i = 0; const e = engine(() => [0.01, 0.2, 0.4][i++ % 3]);
@@ -99,4 +123,8 @@ test('compiled page scripts parse and IDs are unique', () => {
     const ids = [...html.matchAll(/\bid="([^"\s]+)"/g)].map(m => m[1]);
     assert.equal(new Set(ids).size, ids.length);
     assert.ok(!html.includes('state.balance = 1000;'));
+    assert.ok(!html.includes('Free Arcade House Refill'));
+    assert.ok(!html.includes('onclick='));
+    assert.ok(html.includes('createLucky777'));
+    assert.ok(!html.includes('function spinSlots()'));
 });

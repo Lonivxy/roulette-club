@@ -1,0 +1,47 @@
+#slots-view {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 22px 70px 40px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    font-family: 'Chakra Petch', sans-serif;
+}
+#slots-view .arcade-floor { position: absolute; }
+#slots-view .scene-viewport { flex: none; width: 100%; max-width: 680px; }
+#slots-view .slot-cabinet { flex: none; }
+#slots-view .lucky-extra-pay { margin-top: 6px; transform: translateZ(14px); }
+#slots-view .lucky-footer { position: relative; z-index: 11; max-width: 520px; text-align: center; margin: 20px auto 0; font-size: 11px; color: #c7b7ac; }
+#slots-view .lucky-footer p { margin: 0 0 12px; }
+#slots-view #leverAssembly[aria-disabled="true"] { cursor: wait; }
+#slots-view .status-banner { overflow-wrap: anywhere; }
+#slots-view .led-value { font-size: clamp(12px, 2.5vw, 19px); overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+    #slots-view { padding: 18px 0 32px; }
+    #slots-view .scene-viewport { padding: 10px 42px 10px 8px; }
+    #slots-view .slot-cabinet { width: min(500px, calc(100vw - 68px)); }
+    #slots-view .cabinet-body { padding: 15px 12px 18px; }
+    #slots-view .marquee-title { font-size: clamp(22px, 6vw, 32px); }
+    #slots-view .lever-assembly { right: -43px; width: 43px; }
+    #slots-view .lever-knob { width: 36px; height: 36px; }
+    #slots-view .reel-window-frame { gap: 5px; padding: 12px 6px; }
+    #slots-view .symbol-bar { padding: 3px 4px; font-size: 14px; }
+    #slots-view .symbol-seven { font-size: 32px; }
+    #slots-view .symbol-glyph { font-size: 30px; }
+    #slots-view .paytable-grid { grid-template-columns: repeat(2, 1fr); }
+    #slots-view .pay-pill { padding: 4px; font-size: 10px; }
+    #slots-view .control-deck { padding: 10px; flex-wrap: wrap; }
+    #slots-view .btn-bet, #slots-view .btn-max { flex: 1; padding: 10px 5px; font-size: 10px; }
+    #slots-view .btn-spin { flex: 1 1 100%; }
+    #slots-view .led-dashboard { gap: 5px; }
+    #slots-view .led-box { padding: 8px 4px; }
+    #slots-view .led-label { font-size: 9px; }
+    #slots-view .status-banner { font-size: 11px; }
+    #slots-view .lucky-footer { padding: 0 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #slots-view .bulb, #slots-view .payline-bar.win-active, #slots-view .reel-facet.win-highlight { animation: none; }
+    #slots-view .slot-cabinet, #slots-view .lever-pivot { transition: none; }
+}
