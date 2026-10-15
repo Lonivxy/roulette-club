@@ -130,7 +130,7 @@ test('unavailable or malformed storage remains usable with a visible warning', (
 test('compiled page scripts parse and IDs are unique', () => {
     const html = fs.readFileSync(path.join(__dirname, '../dist/index.html'), 'utf8');
     const inline = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].filter(m => m[1].trim());
-    assert.equal(inline.length, 2); inline.forEach(m => new vm.Script(m[1]));
+    assert.equal(inline.length, 4); inline.forEach(m => new vm.Script(m[1]));
     const ids = [...html.matchAll(/\bid="([^"\s]+)"/g)].map(m => m[1]);
     assert.equal(new Set(ids).size, ids.length);
     assert.ok(!html.includes('state.balance = 1000;'));

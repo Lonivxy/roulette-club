@@ -47,8 +47,8 @@ function createEconomyUI(engine, callbacks) {
             row.append(element('span', `${CasinoEngine.cards[card.type].name} · 绑定 ${fmt(card.stake)}${armed ? ' · 已装备' : ''}`));
             const button = element('button', armed ? '取消装备' : '装备并前往 777', 'club-action secondary');
             button.type = 'button'; button.disabled = locked || (!armed && card.stake > user.balance);
-            button.addEventListener('click', () => {
-                if (callbacks.transact(() => engine.armCard(armed ? null : card.id), armed ? '已取消装备。' : '已装备，下一次 777 旋转使用此卡。') && !armed) callbacks.playSlots();
+            button.addEventListener('click', async () => {
+                if (await callbacks.transact(() => engine.armCard(armed ? null : card.id), armed ? '已取消装备。' : '已装备，下一次 777 旋转使用此卡。') && !armed) callbacks.playSlots();
             });
             row.append(button); return row;
         });
@@ -60,13 +60,13 @@ function createEconomyUI(engine, callbacks) {
         tick();
     }
     $('market-stake').addEventListener('input', render);
-    $('shark-borrow-form').addEventListener('submit', event => {
+    $('shark-borrow-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (callbacks.transact(() => engine.borrowShark(Number($('shark-borrow-amount').value)), '高利贷已到账，欠款及计息进度已保存。')) $('shark-borrow-form').reset();
+        if (await callbacks.transact(() => engine.borrowShark(Number($('shark-borrow-amount').value)), '高利贷已到账，欠款及计息进度已保存。')) $('shark-borrow-form').reset();
     });
-    $('shark-repay-form').addEventListener('submit', event => {
+    $('shark-repay-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (callbacks.transact(() => engine.repayShark(Number($('shark-repay-amount').value)), '高利贷还款已入账。')) $('shark-repay-form').reset();
+        if (await callbacks.transact(() => engine.repayShark(Number($('shark-repay-amount').value)), '高利贷还款已入账。')) $('shark-repay-form').reset();
     });
     $('lucky-card-cancel').addEventListener('click', () => callbacks.transact(() => engine.armCard(null), '已取消装备。'));
     return { render, tick };

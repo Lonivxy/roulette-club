@@ -1,0 +1,6 @@
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+export const state = sqliteTable('casino_state', { id: text('id').primaryKey(), snapshot: text('snapshot').notNull(), revision: integer('revision').notNull(), lastOp: text('last_op').notNull() });
+export const operations = sqliteTable('casino_operations', { id: text('id').primaryKey(), actor: text('actor').notNull(), payload: text('payload').notNull(), response: text('response').notNull(), createdAt: integer('created_at').notNull() });
+export const credential = sqliteTable('admin_credential', { id: text('id').primaryKey(), actor: text('actor').notNull(), credentialId: text('credential_id').notNull(), publicKey: text('public_key').notNull(), counter: integer('counter').notNull(), transports: text('transports').notNull() });
+export const challenges = sqliteTable('admin_challenges', { id: text('id').primaryKey(), actor: text('actor').notNull(), kind: text('kind').notNull(), challenge: text('challenge').notNull(), expiresAt: integer('expires_at').notNull() });
+export const sessions = sqliteTable('admin_sessions', { id: text('id').primaryKey(), actor: text('actor').notNull(), expiresAt: integer('expires_at').notNull() });

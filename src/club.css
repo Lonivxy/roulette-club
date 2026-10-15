@@ -1,5 +1,12 @@
 /* Club navigation and account surfaces */
 :root { color-scheme: dark; }
+#club-player-tabs[hidden], #admin-panel[hidden], #admin-login[hidden], #admin-legacy[hidden], #admin-enroll[hidden], #admin-signin[hidden] { display: none !important; }
+.club-primary-links { display: flex; gap: 12px; font-size: 11px; font-weight: 800; color: #e8cd8e; }
+.club-primary-links a { padding: 8px 0; }
+#admin-view .club-card { margin-top: 18px; }
+#club-migration-note { position: fixed; z-index: 55; bottom: 16px; left: 16px; right: 16px; max-width: 700px; margin: auto; border: 1px solid #d9bb71; border-radius: 12px; padding: 16px; background: #20182bf2; color: #ffe4a4; font-size: 13px; line-height: 1.7; }
+#club-migration-note[hidden] { display: none; }
+#club-migration-note a { text-decoration: underline; font-weight: 800; }
 .loan-term-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .peer-loan-row { padding: 18px 0; border-top: 1px solid #ffffff18; }
 .peer-loan-row h4 { font-size: 14px; font-weight: 800; color: #f3d18b; margin: 0 0 8px; }

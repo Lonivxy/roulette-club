@@ -1,6 +1,6 @@
 <nav id="club-nav" aria-label="Casino navigation">
-    <div class="club-wordmark">ROULETTE CLUB<small>PLAY CHIPS · LOCAL PROFILES</small></div>
-    <div class="club-tabs" role="tablist" aria-label="Games and bank">
+    <div class="club-wordmark">PLAYER<small>游戏 · 赠送 · 借贷 · 银行</small></div>
+    <div id="club-player-tabs" class="club-tabs" role="tablist" aria-label="Games and bank">
         <button id="tab-roulette" type="button" role="tab" aria-controls="canvas-container" aria-selected="true" data-view="roulette">Roulette</button>
         <button id="tab-slots" type="button" role="tab" aria-controls="slots-view" aria-selected="false" data-view="slots">777 Slots</button>
         <button id="tab-blackjack" type="button" role="tab" aria-controls="blackjack-view" aria-selected="false" data-view="blackjack">Blackjack</button>
@@ -8,14 +8,16 @@
         <button id="tab-players" type="button" role="tab" aria-controls="players-view" aria-selected="false" data-view="players">玩家</button>
         <button id="tab-market" type="button" role="tab" aria-controls="market-view" aria-selected="false" data-view="market">黑市商人</button>
     </div>
-    <div class="club-account"><span class="club-wallet" id="club-wallet">1,000 ₵</span><label for="club-user" class="sr-only">Active player</label><select id="club-user" class="club-select" aria-label="Active player"></select></div>
+    <div class="club-primary-links"><a href="/player">PLAYER</a><a href="/admin">ADMIN</a></div><div class="club-account"><span class="club-wallet" id="club-wallet">1,000 ₵</span><label for="club-user" class="sr-only">Active player</label><select id="club-user" class="club-select" aria-label="Active player"></select></div>
 </nav>
+<div id="club-migration-note" hidden>检测到此前的本地玩家存档。请先<a href="/admin">进入 ADMIN，设置通行密钥并导入</a>，以保留原有余额、欠款和卡包。</div>
 <!-- LUCKY_777 -->
 <!-- BLACKJACK -->
 <!-- MARKET -->
+<!-- ADMIN -->
 <section id="players-view" class="club-view" role="tabpanel" aria-labelledby="tab-players" hidden>
   <div class="club-shell"><div class="club-eyebrow">Players · 玩家</div><h2 id="players-greeting" class="club-title">玩家往来</h2>
-    <p class="club-muted">赠送直接到账；借款由出借人设定条款、借款人确认后才转账。双方通过右上角切换本地玩家分别操作，数据保存在当前浏览器。</p>
+    <p class="club-muted">赠送直接到账；借款由出借人设定条款、借款人确认后才转账。双方通过右上角选择玩家分别操作；账户变更由服务器保存。玩家管理仅在 ADMIN 入口开放。</p>
     <dl class="club-stat-row"><div><dt>钱包</dt><dd id="players-wallet">0</dd></div><div><dt>欠其他玩家</dt><dd id="peer-debt">0</dd></div><div><dt>应收借款</dt><dd id="peer-receivable">0</dd></div></dl>
     <div class="club-grid">
       <form id="transfer-form" class="club-card"><h3>赠送筹码</h3><p class="club-muted">这是赠送，不产生欠款，确认赠送后立即转入对方钱包。</p>
@@ -30,9 +32,7 @@
         <div class="club-actions"><button type="submit" class="club-action" data-idle-only>发出借款协议</button></div>
       </form>
       <div class="club-card club-wide"><h3>借款协议与还款</h3><p class="club-muted">切换到借款人后可接受或拒绝。生效后按现实时间复利计息，离线也计息；还款直接进入出借人钱包。</p><div id="peer-loan-list" aria-live="polite"></div></div>
-      <div class="club-card club-wide"><h3>玩家管理</h3><p class="club-muted">可添加、切换和删除玩家。删除会移除该玩家的钱包和卡包；存在欠款、借出款、待确认协议或游戏下注时，需要先处理完成。</p><div class="club-account-list" id="club-player-list"></div>
-        <form id="player-form"><label class="club-field" for="player-name">新玩家名称 · 最多 12 人</label><input id="player-name" class="club-input" type="text" maxlength="24" required placeholder="玩家名称"><div class="club-actions"><button type="submit" class="club-action secondary" data-idle-only>添加玩家</button></div></form>
-      </div>
+
     </div>
   </div>
 </section>

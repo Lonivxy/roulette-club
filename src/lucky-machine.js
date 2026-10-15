@@ -1275,11 +1275,11 @@ function createLuckyMachine(engine, callbacks, host) {
       }
     });
 
-    function QuickPullAndSpin(jackpot = false) {
+    async function QuickPullAndSpin(jackpot = false) {
       if (isSpinning || !visible || callbacks.locked()) return;
       armPullRatio = 1.0;
       syncArmVisuals(1.0);
-      executeReelSpin(jackpot);
+      return executeReelSpin(jackpot);
     }
 
     /* ============================================================================
@@ -1338,14 +1338,15 @@ function createLuckyMachine(engine, callbacks, host) {
       callbacks.market?.();
     }
 
-    function executeReelSpin(jackpot = false) {
+    async function executeReelSpin(jackpot = false) {
       if (isSpinning || !visible || callbacks.locked()) return;
 
       const wager = getActiveBetAmount();
-      try { spinResult = engine.spinSlots(wager, null, { allIn: wager === engine.active.balance, jackpot }); }
+      try { spinResult = await engine.spinSlots(wager, null, { allIn: wager === engine.active.balance, jackpot }); }
       catch (error) { callbacks.notify(error.message, true); return; }
       const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
       isSpinning = true;
+      if (engine.remote) engine.lock = 'slots';
       visualBalance = engine.active.balance - spinResult.payout;
       credits = visualBalance;
       lastWinAmount = 0;

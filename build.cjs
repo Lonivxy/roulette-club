@@ -11,10 +11,10 @@ function replace(from, to) {
 replace('<title>3D Low-Poly Roulette</title>', '<title>Roulette Club · Blackjack, 777 & Bank</title>\n    <meta name="description" content="Play 3D blackjack, roulette and Lucky 777 with local player wallets, chip transfers, and a house bank.">');
 replace('</head>', '<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">\n</head>');
 replace('    </style>', read('club.css') + lucky.css + read('lucky-layout.css') + read('blackjack.css') + '\n    </style>');
-replace('<body>', '<body>\n' + read('club.html').replace('<!-- LUCKY_777 -->', lucky.html).replace('<!-- BLACKJACK -->', read('blackjack.html')).replace('<!-- MARKET -->', read('market.html')));
+replace('<body>', '<body>\n' + read('club.html').replace('<!-- LUCKY_777 -->', lucky.html).replace('<!-- BLACKJACK -->', read('blackjack.html')).replace('<!-- MARKET -->', read('market.html')).replace('<!-- ADMIN -->', read('admin.html')));
 replace('class="fixed top-0 left-0 right-0 z-20', 'class="club-roulette-hud fixed top-0 left-0 right-0 z-20');
 replace('<div class="fixed bottom-0', '<div id="roulette-controls" class="fixed bottom-0');
-replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + read('custom-bet.js') + '\n' + read('jackpot-shortcut.js') + '\n' + read('lucky-input.js') + '\n' + lucky.script + '\n' + read('blackjack-core.js') + '\n' + read('blackjack-scene.js') + '\n' + read('blackjack-ui.js') + '\n' + read('economy-ui.js') + '\n' + read('player-loans-ui.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
+replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + read('custom-bet.js') + '\n' + read('jackpot-shortcut.js') + '\n' + read('lucky-input.js') + '\n' + lucky.script + '\n' + read('blackjack-core.js') + '\n' + read('remote-engine.js') + '\n' + read('blackjack-scene.js') + '\n' + read('blackjack-ui.js') + '\n' + read('economy-ui.js') + '\n' + read('player-loans-ui.js') + '\n' + read('admin-ui.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
 replace('        // Helper to determine pocket color', '        const casino = createCasinoClub(state);\n        casino.init();\n        updateBettingHUD();\n        renderHistoryRibbon();\n\n        // Helper to determine pocket color');
 replace("            sfx.init();\n            hideBanner();", "            if (casino.busy() || casino.view !== 'roulette') return;\n            casino.engine.lock = 'roulette';\n            casino.engine.active.pendingRoulette = true;\n            casino.refresh();\n            sfx.init();\n            hideBanner();");
 replace('            state.balance += totalPayout;', "            state.balance += totalPayout;\n            casino.engine.lock = null;\n            casino.engine.active.pendingRoulette = false;\n            if (totalWagered > 0) casino.engine.completeRound();\n            casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);");
@@ -70,6 +70,51 @@ replace("            if (state.selectedChip === 'ALL') return state.balance;", `
 replace("                    state.selectedChip = val === 'ALL' ? 'ALL' : Number(val);", `                    state.selectedChip = val === 'ALL' ? 'ALL' : Number(val);
                     state.customBet = false;
                     document.getElementById('roulette-custom-selected').textContent = 'Selected: ' + (val === 'ALL' ? 'All In' : Number(val).toLocaleString()) + ' chips per bet';`);
+// Hosted roulette places and settles wagers through the authoritative server.
+replace('        function placeCategoryBet(category) {', `        function placeCategoryBet(category) {
+            if (casino.engine.remote) {
+                if (casino.busy()) return;
+                const amount = getChipIncrement(); if (amount <= 0) return;
+                casino.engine.rouletteBet(category, amount).then(() => { sfx.playChipSound(); updateBettingHUD(); }).catch(error => casino.toast(error.message,true)); return;
+            }`);
+replace('        function placeNumberBet(pocketNum) {', `        function placeNumberBet(pocketNum) {
+            if (casino.engine.remote) {
+                if (casino.busy()) return;
+                const amount = getChipIncrement(); if (amount <= 0) return;
+                casino.engine.rouletteBet(pocketNum, amount).then(() => { sfx.playChipSound(); updateBettingHUD(); renderNumberModalGrid(); }).catch(error => casino.toast(error.message,true)); return;
+            }`);
+replace('        function clearAllBets() {', `        function clearAllBets() {
+            if (casino.engine.remote) { if(casino.busy())return; casino.engine.rouletteClear().then(() => {updateBettingHUD();renderNumberModalGrid();}).catch(error=>casino.toast(error.message,true)); return; }`);
+replace('        function rebetLast() {', `        function rebetLast() {
+            if (casino.engine.remote) { if(casino.busy())return; casino.engine.rouletteRebet().then(() => {updateBettingHUD();renderNumberModalGrid();}).catch(error=>casino.toast(error.message,true)); return; }`);
+replace('        function triggerSpin(powerNormalized = 0.75, direction = 1) {', `        function triggerSpin(powerNormalized = 0.75, direction = 1) {
+            if (casino.engine.remote && !state.remoteSpin) {
+                if(casino.busy())return;
+                casino.engine.rouletteSpin(Boolean(state.remoteJackpot)).then(result => {
+                    state.remoteJackpot = false; state.remoteSpin = result; state.forcedPocketIndex = result.index;
+                    triggerSpin(powerNormalized,direction);
+                }).catch(error => {state.remoteJackpot=false;casino.toast(error.message,true);});return;
+            }`);
+replace('        function forceRouletteJackpot() {', `        function forceRouletteJackpot() {
+            if (casino.engine.remote) {
+                if(!window.THREE || !renderer){casino.toast('The 3D wheel is unavailable.',true);return;}
+                if(casino.engine.animationLock==='roulette' && state.remoteSpin){
+                    casino.engine.rouletteRig(state.remoteSpin.roundId).then(result => {
+                        if(state.remoteSpin){state.remoteSpin=result;state.forcedPocketIndex=result.index;}
+                        else {state.settledPocketIndex=result.index;renderHistoryRibbon();updateBettingHUD();showResultBanner(result.number,result.number===0?'GREEN':result.number%2?'RED':'BLACK',result.wager,result.payout);}
+                    }).catch(error=>casino.toast(error.message,true));return;
+                }
+                if(casino.busy())return;
+                const prepared = getTotalActiveBet()>0 ? Promise.resolve() : casino.engine.rouletteBet(0,getChipIncrement());
+                prepared.then(() => {state.remoteJackpot=true;triggerSpin();}).catch(error=>casino.toast(error.message,true));return;
+            }`);
+replace('        function evaluateSpinOutcome(winningIndex) {', `        function evaluateSpinOutcome(winningIndex) {
+            if (casino.engine.remote && state.remoteSpin) {
+                const result=state.remoteSpin;state.remoteSpin=null;casino.engine.lock=null;casino.engine.active.pendingRoulette=false;
+                renderHistoryRibbon();updateBettingHUD();renderNumberModalGrid();
+                showResultBanner(result.number,result.number===0?'GREEN':result.number%2?'RED':'BLACK',result.wager,result.payout);
+                document.getElementById('hint-text').textContent='Spin complete!';return;
+            }`);
 fs.mkdirSync(path.join(base, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(base, 'dist', 'index.html'), html);
 fs.writeFileSync(path.join(base, '..', 'roulette.html'), html);

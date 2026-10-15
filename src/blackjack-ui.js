@@ -73,7 +73,7 @@ function createBlackjackTable(engine, callbacks) {
     function changed() { update(); callbacks.changed(); }
     function schedule(callback, delay) {
         if(timer!==null) clearTimeout(timer);
-        timer=setTimeout(()=>{timer=null;callback();},reduced.matches?0:delay);
+        timer=setTimeout(()=>{timer=null;return callback();},reduced.matches?0:delay);
     }
     function finishedMotion() {
         animating=false;
@@ -84,23 +84,23 @@ function createBlackjackTable(engine, callbacks) {
     function queueDealer() {
         if(!visible||timer!==null||game.round?.phase!=='dealer') return;
         animating=true; changed();
-        schedule(()=>{
-            try {game.dealerStep();tone(240,.05);changed();if(game.round.phase==='dealer') queueDealer();else schedule(finishedMotion,650);}
+        schedule(async()=>{
+            try {await game.dealerStep();tone(240,.05);changed();if(game.round.phase==='dealer') queueDealer();else schedule(finishedMotion,650);}
             catch(error) {animating=false;callbacks.notify(error.message,true);changed();}
         },800);
     }
-    function act(action) {
+    async function act(action) {
         if(!visible||animating) return;
         try {
-            if(action==='deal') game.start(wager()); else game[action]();
+            if(action==='deal') await game.start(wager()); else await game[action]();
             animating=true;tone(action==='deal'?160:260,.08);changed();
             schedule(finishedMotion,action==='deal'?1050:600);
         } catch(error) {callbacks.notify(error.message,true);update();}
     }
-    function forceJackpot() {
+    async function forceJackpot() {
         if (!visible || animating) { callbacks.notify('Wait for the cards to finish moving.', true); return; }
         try {
-            game.forceJackpot(wager());
+            await game.forceJackpot(wager());
             animating = true; tone(660, .12); changed();
             schedule(finishedMotion, 1050);
         } catch (error) { callbacks.notify(error.message, true); update(); }

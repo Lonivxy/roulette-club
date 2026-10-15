@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>/* SERVER_BOOTSTRAP */</script>
+<script>var ClubPasskeys=(()=>{var P=Object.defineProperty;var v=Object.getOwnPropertyDescriptor;var k=Object.getOwnPropertyNames;var L=Object.prototype.hasOwnProperty;var V=(e,t)=>{for(var r in t)P(e,r,{get:t[r],enumerable:!0})},G=(e,t,r,o)=>{if(t&&typeof t=="object"||typeof t=="function")for(let i of k(t))!L.call(e,i)&&i!==r&&P(e,i,{get:()=>t[i],enumerable:!(o=v(t,i))||o.enumerable});return e};var M=e=>G(P({},"__esModule",{value:!0}),e);var F={};V(F,{WebAuthnAbortService:()=>w,WebAuthnError:()=>n,_browserSupportsWebAuthnAutofillInternals:()=>C,_browserSupportsWebAuthnInternals:()=>U,_getBrowserCapabilitiesInternals:()=>D,base64URLStringToBuffer:()=>b,browserSupportsPasskeys:()=>z,browserSupportsWebAuthn:()=>u,browserSupportsWebAuthnAutofill:()=>O,bufferToBase64URLString:()=>a,getBrowserCapabilities:()=>N,platformAuthenticatorIsAvailable:()=>j,sendSignal:()=>$,startAuthentication:()=>H,startRegistration:()=>B});function a(e){let t=new Uint8Array(e),r="";for(let i of t)r+=String.fromCharCode(i);return btoa(r).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"")}function b(e){let t=e.replace(/-/g,"+").replace(/_/g,"/"),r=(4-t.length%4)%4,o=t.padEnd(t.length+r,"="),i=atob(o),c=new ArrayBuffer(i.length),f=new Uint8Array(c);for(let s=0;s<i.length;s++)f[s]=i.charCodeAt(s);return c}function u(){return U.stubThis(globalThis?.PublicKeyCredential!==void 0&&typeof globalThis.PublicKeyCredential=="function")}var U={stubThis:e=>e};function R(e){let{id:t}=e;return{...e,id:b(t),transports:e.transports,type:e.type}}function h(e){return e==="localhost"||/^((xn--[a-z0-9-]+|[a-z0-9]+(-[a-z0-9]+)*)\.)+([a-z]{2,}|xn--[a-z0-9-]+)$/i.test(e)}var n=class extends Error{constructor({message:t,code:r,cause:o,name:i}){super(t,{cause:o}),Object.defineProperty(this,"code",{enumerable:!0,configurable:!0,writable:!0,value:void 0}),this.name=i??o.name,this.code=r}};function x({error:e,options:t}){let{publicKey:r}=t;if(!r)throw Error("options was missing required publicKey property");if(e.name==="AbortError"){if(t.signal instanceof AbortSignal)return new n({message:"Registration ceremony was sent an abort signal",code:"ERROR_CEREMONY_ABORTED",cause:e})}else if(e.name==="ConstraintError"){if(r.authenticatorSelection?.requireResidentKey===!0)return new n({message:"Discoverable credentials were required but no available authenticator supported it",code:"ERROR_AUTHENTICATOR_MISSING_DISCOVERABLE_CREDENTIAL_SUPPORT",cause:e});if(t.mediation==="conditional"&&r.authenticatorSelection?.userVerification==="required")return new n({message:"User verification was required during automatic registration but it could not be performed",code:"ERROR_AUTO_REGISTER_USER_VERIFICATION_FAILURE",cause:e});if(r.authenticatorSelection?.userVerification==="required")return new n({message:"User verification was required but no available authenticator supported it",code:"ERROR_AUTHENTICATOR_MISSING_USER_VERIFICATION_SUPPORT",cause:e})}else{if(e.name==="InvalidStateError")return new n({message:"The authenticator was previously registered",code:"ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED",cause:e});if(e.name==="NotAllowedError")return new n({message:e.message,code:"ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY",cause:e});if(e.name==="NotSupportedError")return r.pubKeyCredParams.filter(i=>i.type==="public-key").length===0?new n({message:'No entry in pubKeyCredParams was of type "public-key"',code:"ERROR_MALFORMED_PUBKEYCREDPARAMS",cause:e}):new n({message:"No available authenticator supported any of the specified pubKeyCredParams algorithms",code:"ERROR_AUTHENTICATOR_NO_SUPPORTED_PUBKEYCREDPARAMS_ALG",cause:e});if(e.name==="SecurityError"){let o=globalThis.location.hostname;if(h(o)){if(r.rp.id!==o)return new n({message:`The RP ID "${r.rp.id}" is invalid for this domain`,code:"ERROR_INVALID_RP_ID",cause:e})}else return new n({message:`${globalThis.location.hostname} is an invalid domain`,code:"ERROR_INVALID_DOMAIN",cause:e})}else if(e.name==="TypeError"){if(r.user.id.byteLength<1||r.user.id.byteLength>64)return new n({message:"User ID was not between 1 and 64 characters",code:"ERROR_INVALID_USER_ID_LENGTH",cause:e})}else if(e.name==="UnknownError")return new n({message:"The authenticator was unable to process the specified options, or could not create a new credential",code:"ERROR_AUTHENTICATOR_GENERAL_ERROR",cause:e})}return e}var S=class{constructor(){Object.defineProperty(this,"controller",{enumerable:!0,configurable:!0,writable:!0,value:void 0})}createNewAbortSignal(){if(this.controller){let r=new Error("Cancelling existing WebAuthn API call for new one");r.name="AbortError",this.controller.abort(r)}let t=new AbortController;return this.controller=t,t.signal}cancelCeremony(){if(this.controller){let t=new Error("Manually cancelling existing WebAuthn API call");t.name="AbortError",this.controller.abort(t),this.controller=void 0}}},w=new S;var W=["cross-platform","platform"];function E(e){if(e&&!(W.indexOf(e)<0))return e}async function B(e){!e.optionsJSON&&e.challenge&&(console.warn("startRegistration() was not called correctly. It will try to continue with the provided options, but this call should be refactored to use the expected call structure instead. See https://simplewebauthn.dev/docs/packages/browser#typeerror-cannot-read-properties-of-undefined-reading-challenge for more information."),e={optionsJSON:e});let{optionsJSON:t,useAutoRegister:r=!1}=e;if(!u())throw new Error("WebAuthn is not supported in this browser");let o={...t,challenge:b(t.challenge),user:{...t.user,id:b(t.user.id)},excludeCredentials:t.excludeCredentials?.map(R)},i={};r&&(i.mediation="conditional"),i.publicKey=o,i.signal=w.createNewAbortSignal();let c;try{c=await navigator.credentials.create(i)}catch(d){throw x({error:d,options:i})}if(!c)throw new Error("Registration was not completed");let{id:f,rawId:s,response:l,type:T}=c,m;typeof l.getTransports=="function"&&(m=l.getTransports());let y;if(typeof l.getPublicKeyAlgorithm=="function")try{y=l.getPublicKeyAlgorithm()}catch(d){_("getPublicKeyAlgorithm()",d)}let g;if(typeof l.getPublicKey=="function")try{let d=l.getPublicKey();d!==null&&(g=a(d))}catch(d){_("getPublicKey()",d)}let A;if(typeof l.getAuthenticatorData=="function")try{A=a(l.getAuthenticatorData())}catch(d){_("getAuthenticatorData()",d)}return{id:f,rawId:a(s),response:{attestationObject:a(l.attestationObject),clientDataJSON:a(l.clientDataJSON),transports:m,publicKeyAlgorithm:y,publicKey:g,authenticatorData:A},type:T,clientExtensionResults:c.getClientExtensionResults(),authenticatorAttachment:E(c.authenticatorAttachment)}}function _(e,t){console.warn(`The browser extension that intercepted this WebAuthn API call incorrectly implemented ${e}. You should report this error to them.
+`,t)}function O(){if(!u())return C.stubThis(new Promise(t=>t(!1)));let e=globalThis.PublicKeyCredential;return e?.isConditionalMediationAvailable===void 0?C.stubThis(new Promise(t=>t(!1))):C.stubThis(e.isConditionalMediationAvailable())}var C={stubThis:e=>e};function K({error:e,options:t}){let{publicKey:r}=t;if(!r)throw Error("options was missing required publicKey property");if(e.name==="AbortError"){if(t.signal instanceof AbortSignal)return new n({message:"Authentication ceremony was sent an abort signal",code:"ERROR_CEREMONY_ABORTED",cause:e})}else{if(e.name==="NotAllowedError")return new n({message:e.message,code:"ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY",cause:e});if(e.name==="SecurityError"){let o=globalThis.location.hostname;if(h(o)){if(r.rpId!==o)return new n({message:`The RP ID "${r.rpId}" is invalid for this domain`,code:"ERROR_INVALID_RP_ID",cause:e})}else return new n({message:`${globalThis.location.hostname} is an invalid domain`,code:"ERROR_INVALID_DOMAIN",cause:e})}else if(e.name==="UnknownError")return new n({message:"The authenticator was unable to process the specified options, or could not create a new assertion signature",code:"ERROR_AUTHENTICATOR_GENERAL_ERROR",cause:e})}return e}async function H(e){!e.optionsJSON&&e.challenge&&(console.warn("startAuthentication() was not called correctly. It will try to continue with the provided options, but this call should be refactored to use the expected call structure instead. See https://simplewebauthn.dev/docs/packages/browser#typeerror-cannot-read-properties-of-undefined-reading-challenge for more information."),e={optionsJSON:e});let{optionsJSON:t,useBrowserAutofill:r=!1,verifyBrowserAutofillInput:o=!0}=e;if(!u())throw new Error("WebAuthn is not supported in this browser");let i;t.allowCredentials?.length!==0&&(i=t.allowCredentials?.map(R));let c={...t,challenge:b(t.challenge),allowCredentials:i},f={};if(r){if(!await O())throw Error("Browser does not support WebAuthn autofill");if(document.querySelectorAll("input[autocomplete$='webauthn']").length<1&&o)throw Error('No <input> with "webauthn" as the only or last value in its `autocomplete` attribute was detected');f.mediation="conditional",c.allowCredentials=[]}f.publicKey=c,f.signal=w.createNewAbortSignal();let s;try{s=await navigator.credentials.get(f)}catch(A){throw K({error:A,options:f})}if(!s)throw new Error("Authentication was not completed");let{id:l,rawId:T,response:m,type:y}=s,g;return m.userHandle&&(g=a(m.userHandle)),{id:l,rawId:a(T),response:{authenticatorData:a(m.authenticatorData),clientDataJSON:a(m.clientDataJSON),signature:a(m.signature),userHandle:g},type:y,clientExtensionResults:s.getClientExtensionResults(),authenticatorAttachment:E(s.authenticatorAttachment)}}function I({error:e,options:t}){if(e.name==="SecurityError"){let r=globalThis.location.hostname;return h(r)?new n({message:`The browser does not support Related Origins to enable signals for RP ID "${t.rpID}" on domain "${globalThis.location.hostname}"`,code:"ERROR_INVALID_RP_ID",cause:e}):new n({message:`"${globalThis.location.hostname}" is an invalid domain`,code:"ERROR_INVALID_DOMAIN",cause:e})}if(t.signalName==="unknownCredential"){if(e.name==="TypeError")return new n({message:"credentialID is an invalid base64url string",code:"ERROR_SIGNAL_INVALID_ARGUMENT",cause:e})}else if(t.signalName==="allAcceptedCredentials"){if(e.name==="TypeError")return new n({message:"userID, or an entry in allAcceptedCredentialIDs, is an invalid base64url string",code:"ERROR_SIGNAL_INVALID_ARGUMENT",cause:e})}else if(t.signalName==="currentUserDetails"&&e.name==="TypeError")return new n({message:"userID is an invalid base64url string",code:"ERROR_SIGNAL_INVALID_ARGUMENT",cause:e});return new n({message:e.message,code:"ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY",cause:e})}async function $(e){let{signalName:t}=e;if(t==="unknownCredential")return J(e);if(t==="allAcceptedCredentials")return q(e);if(t==="currentUserDetails")return Y(e);throw new Error(`Received unrecognized signalName "${e.signalName}"`)}async function J(e){let t=globalThis.PublicKeyCredential;if(typeof t.signalUnknownCredential!="function")throw new Error("This browser does not support PublicKeyCredential.signalUnknownCredential()");try{await t.signalUnknownCredential({rpId:e.rpID,credentialId:e.credentialID})}catch(r){throw I({error:r,options:e})}}async function q(e){let t=globalThis.PublicKeyCredential;if(typeof t.signalAllAcceptedCredentials!="function")throw new Error("This browser does not support PublicKeyCredential.signalAllAcceptedCredentials()");try{await t.signalAllAcceptedCredentials({rpId:e.rpID,userId:e.userID,allAcceptedCredentialIds:e.allAcceptedCredentialIDs})}catch(r){throw I({error:r,options:e})}}async function Y(e){let t=globalThis.PublicKeyCredential;if(typeof t.signalCurrentUserDetails!="function")throw new Error("This browser does not support PublicKeyCredential.signalCurrentUserDetails()");try{await t.signalCurrentUserDetails({rpId:e.rpID,userId:e.userID,name:e.userName,displayName:e.userDisplayName??""})}catch(r){throw I({error:r,options:e})}}async function N(){if(typeof PublicKeyCredential.getClientCapabilities=="function"){let e=await PublicKeyCredential.getClientCapabilities(),t=p(e.userVerifyingPlatformAuthenticator);t==="unknown"&&typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable=="function"&&(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()?t="supported":t="unsupported");let r=p(e.conditionalGet);return r==="unknown"&&typeof PublicKeyCredential.isConditionalMediationAvailable=="function"&&(await PublicKeyCredential.isConditionalMediationAvailable()?r="supported":r="unsupported"),D.stubThis({conditionalCreate:p(e.conditionalCreate),conditionalGet:r,hybridTransport:p(e.hybridTransport),passkeyPlatformAuthenticator:p(e.passkeyPlatformAuthenticator),userVerifyingPlatformAuthenticator:t,relatedOrigins:p(e.relatedOrigins),signalAllAcceptedCredentials:p(e.signalAllAcceptedCredentials),signalCurrentUserDetails:p(e.signalCurrentUserDetails),signalUnknownCredential:p(e.signalUnknownCredential)})}return D.stubThis({conditionalCreate:"unknown",conditionalGet:"unknown",hybridTransport:"unknown",passkeyPlatformAuthenticator:"unknown",userVerifyingPlatformAuthenticator:"unknown",relatedOrigins:"unknown",signalAllAcceptedCredentials:"unknown",signalCurrentUserDetails:"unknown",signalUnknownCredential:"unknown"})}function p(e){if(e===!0)return"supported";if(e===!1)return"unsupported";if(typeof e>"u")return"unknown";throw new Error("Unexpected capability value:",e)}var D={stubThis:e=>e};async function z(){if(!u())return new Promise(i=>i(!1));let e=await N(),{passkeyPlatformAuthenticator:t,userVerifyingPlatformAuthenticator:r,hybridTransport:o}=e;return t==="supported"||o==="supported"||r==="supported"}function j(){return u()?PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable():new Promise(e=>e(!1))}return M(F);})();
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Roulette Club · Blackjack, 777 & Bank</title>
@@ -86,6 +90,13 @@
         }
 /* Club navigation and account surfaces */
 :root { color-scheme: dark; }
+#club-player-tabs[hidden], #admin-panel[hidden], #admin-login[hidden], #admin-legacy[hidden], #admin-enroll[hidden], #admin-signin[hidden] { display: none !important; }
+.club-primary-links { display: flex; gap: 12px; font-size: 11px; font-weight: 800; color: #e8cd8e; }
+.club-primary-links a { padding: 8px 0; }
+#admin-view .club-card { margin-top: 18px; }
+#club-migration-note { position: fixed; z-index: 55; bottom: 16px; left: 16px; right: 16px; max-width: 700px; margin: auto; border: 1px solid #d9bb71; border-radius: 12px; padding: 16px; background: #20182bf2; color: #ffe4a4; font-size: 13px; line-height: 1.7; }
+#club-migration-note[hidden] { display: none; }
+#club-migration-note a { text-decoration: underline; font-weight: 800; }
 .loan-term-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .peer-loan-row { padding: 18px 0; border-top: 1px solid #ffffff18; }
 .peer-loan-row h4 { font-size: 14px; font-weight: 800; color: #f3d18b; margin: 0 0 8px; }
@@ -410,8 +421,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 </head>
 <body>
 <nav id="club-nav" aria-label="Casino navigation">
-    <div class="club-wordmark">ROULETTE CLUB<small>PLAY CHIPS · LOCAL PROFILES</small></div>
-    <div class="club-tabs" role="tablist" aria-label="Games and bank">
+    <div class="club-wordmark">PLAYER<small>游戏 · 赠送 · 借贷 · 银行</small></div>
+    <div id="club-player-tabs" class="club-tabs" role="tablist" aria-label="Games and bank">
         <button id="tab-roulette" type="button" role="tab" aria-controls="canvas-container" aria-selected="true" data-view="roulette">Roulette</button>
         <button id="tab-slots" type="button" role="tab" aria-controls="slots-view" aria-selected="false" data-view="slots">777 Slots</button>
         <button id="tab-blackjack" type="button" role="tab" aria-controls="blackjack-view" aria-selected="false" data-view="blackjack">Blackjack</button>
@@ -419,8 +430,9 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         <button id="tab-players" type="button" role="tab" aria-controls="players-view" aria-selected="false" data-view="players">玩家</button>
         <button id="tab-market" type="button" role="tab" aria-controls="market-view" aria-selected="false" data-view="market">黑市商人</button>
     </div>
-    <div class="club-account"><span class="club-wallet" id="club-wallet">1,000 ₵</span><label for="club-user" class="sr-only">Active player</label><select id="club-user" class="club-select" aria-label="Active player"></select></div>
+    <div class="club-primary-links"><a href="/player">PLAYER</a><a href="/admin">ADMIN</a></div><div class="club-account"><span class="club-wallet" id="club-wallet">1,000 ₵</span><label for="club-user" class="sr-only">Active player</label><select id="club-user" class="club-select" aria-label="Active player"></select></div>
 </nav>
+<div id="club-migration-note" hidden>检测到此前的本地玩家存档。请先<a href="/admin">进入 ADMIN，设置通行密钥并导入</a>，以保留原有余额、欠款和卡包。</div>
 <section id="slots-view" class="club-view" role="tabpanel" aria-labelledby="tab-slots" hidden>
 
   <!-- 3D WebGL Viewport -->
@@ -548,9 +560,35 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </div>
 </section>
 
+<section id="admin-view" class="club-view" aria-label="管理员入口" hidden>
+  <div class="club-shell"><div class="club-eyebrow">ADMIN · 仅管理员</div><h2 class="club-title">玩家管理</h2>
+    <p class="club-muted">添加、删除玩家和增减筹码均由服务器验证管理权限。使用 Windows Hello 通行密钥解锁，管理会话 15 分钟后到期。</p>
+    <div class="club-card" id="admin-login"><h3>Windows Hello 验证</h3><p id="admin-auth-status" class="club-muted" role="status">正在检查管理状态…</p>
+      <div class="club-actions"><button id="admin-enroll" type="button" class="club-action" hidden>首次设置 Windows Hello 通行密钥</button><button id="admin-signin" type="button" class="club-action" hidden>使用 Windows Hello 解锁</button></div>
+      <p class="club-muted">系统会要求指纹、人脸或设备 PIN。网站不会读取或保存 Windows 密码、PIN 或生物识别信息。</p>
+    </div>
+    <p id="admin-message" role="status" class="club-storage"></p>
+    <div id="admin-panel" hidden>
+      <div class="club-actions"><button type="button" class="club-action secondary" id="admin-lock">锁定管理入口</button><a class="club-action secondary" href="/player">返回 PLAYER</a></div>
+      <div id="admin-legacy" class="club-card" hidden><h3>导入旧玩家存档</h3><p class="club-muted">发现此前保存在此浏览器的玩家数据。导入会保留原本地备份，并只在服务器尚未产生新记录时允许执行。</p><button id="admin-import" type="button" class="club-action">导入当前浏览器旧存档</button></div>
+      <div class="club-grid">
+        <form id="admin-adjust-form" class="club-card"><h3>增加 / 扣除筹码</h3>
+          <label for="admin-adjust-player" class="club-field">目标玩家</label><select id="admin-adjust-player" class="club-select" required></select>
+          <label for="admin-adjust-mode" class="club-field">调整方式</label><select id="admin-adjust-mode" class="club-select"><option value="add">增加筹码</option><option value="remove">扣除筹码</option></select>
+          <label for="admin-adjust-amount" class="club-field">金额 / 筹码</label><input id="admin-adjust-amount" type="number" class="club-input" min="1" max="1000000000" step="1" inputmode="numeric" required>
+          <label for="admin-adjust-reason" class="club-field">备注（可选）</label><input id="admin-adjust-reason" class="club-input" type="text" maxlength="120" placeholder="例如奖励、修正余额">
+          <div class="club-actions"><button type="submit" class="club-action" data-admin-action>确认调整并记录</button></div>
+        </form>
+        <form id="player-form" class="club-card"><h3>添加玩家</h3><p class="club-muted">新玩家初始 1,000 筹码；可再通过余额调整修改。最多 12 位玩家。</p><label class="club-field" for="player-name">新玩家名称</label><input id="player-name" class="club-input" type="text" maxlength="24" required placeholder="玩家名称"><div class="club-actions"><button type="submit" class="club-action" data-admin-action>添加玩家</button></div></form>
+        <div class="club-card club-wide"><h3>玩家列表</h3><p class="club-muted">删除需要再次确认。存在未清欠款、借出款、待确认协议或未结算游戏时须先处理，最后一名玩家不能删除。</p><div class="club-account-list" id="club-player-list"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="players-view" class="club-view" role="tabpanel" aria-labelledby="tab-players" hidden>
   <div class="club-shell"><div class="club-eyebrow">Players · 玩家</div><h2 id="players-greeting" class="club-title">玩家往来</h2>
-    <p class="club-muted">赠送直接到账；借款由出借人设定条款、借款人确认后才转账。双方通过右上角切换本地玩家分别操作，数据保存在当前浏览器。</p>
+    <p class="club-muted">赠送直接到账；借款由出借人设定条款、借款人确认后才转账。双方通过右上角选择玩家分别操作；账户变更由服务器保存。玩家管理仅在 ADMIN 入口开放。</p>
     <dl class="club-stat-row"><div><dt>钱包</dt><dd id="players-wallet">0</dd></div><div><dt>欠其他玩家</dt><dd id="peer-debt">0</dd></div><div><dt>应收借款</dt><dd id="peer-receivable">0</dd></div></dl>
     <div class="club-grid">
       <form id="transfer-form" class="club-card"><h3>赠送筹码</h3><p class="club-muted">这是赠送，不产生欠款，确认赠送后立即转入对方钱包。</p>
@@ -565,9 +603,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         <div class="club-actions"><button type="submit" class="club-action" data-idle-only>发出借款协议</button></div>
       </form>
       <div class="club-card club-wide"><h3>借款协议与还款</h3><p class="club-muted">切换到借款人后可接受或拒绝。生效后按现实时间复利计息，离线也计息；还款直接进入出借人钱包。</p><div id="peer-loan-list" aria-live="polite"></div></div>
-      <div class="club-card club-wide"><h3>玩家管理</h3><p class="club-muted">可添加、切换和删除玩家。删除会移除该玩家的钱包和卡包；存在欠款、借出款、待确认协议或游戏下注时，需要先处理完成。</p><div class="club-account-list" id="club-player-list"></div>
-        <form id="player-form"><label class="club-field" for="player-name">新玩家名称 · 最多 12 人</label><input id="player-name" class="club-input" type="text" maxlength="24" required placeholder="玩家名称"><div class="club-actions"><button type="submit" class="club-action secondary" data-idle-only>添加玩家</button></div></form>
-      </div>
+
     </div>
   </div>
 </section>
@@ -854,7 +890,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         return { id, name, balance: 1000, debt: 0, bets: emptyBets(), lastBets: null, history: [], pendingRoulette: false, ...economyDefaults() };
     }
     class CasinoEngine {
-        constructor(storage, random, clock = () => Date.now()) {
+        constructor(storage, random, clock = () => Date.now(), { recoverRoulette = true } = {}) {
             this.storage = storage;
             this.now = clock;
             this.random = random || (() => {
@@ -885,7 +921,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
                     for (const u of saved.users) {
                         delete u.bankRounds; delete u.sharkRounds;
                         u.history = u.history.filter(h => h && integer(h.num, 23) && ['GREEN', 'RED', 'BLACK'].includes(h.colorTag)).slice(0, 10);
-                        if (u.pendingRoulette) {
+                        if (u.pendingRoulette && recoverRoulette) {
                             u.balance += sumBets(u.bets);
                             u.bets = emptyBets();
                             u.pendingRoulette = false;
@@ -1006,6 +1042,17 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             this.data.users = this.data.users.filter(item => item.id !== id);
             if (this.data.activeId === id) this.data.activeId = this.data.users[0].id;
             this.record(`已删除玩家 ${user.name}，其钱包和卡包已移除。`); this.save();
+        }
+        adminAdjust(id, mode, value, reason = '') {
+            this.ensureIdle();
+            const user = this.data.users.find(item => item.id === id), amount = this.amount(value, MAX);
+            if (!user || !['add', 'remove'].includes(mode)) throw new Error('请选择玩家及有效的调整方式。');
+            if (typeof reason !== 'string' || reason.length > 120) throw new Error('备注最多 120 个字符。');
+            const delta = mode === 'add' ? amount : -amount;
+            if (user.balance + delta > MAX || user.balance + delta < 0) throw new Error('调整后余额必须在 0–1,000,000,000 之间。');
+            user.balance += delta;
+            this.record(`管理员 · ${user.name} ${mode === 'add' ? '增加' : '扣除'} ${amount.toLocaleString()} 筹码${reason.trim() ? ' · ' + reason.trim() : ''}。`);
+            this.save();
         }
         transfer(id, value) {
             this.ensureIdle();
@@ -2515,11 +2562,11 @@ function createLuckyMachine(engine, callbacks, host) {
       }
     });
 
-    function QuickPullAndSpin(jackpot = false) {
+    async function QuickPullAndSpin(jackpot = false) {
       if (isSpinning || !visible || callbacks.locked()) return;
       armPullRatio = 1.0;
       syncArmVisuals(1.0);
-      executeReelSpin(jackpot);
+      return executeReelSpin(jackpot);
     }
 
     /* ============================================================================
@@ -2578,14 +2625,15 @@ function createLuckyMachine(engine, callbacks, host) {
       callbacks.market?.();
     }
 
-    function executeReelSpin(jackpot = false) {
+    async function executeReelSpin(jackpot = false) {
       if (isSpinning || !visible || callbacks.locked()) return;
 
       const wager = getActiveBetAmount();
-      try { spinResult = engine.spinSlots(wager, null, { allIn: wager === engine.active.balance, jackpot }); }
+      try { spinResult = await engine.spinSlots(wager, null, { allIn: wager === engine.active.balance, jackpot }); }
       catch (error) { callbacks.notify(error.message, true); return; }
       const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
       isSpinning = true;
+      if (engine.remote) engine.lock = 'slots';
       visualBalance = engine.active.balance - spinResult.payout;
       credits = visualBalance;
       lastWinAmount = 0;
@@ -2957,7 +3005,7 @@ function createLucky777(engine, callbacks) {
         toggle.setAttribute('aria-expanded', String(!panels.hidden));
     });
     return {
-        forceJackpot() { if (visible && machine) machine.forceJackpot(); },
+        forceJackpot() { if (visible && machine) return machine.forceJackpot(); },
         get dragging() { return machine?.dragging || false; },
         get displayBalance() { return machine?.displayBalance ?? null; },
         update(locked) { machine?.update(locked); custom.update(locked || !!engine.armedCard); customToggle.disabled = locked || !!engine.armedCard; },
@@ -3170,6 +3218,94 @@ function createLucky777(engine, callbacks) {
     CasinoBlackjack.makeShoe = makeShoe;
     root.CasinoBlackjack = CasinoBlackjack;
 })(globalThis);
+
+// Hosted pages use server commands; the pure engines remain available for rules tests.
+if (window.__CASINO_BOOTSTRAP__) {
+    const LocalEngine = CasinoEngine, LocalBlackjack = CasinoBlackjack;
+    class RemoteCasinoEngine extends LocalEngine {
+        constructor() {
+            super(null);
+            this.remote = true; this.requestBusy = false; this.onChange = null;
+            this.applySnapshot(window.__CASINO_BOOTSTRAP__);
+            try { this.legacyPending = this.revision === 0 && Boolean(JSON.parse(localStorage.getItem('roulette-club-v1') || 'null')?.users?.length); } catch { this.legacyPending = false; }
+            try { const selected = sessionStorage.getItem('club-selected-player'); if (this.data.users.some(user => user.id === selected)) this.data.activeId = selected; } catch {}
+        }
+        get lock() { return this.requestBusy ? 'network' : this.animationLock || (this.active?.blackjack && this.active.blackjack.phase !== 'settled' ? 'blackjack' : null); }
+        set lock(value) { this.animationLock = value === 'blackjack' ? null : value; }
+        save() {}
+        accrueInterest() { return false; }
+        applySnapshot(snapshot) {
+            if (this.revision !== undefined && snapshot.revision < this.revision) return;
+            const selected = this.revision !== undefined ? this.data?.activeId : null;
+            if (selected && snapshot.data.users.some(user => user.id === selected)) snapshot.data.activeId = selected;
+            const pending = snapshot.data.users.find(user => user.blackjack && user.blackjack.phase !== 'settled');
+            if (pending) snapshot.data.activeId = pending.id;
+            this.data = snapshot.data; this.revision = snapshot.revision; this.offset = snapshot.now - Date.now();
+            if (this.revision > 0) this.legacyPending = false;
+            this.now = () => Date.now() + this.offset;
+            if (snapshot.auth) this.auth = snapshot.auth;
+        }
+        async send(command, args = [], {admin = false} = {}) {
+            if (this.legacyPending && command !== 'import') throw new Error('检测到旧存档，请先进入 ADMIN，通过 Windows Hello 验证并导入后继续。');
+            if (this.requestBusy) throw new Error('上一项操作仍在处理，请稍后再试。');
+            const id = crypto.randomUUID(), body = JSON.stringify({id,command,args,playerId:this.data.activeId});
+            this.requestBusy = true; this.onChange?.();
+            try {
+                let response;
+                for(let attempt=0;attempt<2;attempt++) {
+                    try { response = await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body,credentials:'same-origin',signal:AbortSignal.timeout(15000)}); break; }
+                    catch(error) { if(attempt===1) throw new Error('无法连接服务器。请刷新以确认余额，操作不会重复入账。'); }
+                }
+                const data = await response.json();
+                if(!response.ok) { if(response.status===403&&admin)this.auth={...(this.auth||{}),admin:false}; throw new Error(data.error || '操作失败。'); }
+                this.applySnapshot(data);
+                return data.result;
+            } finally { this.requestBusy = false; this.onChange?.(); }
+        }
+        async sync() {
+            if(this.requestBusy||this.animationLock)return;
+            const response=await fetch('/api/state?playerId='+encodeURIComponent(this.data.activeId),{credentials:'same-origin',cache:'no-store'});
+            const value=await response.json();if(!response.ok)throw new Error(value.error||'账户同步失败。');
+            this.applySnapshot(value);this.onChange?.();
+        }
+        switchUser(id) {
+            this.ensureIdle(); if(!this.data.users.some(user=>user.id===id))throw new Error('请选择有效玩家。');this.data.activeId=id;
+            try {sessionStorage.setItem('club-selected-player',id);} catch {}
+        }
+        transfer(...args){return this.send('gift',args);}
+        offerLoan(...args){return this.send('offerLoan',args);}
+        respondLoan(...args){return this.send('respondLoan',args);}
+        cancelLoan(...args){return this.send('cancelLoan',args);}
+        repayLoan(...args){return this.send('repayLoan',args);}
+        borrow(...args){return this.send('borrow',args);}
+        repay(...args){return this.send('repay',args);}
+        borrowShark(...args){return this.send('borrowShark',args);}
+        repayShark(...args){return this.send('repayShark',args);}
+        buyCard(...args){return this.send('buyCard',args);}
+        armCard(...args){return this.send('armCard',args);}
+        spinSlots(value, _forced, options={}){return this.send('slots',[value,options]);}
+        addUser(...args){return this.send('addUser',args,{admin:true});}
+        deletePlayer(...args){return this.send('deletePlayer',args,{admin:true});}
+        adminAdjust(...args){return this.send('adminAdjust',args,{admin:true});}
+        importLegacy(snapshot){return this.send('import',[snapshot],{admin:true});}
+        rouletteBet(...args){return this.send('roulette.bet',args);}
+        rouletteClear(){return this.send('roulette.clear');}
+        rouletteRebet(){return this.send('roulette.rebet');}
+        rouletteSpin(jackpot=false){return this.send('roulette.spin',[jackpot]);}
+        rouletteRig(id){return this.send('roulette.rig',[id]);}
+    }
+    class RemoteCasinoBlackjack extends LocalBlackjack {
+        start(value){return this.engine.send('blackjack',['start',value]);}
+        hit(){return this.engine.send('blackjack',['hit']);}
+        stand(){return this.engine.send('blackjack',['stand']);}
+        double(){return this.engine.send('blackjack',['double']);}
+        split(){return this.engine.send('blackjack',['split']);}
+        dealerStep(){return this.engine.send('blackjack',['dealerStep']);}
+        forceJackpot(value){return this.engine.send('blackjack',['forceJackpot',value]);}
+    }
+    window.CasinoEngine = RemoteCasinoEngine;
+    window.CasinoBlackjack = RemoteCasinoBlackjack;
+}
 
 function createBlackjackScene(container) {
     'use strict';
@@ -3437,7 +3573,7 @@ function createBlackjackTable(engine, callbacks) {
     function changed() { update(); callbacks.changed(); }
     function schedule(callback, delay) {
         if(timer!==null) clearTimeout(timer);
-        timer=setTimeout(()=>{timer=null;callback();},reduced.matches?0:delay);
+        timer=setTimeout(()=>{timer=null;return callback();},reduced.matches?0:delay);
     }
     function finishedMotion() {
         animating=false;
@@ -3448,23 +3584,23 @@ function createBlackjackTable(engine, callbacks) {
     function queueDealer() {
         if(!visible||timer!==null||game.round?.phase!=='dealer') return;
         animating=true; changed();
-        schedule(()=>{
-            try {game.dealerStep();tone(240,.05);changed();if(game.round.phase==='dealer') queueDealer();else schedule(finishedMotion,650);}
+        schedule(async()=>{
+            try {await game.dealerStep();tone(240,.05);changed();if(game.round.phase==='dealer') queueDealer();else schedule(finishedMotion,650);}
             catch(error) {animating=false;callbacks.notify(error.message,true);changed();}
         },800);
     }
-    function act(action) {
+    async function act(action) {
         if(!visible||animating) return;
         try {
-            if(action==='deal') game.start(wager()); else game[action]();
+            if(action==='deal') await game.start(wager()); else await game[action]();
             animating=true;tone(action==='deal'?160:260,.08);changed();
             schedule(finishedMotion,action==='deal'?1050:600);
         } catch(error) {callbacks.notify(error.message,true);update();}
     }
-    function forceJackpot() {
+    async function forceJackpot() {
         if (!visible || animating) { callbacks.notify('Wait for the cards to finish moving.', true); return; }
         try {
-            game.forceJackpot(wager());
+            await game.forceJackpot(wager());
             animating = true; tone(660, .12); changed();
             schedule(finishedMotion, 1050);
         } catch (error) { callbacks.notify(error.message, true); update(); }
@@ -3549,8 +3685,8 @@ function createEconomyUI(engine, callbacks) {
             row.append(element('span', `${CasinoEngine.cards[card.type].name} · 绑定 ${fmt(card.stake)}${armed ? ' · 已装备' : ''}`));
             const button = element('button', armed ? '取消装备' : '装备并前往 777', 'club-action secondary');
             button.type = 'button'; button.disabled = locked || (!armed && card.stake > user.balance);
-            button.addEventListener('click', () => {
-                if (callbacks.transact(() => engine.armCard(armed ? null : card.id), armed ? '已取消装备。' : '已装备，下一次 777 旋转使用此卡。') && !armed) callbacks.playSlots();
+            button.addEventListener('click', async () => {
+                if (await callbacks.transact(() => engine.armCard(armed ? null : card.id), armed ? '已取消装备。' : '已装备，下一次 777 旋转使用此卡。') && !armed) callbacks.playSlots();
             });
             row.append(button); return row;
         });
@@ -3562,13 +3698,13 @@ function createEconomyUI(engine, callbacks) {
         tick();
     }
     $('market-stake').addEventListener('input', render);
-    $('shark-borrow-form').addEventListener('submit', event => {
+    $('shark-borrow-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (callbacks.transact(() => engine.borrowShark(Number($('shark-borrow-amount').value)), '高利贷已到账，欠款及计息进度已保存。')) $('shark-borrow-form').reset();
+        if (await callbacks.transact(() => engine.borrowShark(Number($('shark-borrow-amount').value)), '高利贷已到账，欠款及计息进度已保存。')) $('shark-borrow-form').reset();
     });
-    $('shark-repay-form').addEventListener('submit', event => {
+    $('shark-repay-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (callbacks.transact(() => engine.repayShark(Number($('shark-repay-amount').value)), '高利贷还款已入账。')) $('shark-repay-form').reset();
+        if (await callbacks.transact(() => engine.repayShark(Number($('shark-repay-amount').value)), '高利贷还款已入账。')) $('shark-repay-form').reset();
     });
     $('lucky-card-cancel').addEventListener('click', () => callbacks.transact(() => engine.armCard(null), '已取消装备。'));
     return { render, tick };
@@ -3618,7 +3754,7 @@ function createPlayerLoansUI(engine, callbacks) {
                     input.setAttribute('aria-label', '偿还给 ' + loan.lenderName + ' 的金额'); input.value = repaymentValues.get(loan.id) ?? String(Math.max(1, Math.min(loan.balance, user.balance)));
                     input.disabled = locked; submit.type = 'submit'; submit.disabled = locked;
                     input.addEventListener('input', () => repaymentValues.set(loan.id, input.value));
-                    form.addEventListener('submit', event => { event.preventDefault(); callbacks.transact(() => engine.repayLoan(loan.id, Number(input.value)), '还款已进入出借人钱包。'); });
+                    form.addEventListener('submit', async event => { event.preventDefault(); callbacks.transact(() => engine.repayLoan(loan.id, Number(input.value)), '还款已进入出借人钱包。'); });
                     form.append(input, submit); row.append(form);
                 }
             }
@@ -3626,11 +3762,56 @@ function createPlayerLoansUI(engine, callbacks) {
         });
         $('peer-loan-list').replaceChildren(...(rows.length ? rows : [element('p','暂无借款协议。','club-muted')])); tick();
     }
-    $('peer-loan-form').addEventListener('submit', event => {
+    $('peer-loan-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, Number($('peer-loan-amount').value), Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), '协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
+        if (await callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, Number($('peer-loan-amount').value), Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), '协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
     });
     return { render, tick };
+}
+
+function createAdminUI(engine, callbacks) {
+    const $=id=>document.getElementById(id);let auth=engine.auth||{enrolled:false,admin:false,canEnroll:false},working=false;
+    let legacy=null;try{const raw=localStorage.getItem('roulette-club-v1');if(raw)legacy=JSON.parse(raw);}catch{}
+    async function api(path,body) {
+        const response=await fetch(path,{method:body===undefined?'GET':'POST',headers:body===undefined?{}:{'Content-Type':'application/json'},credentials:'same-origin',body:body===undefined?undefined:JSON.stringify(body)});
+        const result=await response.json();if(!response.ok)throw new Error(result.error||'管理验证失败。');return result;
+    }
+    function render() {
+        auth=engine.auth||auth;
+        $('admin-login').hidden=auth.admin;$('admin-panel').hidden=!auth.admin;
+        $('admin-enroll').hidden=!auth.canEnroll;$('admin-signin').hidden=!auth.enrolled;
+        $('admin-enroll').disabled=working;$('admin-signin').disabled=working;
+        $('admin-auth-status').textContent=working?'请完成系统的 Windows Hello 提示…':!engine.remote?'管理入口需要在已发布网站中打开。':auth.enrolled?'已设置通行密钥。验证后才能管理玩家。':'仅站点所有者可首次绑定管理通行密钥。';
+        $('admin-legacy').hidden=!legacy||engine.revision!==0;
+        $('club-migration-note').hidden=!engine.legacyPending||window.location.pathname==='/admin';
+        const selected=$('admin-adjust-player').value;
+        $('admin-adjust-player').replaceChildren(...engine.data.users.map(user=>{const option=document.createElement('option');option.value=user.id;option.textContent=user.name+' · '+user.balance.toLocaleString();return option;}));
+        if(engine.data.users.some(user=>user.id===selected))$('admin-adjust-player').value=selected;
+        document.querySelectorAll('[data-admin-action]').forEach(button=>button.disabled=working||!auth.admin||callbacks.locked());
+    }
+    async function authenticate(register) {
+        if(!engine.remote){$('admin-message').textContent='请从已发布网站打开管理入口。';return;}
+        if(!window.PublicKeyCredential||!navigator.credentials){$('admin-message').textContent='当前浏览器不支持通行密钥。请在 Windows 上用 Edge 或 Chrome 打开本站。';return;}
+        working=true;render();$('admin-message').textContent='';
+        try{
+            const kind=register?'register':'authenticate',optionsJSON=await api('/api/admin/'+kind+'/options',{});
+            const result=register?await ClubPasskeys.startRegistration({optionsJSON}):await ClubPasskeys.startAuthentication({optionsJSON});
+            await api('/api/admin/'+kind+'/verify',result);auth=await api('/api/admin/status');engine.auth=auth;
+            await engine.sync();$('admin-message').textContent='管理入口已解锁。';callbacks.changed();
+        }catch(error){$('admin-message').textContent=error.name==='NotAllowedError'?'验证已取消或超时，尚未修改任何账户。':error.message;}
+        finally{working=false;render();}
+    }
+    $('admin-enroll').addEventListener('click',()=>authenticate(true));$('admin-signin').addEventListener('click',()=>authenticate(false));
+    $('admin-lock').addEventListener('click',async()=>{try{await api('/api/admin/logout',{});auth={...auth,admin:false};engine.auth=auth;callbacks.changed();}catch(error){$('admin-message').textContent=error.message;}render();});
+    $('admin-adjust-form').addEventListener('submit',async event=>{
+        event.preventDefault();
+        if(await callbacks.transact(()=>engine.adminAdjust($('admin-adjust-player').value,$('admin-adjust-mode').value,Number($('admin-adjust-amount').value),$('admin-adjust-reason').value),'管理员余额调整已保存并记录。')){$('admin-adjust-amount').value='';$('admin-adjust-reason').value='';}
+    });
+    $('admin-import').addEventListener('click',async()=>{
+        if(!legacy)return;
+        if(await callbacks.transact(()=>engine.importLegacy(legacy),'旧存档已导入服务器，本地备份已保留。')){legacy=null;callbacks.changed();}
+    });
+    return {render,get unlocked(){return Boolean(auth.admin);}};
 }
 
 function createCasinoClub(roulette) {
@@ -3638,12 +3819,12 @@ function createCasinoClub(roulette) {
     let browserStorage;
     try { browserStorage = window.localStorage; } catch { /* Session mode is supported. */ }
     const engine = new CasinoEngine(browserStorage);
-    if (!browserStorage) engine.storageWarning = 'Browser storage is unavailable. This session is temporary.';
+    if (!browserStorage && !engine.remote) engine.storageWarning = 'Browser storage is unavailable. This session is temporary.';
     for (const key of ['balance', 'bets', 'lastBets', 'history']) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, pendingDelete = null;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, admin, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -3662,6 +3843,7 @@ function createCasinoClub(roulette) {
         return el;
     }
     function render() {
+        admin?.render();
         const u = engine.active;
         const selectedRecipient = $('transfer-user').value;
         $('club-user').replaceChildren(...engine.data.users.map(option));
@@ -3689,10 +3871,11 @@ function createCasinoClub(roulette) {
             button.addEventListener('click', () => switchPlayer(p.id));
             const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'club-action secondary danger';
             remove.textContent = pendingDelete === p.id ? '再次点击确认永久删除（含余额）' : '删除';
-            remove.disabled = viewLocked() || engine.data.users.length === 1;
-            remove.addEventListener('click', () => {
+            remove.disabled = viewLocked() || engine.data.users.length === 1 || !admin?.unlocked;
+            remove.addEventListener('click', async () => {
+                if (!admin?.unlocked) { toast('请先使用 Windows Hello 解锁管理入口。',true); return; }
                 if (pendingDelete !== p.id) { pendingDelete = p.id; render(); return; }
-                if (transact(() => engine.deletePlayer(p.id), '玩家已删除。')) {
+                if (await transact(() => engine.deletePlayer(p.id), '玩家已删除。')) {
                     pendingDelete = null; lucky.resetPlayer(); renderHistoryRibbon(); renderNumberModalGrid(); hideBanner(); render();
                 }
             });
@@ -3721,6 +3904,8 @@ function createCasinoClub(roulette) {
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
         $('market-view').hidden = view !== 'market';
         $('players-view').hidden = view !== 'players';
+        $('admin-view').hidden = view !== 'admin';
+        $('club-player-tabs').hidden = view === 'admin';
         lucky.setVisible(view === 'slots');
         $('blackjack-view').hidden = view !== 'blackjack';
         blackjack.setVisible(view === 'blackjack');
@@ -3731,7 +3916,7 @@ function createCasinoClub(roulette) {
         render();
     }
     function setView(next) {
-        if (!['roulette', 'slots', 'blackjack', 'bank', 'market', 'players'].includes(next)) return;
+        if (!['roulette', 'slots', 'blackjack', 'bank', 'market', 'players', 'admin'].includes(next)) return;
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
         paintView();
@@ -3746,10 +3931,10 @@ function createCasinoClub(roulette) {
             toast(`Now playing as ${engine.active.name}.`);
         } catch (e) { render(); toast(e.message, true); }
     }
-    function transact(action, success) {
+    async function transact(action, success) {
         try {
             if (viewLocked()) throw new Error('Wait for the current round to finish.');
-            action(); updateBettingHUD(); toast(success);
+            await action(); updateBettingHUD(); toast(success);
             return true;
         } catch (e) { toast(e.message, true); return false; }
     }
@@ -3779,21 +3964,23 @@ function createCasinoClub(roulette) {
             changed: () => updateBettingHUD(),
             notify: toast
         });
+        admin = createAdminUI(engine, {locked:viewLocked,transact,changed:()=>{lucky.resetPlayer();render();}});
+        if(engine.remote) engine.onChange = render;
         document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
         document.querySelectorAll('[data-go-bank]').forEach(b => b.addEventListener('click', () => setView('bank')));
         $('club-user').addEventListener('change', e => switchPlayer(e.target.value));
-        $('transfer-form').addEventListener('submit', e => {
+        $('transfer-form').addEventListener('submit', async e => {
             e.preventDefault();
-            if (transact(() => engine.transfer($('transfer-user').value, Number($('transfer-amount').value)), 'Chips transferred successfully.')) $('transfer-form').reset();
+            if (await transact(() => engine.transfer($('transfer-user').value, Number($('transfer-amount').value)), 'Chips transferred successfully.')) $('transfer-form').reset();
         });
-        $('bank-form').addEventListener('submit', e => {
+        $('bank-form').addEventListener('submit', async e => {
             e.preventDefault();
             const repay = e.submitter?.value === 'repay';
-            if (transact(() => engine[repay ? 'repay' : 'borrow'](Number($('bank-amount').value)), repay ? 'Debt repaid. Available credit updated.' : 'Borrowed chips added to your wallet.')) $('bank-form').reset();
+            if (await transact(() => engine[repay ? 'repay' : 'borrow'](Number($('bank-amount').value)), repay ? 'Debt repaid. Available credit updated.' : 'Borrowed chips added to your wallet.')) $('bank-form').reset();
         });
-        $('player-form').addEventListener('submit', e => {
+        $('player-form').addEventListener('submit', async e => {
             e.preventDefault();
-            if (transact(() => engine.addUser($('player-name').value), 'Player added with 1,000 starter chips.')) {
+            if (await transact(() => engine.addUser($('player-name').value), 'Player added with 1,000 starter chips.')) {
                 $('player-form').reset(); renderHistoryRibbon(); renderNumberModalGrid(); hideBanner();
                 lucky.resetPlayer();
             }
@@ -3818,11 +4005,14 @@ function createCasinoClub(roulette) {
             else return;
             e.preventDefault(); setView(tabs[i].dataset.view); tabs[i].focus();
         }));
-        const requestedView = window.location.hash.slice(1);
-        if (blackjack.pending) view = 'blackjack';
-        else if (['roulette', 'slots', 'blackjack', 'bank', 'market', 'players'].includes(requestedView)) view = requestedView;
+        const requestedView = window.location.pathname === '/admin' ? 'admin' : window.location.hash.slice(1);
+        if (requestedView === 'admin') view = 'admin';
+        else if (blackjack.pending) view = 'blackjack';
+        else if (['roulette', 'slots', 'blackjack', 'bank', 'market', 'players', 'admin'].includes(requestedView)) view = requestedView;
         paintView();
+        let lastSync = 0;
         const tick = () => {
+            if(engine.remote && !viewLocked() && Date.now()-lastSync >= 5000){lastSync=Date.now();engine.sync().catch(()=>{});}
             if (engine.accrueInterest()) { engine.save(); render(); }
             else { economy?.tick(); playerLoans?.tick(); }
         };
@@ -4658,6 +4848,18 @@ function createCasinoClub(roulette) {
         // 4. PHYSICS & SPIN SIMULATION LOOP
         // ============================================================================
         function forceRouletteJackpot() {
+            if (casino.engine.remote) {
+                if(!window.THREE || !renderer){casino.toast('The 3D wheel is unavailable.',true);return;}
+                if(casino.engine.animationLock==='roulette' && state.remoteSpin){
+                    casino.engine.rouletteRig(state.remoteSpin.roundId).then(result => {
+                        if(state.remoteSpin){state.remoteSpin=result;state.forcedPocketIndex=result.index;}
+                        else {state.settledPocketIndex=result.index;renderHistoryRibbon();updateBettingHUD();showResultBanner(result.number,result.number===0?'GREEN':result.number%2?'RED':'BLACK',result.wager,result.payout);}
+                    }).catch(error=>casino.toast(error.message,true));return;
+                }
+                if(casino.busy())return;
+                const prepared = getTotalActiveBet()>0 ? Promise.resolve() : casino.engine.rouletteBet(0,getChipIncrement());
+                prepared.then(() => {state.remoteJackpot=true;triggerSpin();}).catch(error=>casino.toast(error.message,true));return;
+            }
             if (!window.THREE || !renderer) { casino.toast('The 3D wheel is unavailable.', true); return; }
             if (casino.engine.lock && casino.engine.lock !== 'roulette') return;
             if (getTotalActiveBet() === 0) placeNumberBet(0);
@@ -4668,6 +4870,13 @@ function createCasinoClub(roulette) {
         }
 
         function triggerSpin(powerNormalized = 0.75, direction = 1) {
+            if (casino.engine.remote && !state.remoteSpin) {
+                if(casino.busy())return;
+                casino.engine.rouletteSpin(Boolean(state.remoteJackpot)).then(result => {
+                    state.remoteJackpot = false; state.remoteSpin = result; state.forcedPocketIndex = result.index;
+                    triggerSpin(powerNormalized,direction);
+                }).catch(error => {state.remoteJackpot=false;casino.toast(error.message,true);});return;
+            }
             if (casino.busy()) return;
 
             if (casino.busy() || casino.view !== 'roulette') return;
@@ -4824,6 +5033,11 @@ function createCasinoClub(roulette) {
         }
 
         function placeCategoryBet(category) {
+            if (casino.engine.remote) {
+                if (casino.busy()) return;
+                const amount = getChipIncrement(); if (amount <= 0) return;
+                casino.engine.rouletteBet(category, amount).then(() => { sfx.playChipSound(); updateBettingHUD(); }).catch(error => casino.toast(error.message,true)); return;
+            }
             if (casino.busy()) return;
             const amount = getChipIncrement();
             if (amount <= 0) return;
@@ -4835,6 +5049,11 @@ function createCasinoClub(roulette) {
         }
 
         function placeNumberBet(pocketNum) {
+            if (casino.engine.remote) {
+                if (casino.busy()) return;
+                const amount = getChipIncrement(); if (amount <= 0) return;
+                casino.engine.rouletteBet(pocketNum, amount).then(() => { sfx.playChipSound(); updateBettingHUD(); renderNumberModalGrid(); }).catch(error => casino.toast(error.message,true)); return;
+            }
             if (casino.busy()) return;
             const amount = getChipIncrement();
             if (amount <= 0) return;
@@ -4847,6 +5066,7 @@ function createCasinoClub(roulette) {
         }
 
         function clearAllBets() {
+            if (casino.engine.remote) { if(casino.busy())return; casino.engine.rouletteClear().then(() => {updateBettingHUD();renderNumberModalGrid();}).catch(error=>casino.toast(error.message,true)); return; }
             if (casino.busy()) return;
             const refund = getTotalActiveBet();
             if (refund === 0) return;
@@ -4859,6 +5079,7 @@ function createCasinoClub(roulette) {
         }
 
         function rebetLast() {
+            if (casino.engine.remote) { if(casino.busy())return; casino.engine.rouletteRebet().then(() => {updateBettingHUD();renderNumberModalGrid();}).catch(error=>casino.toast(error.message,true)); return; }
             if (casino.busy()) return;
             if (!state.lastBets) return;
 
@@ -4885,6 +5106,12 @@ function createCasinoClub(roulette) {
         }
 
         function evaluateSpinOutcome(winningIndex) {
+            if (casino.engine.remote && state.remoteSpin) {
+                const result=state.remoteSpin;state.remoteSpin=null;casino.engine.lock=null;casino.engine.active.pendingRoulette=false;
+                renderHistoryRibbon();updateBettingHUD();renderNumberModalGrid();
+                showResultBanner(result.number,result.number===0?'GREEN':result.number%2?'RED':'BLACK',result.wager,result.payout);
+                document.getElementById('hint-text').textContent='Spin complete!';return;
+            }
             const winningPocket = POCKETS[winningIndex];
             const num = winningPocket.number;
 

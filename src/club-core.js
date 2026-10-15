@@ -43,7 +43,7 @@
         return { id, name, balance: 1000, debt: 0, bets: emptyBets(), lastBets: null, history: [], pendingRoulette: false, ...economyDefaults() };
     }
     class CasinoEngine {
-        constructor(storage, random, clock = () => Date.now()) {
+        constructor(storage, random, clock = () => Date.now(), { recoverRoulette = true } = {}) {
             this.storage = storage;
             this.now = clock;
             this.random = random || (() => {
@@ -74,7 +74,7 @@
                     for (const u of saved.users) {
                         delete u.bankRounds; delete u.sharkRounds;
                         u.history = u.history.filter(h => h && integer(h.num, 23) && ['GREEN', 'RED', 'BLACK'].includes(h.colorTag)).slice(0, 10);
-                        if (u.pendingRoulette) {
+                        if (u.pendingRoulette && recoverRoulette) {
                             u.balance += sumBets(u.bets);
                             u.bets = emptyBets();
                             u.pendingRoulette = false;
@@ -195,6 +195,17 @@
             this.data.users = this.data.users.filter(item => item.id !== id);
             if (this.data.activeId === id) this.data.activeId = this.data.users[0].id;
             this.record(`已删除玩家 ${user.name}，其钱包和卡包已移除。`); this.save();
+        }
+        adminAdjust(id, mode, value, reason = '') {
+            this.ensureIdle();
+            const user = this.data.users.find(item => item.id === id), amount = this.amount(value, MAX);
+            if (!user || !['add', 'remove'].includes(mode)) throw new Error('请选择玩家及有效的调整方式。');
+            if (typeof reason !== 'string' || reason.length > 120) throw new Error('备注最多 120 个字符。');
+            const delta = mode === 'add' ? amount : -amount;
+            if (user.balance + delta > MAX || user.balance + delta < 0) throw new Error('调整后余额必须在 0–1,000,000,000 之间。');
+            user.balance += delta;
+            this.record(`管理员 · ${user.name} ${mode === 'add' ? '增加' : '扣除'} ${amount.toLocaleString()} 筹码${reason.trim() ? ' · ' + reason.trim() : ''}。`);
+            this.save();
         }
         transfer(id, value) {
             this.ensureIdle();

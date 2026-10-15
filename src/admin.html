@@ -1,0 +1,25 @@
+<section id="admin-view" class="club-view" aria-label="管理员入口" hidden>
+  <div class="club-shell"><div class="club-eyebrow">ADMIN · 仅管理员</div><h2 class="club-title">玩家管理</h2>
+    <p class="club-muted">添加、删除玩家和增减筹码均由服务器验证管理权限。使用 Windows Hello 通行密钥解锁，管理会话 15 分钟后到期。</p>
+    <div class="club-card" id="admin-login"><h3>Windows Hello 验证</h3><p id="admin-auth-status" class="club-muted" role="status">正在检查管理状态…</p>
+      <div class="club-actions"><button id="admin-enroll" type="button" class="club-action" hidden>首次设置 Windows Hello 通行密钥</button><button id="admin-signin" type="button" class="club-action" hidden>使用 Windows Hello 解锁</button></div>
+      <p class="club-muted">系统会要求指纹、人脸或设备 PIN。网站不会读取或保存 Windows 密码、PIN 或生物识别信息。</p>
+    </div>
+    <p id="admin-message" role="status" class="club-storage"></p>
+    <div id="admin-panel" hidden>
+      <div class="club-actions"><button type="button" class="club-action secondary" id="admin-lock">锁定管理入口</button><a class="club-action secondary" href="/player">返回 PLAYER</a></div>
+      <div id="admin-legacy" class="club-card" hidden><h3>导入旧玩家存档</h3><p class="club-muted">发现此前保存在此浏览器的玩家数据。导入会保留原本地备份，并只在服务器尚未产生新记录时允许执行。</p><button id="admin-import" type="button" class="club-action">导入当前浏览器旧存档</button></div>
+      <div class="club-grid">
+        <form id="admin-adjust-form" class="club-card"><h3>增加 / 扣除筹码</h3>
+          <label for="admin-adjust-player" class="club-field">目标玩家</label><select id="admin-adjust-player" class="club-select" required></select>
+          <label for="admin-adjust-mode" class="club-field">调整方式</label><select id="admin-adjust-mode" class="club-select"><option value="add">增加筹码</option><option value="remove">扣除筹码</option></select>
+          <label for="admin-adjust-amount" class="club-field">金额 / 筹码</label><input id="admin-adjust-amount" type="number" class="club-input" min="1" max="1000000000" step="1" inputmode="numeric" required>
+          <label for="admin-adjust-reason" class="club-field">备注（可选）</label><input id="admin-adjust-reason" class="club-input" type="text" maxlength="120" placeholder="例如奖励、修正余额">
+          <div class="club-actions"><button type="submit" class="club-action" data-admin-action>确认调整并记录</button></div>
+        </form>
+        <form id="player-form" class="club-card"><h3>添加玩家</h3><p class="club-muted">新玩家初始 1,000 筹码；可再通过余额调整修改。最多 12 位玩家。</p><label class="club-field" for="player-name">新玩家名称</label><input id="player-name" class="club-input" type="text" maxlength="24" required placeholder="玩家名称"><div class="club-actions"><button type="submit" class="club-action" data-admin-action>添加玩家</button></div></form>
+        <div class="club-card club-wide"><h3>玩家列表</h3><p class="club-muted">删除需要再次确认。存在未清欠款、借出款、待确认协议或未结算游戏时须先处理，最后一名玩家不能删除。</p><div class="club-account-list" id="club-player-list"></div></div>
+      </div>
+    </div>
+  </div>
+</section>

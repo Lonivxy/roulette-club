@@ -42,7 +42,7 @@ function createPlayerLoansUI(engine, callbacks) {
                     input.setAttribute('aria-label', '偿还给 ' + loan.lenderName + ' 的金额'); input.value = repaymentValues.get(loan.id) ?? String(Math.max(1, Math.min(loan.balance, user.balance)));
                     input.disabled = locked; submit.type = 'submit'; submit.disabled = locked;
                     input.addEventListener('input', () => repaymentValues.set(loan.id, input.value));
-                    form.addEventListener('submit', event => { event.preventDefault(); callbacks.transact(() => engine.repayLoan(loan.id, Number(input.value)), '还款已进入出借人钱包。'); });
+                    form.addEventListener('submit', async event => { event.preventDefault(); callbacks.transact(() => engine.repayLoan(loan.id, Number(input.value)), '还款已进入出借人钱包。'); });
                     form.append(input, submit); row.append(form);
                 }
             }
@@ -50,9 +50,9 @@ function createPlayerLoansUI(engine, callbacks) {
         });
         $('peer-loan-list').replaceChildren(...(rows.length ? rows : [element('p','暂无借款协议。','club-muted')])); tick();
     }
-    $('peer-loan-form').addEventListener('submit', event => {
+    $('peer-loan-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, Number($('peer-loan-amount').value), Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), '协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
+        if (await callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, Number($('peer-loan-amount').value), Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), '协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
     });
     return { render, tick };
 }

@@ -1,6 +1,16 @@
 # Roulette Club
 
-A standalone local play-chip casino with roulette, Three.js Lucky 777, blackjack, players, bank and a black market. Open `dist/index.html` or the sibling `roulette.html`. Three.js, utility styles and fonts load from CDNs. Accounts stay in this browser; these are local profiles rather than authenticated or synchronized accounts.
+A private play-chip casino with roulette, Three.js Lucky 777, blackjack, players, bank and a black market. The hosted app uses a Worker and D1 database for authoritative balances, game outcomes, loans and administrator authorization. Three.js, utility styles and fonts load from CDNs.
+
+## PLAYER and ADMIN
+
+`/player` contains all games, gifts, player loans, the bank and the black market. `/admin` contains player creation/deletion and balance adjustments. Player profiles share the existing profile selector; they do not have separate individual sign-ins. Site access remains private.
+
+On first use, open `/admin`, choose the Windows Hello setup button and approve the browser's native passkey prompt. The server stores a public credential, never the Windows PIN, fingerprint or face data. First enrollment is bound to the authenticated private Site owner's identity. Later visits require the registered passkey; administrator sessions expire after fifteen minutes. Creating/deleting players, adjusting balances and importing a save require server-verified administrator authorization.
+
+If this browser has an older local save, authenticate in ADMIN and import it before playing. The import is allowed only before the shared server account has any activity, so it cannot overwrite an active server balance. The original browser save remains available as a backup. Other browsers use the shared server account rather than separate local balances.
+
+Administrators can add or remove whole chips with an optional reason recorded in the account log. Adjustments cannot produce a negative balance or exceed the wallet cap. This is a play-chip app; balances have no cash redemption.
 
 ## Games
 
@@ -13,7 +23,7 @@ Left Shift + F is a hidden jackpot shortcut on game tabs. Roulette targets the h
 
 ## Players
 
-The Players tab manages local profiles, gifts and loans. Each new player receives 1,000 starter chips; there can be up to 12 players. Gifts transfer immediately. A lender proposes an amount, rate and period; the period defaults to ten minutes and the editable rate starts at 1%. Switch to the borrower to accept or decline. No chips move and no interest accrues before acceptance. Acceptance rechecks both wallets, then transfers once and starts the clock. The lender can cancel a pending offer. The borrower may make partial or full repayments directly into the lender's wallet.
+The Players tab under PLAYER contains gifts and loans. ADMIN manages the profiles. Each new player receives 1,000 starter chips; there can be up to 12 players. Gifts transfer immediately. A lender proposes an amount, rate and period; the period defaults to ten minutes and the editable rate starts at 1%. Switch to the borrower to accept or decline. No chips move and no interest accrues before acceptance. Acceptance rechecks both wallets, then transfers once and starts the clock. The lender can cancel a pending offer. The borrower may make partial or full repayments directly into the lender's wallet.
 
 Deletion requires two clicks and removes the selected player's wallet and cards. It cannot remove the last profile or a player with bank/shark debt, pending/active peer loans (as lender or borrower), outstanding roulette stakes or an unfinished blackjack hand. Completed loan receipts retain party names even after an account is deleted.
 
@@ -45,6 +55,10 @@ Buying requires enough cash for price plus the bound stake. Each player has a fi
 
 ## Development and validation
 
-No dependency installation is needed. `npm run build` assembles embedded source into `dist/index.html` and the standalone sibling. `npm test` uses Node's test runner for accounting, interest boundaries and offline catch-up with injected clocks, mutual loan consent, repayments, deletion, merchant profit and cooldown, game rules, controls, storage migration and compiled script checks. These checks do not establish rendered browser appearance.
+Use Node 24 or newer for the test suite's SQLite adapter. Run `npm ci`, `npm run build`, then `npm test`. The build assembles the UI, embeds the passkey client and bundles the deployable Worker at `dist/server/index.js`. `.openai/hosting.json` declares the existing Site and its D1 binding `DB`. Schema changes belong in `db/schema.ts`; `npm run db:generate` produces versioned migrations in `drizzle/`. Published migrations must not be edited. Sites applies packaged migrations during deployment.
+
+The sibling `roulette.html` is a standalone local game export; administrator authentication and shared balances require the hosted Worker. Do not use the standalone export as an administrator portal.
+
+`npm test` covers accounting, interest boundaries and offline catch-up, mutual loan consent, repayments, deletion, merchant profit and cooldown, game rules, controls, storage migration and compiled scripts. Worker tests exercise real WebAuthn signature verification with generated credentials, single-use challenges, identity/origin checks, session expiry, unauthorized administrator rejection, concurrent transactions, duplicate request protection, UI integration and one-time legacy imports. These automated checks do not establish rendered browser appearance or actual Windows Hello device enrollment.
 
 Original supplied artwork is retained in `src/roulette.html` and `src/lucky-reference.html`; integration remains in build helpers and the shared source modules. `.openai/hosting.json` preserves the existing private Site identity.

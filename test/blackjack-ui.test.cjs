@@ -10,7 +10,7 @@ function ui(engine=new CasinoEngine(null,()=>.5)) {
     class Element {
         constructor(){this.children=[];this.dataset={};this.listeners={};this.textContent='';this.value='50';this.hidden=false;this.firstChild={textContent:''};}
         addEventListener(type,handler){(this.listeners[type]||=[]).push(handler);}
-        fire(type,event={}){for(const handler of this.listeners[type]||[])handler(event);}
+        fire(type,event={}){return Promise.all((this.listeners[type]||[]).map(handler=>handler(event)));}
         setAttribute(name,value){this[name]=value;}
         append(...children){this.children.push(...children);}
         replaceChildren(...children){this.children=children;}
@@ -29,43 +29,43 @@ function ui(engine=new CasinoEngine(null,()=>.5)) {
         for(const card of sequence){const index=cards.findIndex(c=>c.rank===card.rank&&c.suit===0);cards.splice(index,1);}
         controller.game.shoeFactory=()=>[...cards,...sequence.toReversed()];
     }
-    function flush(){let count=0;while(timers.size){const [id,fn]=timers.entries().next().value;timers.delete(id);fn();assert.ok(count++<50);}}
+    async function flush(){let count=0;while(timers.size){const [id,fn]=timers.entries().next().value;timers.delete(id);await fn();assert.ok(count++<50);}}
     controller.setVisible(true);
     return {engine,controller,elements,chips,notices,dealSequence,flush,click:action=>elements.get('bj-'+action).fire('click'),get changes(){return changes;}};
 }
-test('table controls deal, hide the hole card, stand, run the dealer and settle the shared wallet',()=>{
-    const t=ui();t.dealSequence([10,9,8,7,10]);t.click('deal');
+test('table controls deal, hide the hole card, stand, run the dealer and settle the shared wallet',async () =>{
+    const t=ui();t.dealSequence([10,9,8,7,10]);await t.click('deal');
     assert.equal(t.engine.active.balance,950);assert.equal(t.controller.animating,true);assert.equal(t.elements.get('bj-deal').disabled,true);
-    assert.match(t.elements.get('bj-dealer-total').textContent,/hidden/);t.flush();assert.equal(t.elements.get('bj-hit').disabled,false);
-    t.click('stand');t.flush();assert.equal(t.engine.active.balance,1050);assert.equal(t.engine.lock,null);
+    assert.match(t.elements.get('bj-dealer-total').textContent,/hidden/);await t.flush();assert.equal(t.elements.get('bj-hit').disabled,false);
+    await t.click('stand');await t.flush();assert.equal(t.engine.active.balance,1050);assert.equal(t.engine.lock,null);
     assert.equal(t.elements.get('bj-deal').disabled,false);assert.match(t.elements.get('bj-status').textContent,/Net \+50/);
 });
-test('wager controls, low funds, camera and sound controls remain functional without WebGL',()=>{
+test('wager controls, low funds, camera and sound controls remain functional without WebGL',async () =>{
     const t=ui();assert.equal(t.elements.get('bj-render-note').hidden,false);
-    t.chips[1].fire('click');assert.equal(t.elements.get('bj-wager').value,'100');t.click('bet-minus');assert.equal(t.elements.get('bj-wager').value,'90');
-    t.click('camera');assert.equal(t.elements.get('bj-camera').textContent,'View: Overhead');t.click('sound');assert.equal(t.elements.get('bj-sound')['aria-pressed'],'true');
-    t.engine.active.balance=0;t.click('deal');assert.equal(t.engine.active.balance,0);assert.match(t.notices.at(-1),/Not enough chips/);
+    t.chips[1].fire('click');assert.equal(t.elements.get('bj-wager').value,'100');await t.click('bet-minus');assert.equal(t.elements.get('bj-wager').value,'90');
+    await t.click('camera');assert.equal(t.elements.get('bj-camera').textContent,'View: Overhead');await t.click('sound');assert.equal(t.elements.get('bj-sound')['aria-pressed'],'true');
+    t.engine.active.balance=0;await t.click('deal');assert.equal(t.engine.active.balance,0);assert.match(t.notices.at(-1),/Not enough chips/);
 });
-test('replacement UI resumes a pending dealer turn and does not pay twice',()=>{
+test('replacement UI resumes a pending dealer turn and does not pay twice',async () =>{
     const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};
-    const t=ui(new CasinoEngine(storage,()=>.5));t.dealSequence([10,9,8,7,10]);t.click('deal');t.flush();t.click('stand');
-    const restored=ui(new CasinoEngine(storage,()=>.5));assert.equal(restored.engine.lock,'blackjack');restored.flush();assert.equal(restored.engine.active.balance,1050);
+    const t=ui(new CasinoEngine(storage,()=>.5));t.dealSequence([10,9,8,7,10]);await t.click('deal');await t.flush();await t.click('stand');
+    const restored=ui(new CasinoEngine(storage,()=>.5));assert.equal(restored.engine.lock,'blackjack');await restored.flush();assert.equal(restored.engine.active.balance,1050);
     const next=new CasinoEngine(storage);new CasinoBlackjack(next);assert.equal(next.active.balance,1050);assert.equal(next.data.ledger.length,1);
 });
 
-test('typing a custom wager updates the deal button and debits the exact amount',()=>{
+test('typing a custom wager updates the deal button and debits the exact amount',async () =>{
     const t=ui();t.dealSequence([10,9,8,7,10]);
     const input=t.elements.get('bj-wager');input.value='137';input.fire('input');
-    assert.equal(t.elements.get('bj-deal').disabled,false);t.click('deal');
+    assert.equal(t.elements.get('bj-deal').disabled,false);await t.click('deal');
     assert.equal(t.engine.active.balance,863);assert.equal(input.disabled,true);
-    t.flush();t.click('stand');t.flush();assert.equal(t.engine.active.balance,1137);
+    await t.flush();await t.click('stand');await t.flush();assert.equal(t.engine.active.balance,1137);
     input.value='1.5';input.fire('input');assert.equal(t.elements.get('bj-deal').disabled,true);
     input.value='2000';input.fire('input');assert.equal(t.elements.get('bj-deal').disabled,true);
 });
 
-test('jackpot controller plays the winning deal and ignores another request during its animation',()=>{
-    const t=ui();t.elements.get('bj-wager').value='137';t.controller.forceJackpot();
+test('jackpot controller plays the winning deal and ignores another request during its animation',async () =>{
+    const t=ui();t.elements.get('bj-wager').value='137';await t.controller.forceJackpot();
     assert.equal(t.engine.active.balance,1205);assert.equal(t.controller.animating,true);
-    t.controller.forceJackpot();assert.equal(t.engine.active.balance,1205);t.flush();
+    await t.controller.forceJackpot();assert.equal(t.engine.active.balance,1205);await t.flush();
     assert.equal(t.controller.animating,false);assert.match(t.elements.get('bj-status').textContent,/Blackjack/);
 });

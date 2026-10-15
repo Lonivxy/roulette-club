@@ -3,12 +3,12 @@ function createCasinoClub(roulette) {
     let browserStorage;
     try { browserStorage = window.localStorage; } catch { /* Session mode is supported. */ }
     const engine = new CasinoEngine(browserStorage);
-    if (!browserStorage) engine.storageWarning = 'Browser storage is unavailable. This session is temporary.';
+    if (!browserStorage && !engine.remote) engine.storageWarning = 'Browser storage is unavailable. This session is temporary.';
     for (const key of ['balance', 'bets', 'lastBets', 'history']) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, pendingDelete = null;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, admin, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -27,6 +27,7 @@ function createCasinoClub(roulette) {
         return el;
     }
     function render() {
+        admin?.render();
         const u = engine.active;
         const selectedRecipient = $('transfer-user').value;
         $('club-user').replaceChildren(...engine.data.users.map(option));
@@ -54,10 +55,11 @@ function createCasinoClub(roulette) {
             button.addEventListener('click', () => switchPlayer(p.id));
             const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'club-action secondary danger';
             remove.textContent = pendingDelete === p.id ? '再次点击确认永久删除（含余额）' : '删除';
-            remove.disabled = viewLocked() || engine.data.users.length === 1;
-            remove.addEventListener('click', () => {
+            remove.disabled = viewLocked() || engine.data.users.length === 1 || !admin?.unlocked;
+            remove.addEventListener('click', async () => {
+                if (!admin?.unlocked) { toast('请先使用 Windows Hello 解锁管理入口。',true); return; }
                 if (pendingDelete !== p.id) { pendingDelete = p.id; render(); return; }
-                if (transact(() => engine.deletePlayer(p.id), '玩家已删除。')) {
+                if (await transact(() => engine.deletePlayer(p.id), '玩家已删除。')) {
                     pendingDelete = null; lucky.resetPlayer(); renderHistoryRibbon(); renderNumberModalGrid(); hideBanner(); render();
                 }
             });
@@ -86,6 +88,8 @@ function createCasinoClub(roulette) {
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
         $('market-view').hidden = view !== 'market';
         $('players-view').hidden = view !== 'players';
+        $('admin-view').hidden = view !== 'admin';
+        $('club-player-tabs').hidden = view === 'admin';
         lucky.setVisible(view === 'slots');
         $('blackjack-view').hidden = view !== 'blackjack';
         blackjack.setVisible(view === 'blackjack');
@@ -96,7 +100,7 @@ function createCasinoClub(roulette) {
         render();
     }
     function setView(next) {
-        if (!['roulette', 'slots', 'blackjack', 'bank', 'market', 'players'].includes(next)) return;
+        if (!['roulette', 'slots', 'blackjack', 'bank', 'market', 'players', 'admin'].includes(next)) return;
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
         paintView();
@@ -111,10 +115,10 @@ function createCasinoClub(roulette) {
             toast(`Now playing as ${engine.active.name}.`);
         } catch (e) { render(); toast(e.message, true); }
     }
-    function transact(action, success) {
+    async function transact(action, success) {
         try {
             if (viewLocked()) throw new Error('Wait for the current round to finish.');
-            action(); updateBettingHUD(); toast(success);
+            await action(); updateBettingHUD(); toast(success);
             return true;
         } catch (e) { toast(e.message, true); return false; }
     }
@@ -144,21 +148,23 @@ function createCasinoClub(roulette) {
             changed: () => updateBettingHUD(),
             notify: toast
         });
+        admin = createAdminUI(engine, {locked:viewLocked,transact,changed:()=>{lucky.resetPlayer();render();}});
+        if(engine.remote) engine.onChange = render;
         document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
         document.querySelectorAll('[data-go-bank]').forEach(b => b.addEventListener('click', () => setView('bank')));
         $('club-user').addEventListener('change', e => switchPlayer(e.target.value));
-        $('transfer-form').addEventListener('submit', e => {
+        $('transfer-form').addEventListener('submit', async e => {
             e.preventDefault();
-            if (transact(() => engine.transfer($('transfer-user').value, Number($('transfer-amount').value)), 'Chips transferred successfully.')) $('transfer-form').reset();
+            if (await transact(() => engine.transfer($('transfer-user').value, Number($('transfer-amount').value)), 'Chips transferred successfully.')) $('transfer-form').reset();
         });
-        $('bank-form').addEventListener('submit', e => {
+        $('bank-form').addEventListener('submit', async e => {
             e.preventDefault();
             const repay = e.submitter?.value === 'repay';
-            if (transact(() => engine[repay ? 'repay' : 'borrow'](Number($('bank-amount').value)), repay ? 'Debt repaid. Available credit updated.' : 'Borrowed chips added to your wallet.')) $('bank-form').reset();
+            if (await transact(() => engine[repay ? 'repay' : 'borrow'](Number($('bank-amount').value)), repay ? 'Debt repaid. Available credit updated.' : 'Borrowed chips added to your wallet.')) $('bank-form').reset();
         });
-        $('player-form').addEventListener('submit', e => {
+        $('player-form').addEventListener('submit', async e => {
             e.preventDefault();
-            if (transact(() => engine.addUser($('player-name').value), 'Player added with 1,000 starter chips.')) {
+            if (await transact(() => engine.addUser($('player-name').value), 'Player added with 1,000 starter chips.')) {
                 $('player-form').reset(); renderHistoryRibbon(); renderNumberModalGrid(); hideBanner();
                 lucky.resetPlayer();
             }
@@ -183,11 +189,14 @@ function createCasinoClub(roulette) {
             else return;
             e.preventDefault(); setView(tabs[i].dataset.view); tabs[i].focus();
         }));
-        const requestedView = window.location.hash.slice(1);
-        if (blackjack.pending) view = 'blackjack';
-        else if (['roulette', 'slots', 'blackjack', 'bank', 'market', 'players'].includes(requestedView)) view = requestedView;
+        const requestedView = window.location.pathname === '/admin' ? 'admin' : window.location.hash.slice(1);
+        if (requestedView === 'admin') view = 'admin';
+        else if (blackjack.pending) view = 'blackjack';
+        else if (['roulette', 'slots', 'blackjack', 'bank', 'market', 'players', 'admin'].includes(requestedView)) view = requestedView;
         paintView();
+        let lastSync = 0;
         const tick = () => {
+            if(engine.remote && !viewLocked() && Date.now()-lastSync >= 5000){lastSync=Date.now();engine.sync().catch(()=>{});}
             if (engine.accrueInterest()) { engine.save(); render(); }
             else { economy?.tick(); playerLoans?.tick(); }
         };
