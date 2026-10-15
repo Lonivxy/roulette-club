@@ -14,7 +14,7 @@ replace('    </style>', read('club.css') + lucky.css + read('lucky-layout.css') 
 replace('<body>', '<body>\n' + read('club.html').replace('<!-- LUCKY_777 -->', lucky.html).replace('<!-- BLACKJACK -->', read('blackjack.html')).replace('<!-- MARKET -->', read('market.html')));
 replace('class="fixed top-0 left-0 right-0 z-20', 'class="club-roulette-hud fixed top-0 left-0 right-0 z-20');
 replace('<div class="fixed bottom-0', '<div id="roulette-controls" class="fixed bottom-0');
-replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + read('custom-bet.js') + '\n' + read('lucky-input.js') + '\n' + lucky.script + '\n' + read('blackjack-core.js') + '\n' + read('blackjack-scene.js') + '\n' + read('blackjack-ui.js') + '\n' + read('economy-ui.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
+replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + read('custom-bet.js') + '\n' + read('jackpot-shortcut.js') + '\n' + read('lucky-input.js') + '\n' + lucky.script + '\n' + read('blackjack-core.js') + '\n' + read('blackjack-scene.js') + '\n' + read('blackjack-ui.js') + '\n' + read('economy-ui.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
 replace('        // Helper to determine pocket color', '        const casino = createCasinoClub(state);\n        casino.init();\n        updateBettingHUD();\n        renderHistoryRibbon();\n\n        // Helper to determine pocket color');
 replace("            sfx.init();\n            hideBanner();", "            if (casino.busy() || casino.view !== 'roulette') return;\n            casino.engine.lock = 'roulette';\n            casino.engine.active.pendingRoulette = true;\n            casino.refresh();\n            sfx.init();\n            hideBanner();");
 replace('            state.balance += totalPayout;', "            state.balance += totalPayout;\n            casino.engine.lock = null;\n            casino.engine.active.pendingRoulette = false;\n            if (totalWagered > 0) casino.engine.completeRound();\n            casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);");
@@ -32,6 +32,24 @@ replace('            build3DScene();', "            if (!window.THREE) {\n      
 html = html.replace('let raycaster = new THREE.Raycaster();', 'let raycaster = window.THREE ? new THREE.Raycaster() : null;')
     .replace('let mouseNDC = new THREE.Vector2(0, 0);', 'let mouseNDC = window.THREE ? new THREE.Vector2(0, 0) : null;')
     .replace('let interactivePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.8);', 'let interactivePlane = window.THREE ? new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.8) : null;');
+// Keep the hidden shortcut's winning pocket aligned with the rendered ball.
+replace('        function triggerSpin(powerNormalized = 0.75, direction = 1) {', `        function forceRouletteJackpot() {
+            if (!window.THREE || !renderer) { casino.toast('The 3D wheel is unavailable.', true); return; }
+            if (casino.engine.lock && casino.engine.lock !== 'roulette') return;
+            if (getTotalActiveBet() === 0) placeNumberBet(0);
+            if (getTotalActiveBet() === 0) { casino.toast('Not enough chips to place a bet.', true); return; }
+            const winningNumber = bestRouletteNumber(state.bets);
+            state.forcedPocketIndex = POCKETS.findIndex(pocket => pocket.number === winningNumber);
+            if (casino.engine.lock !== 'roulette') triggerSpin();
+        }
+
+        function triggerSpin(powerNormalized = 0.75, direction = 1) {`);
+replace('const targetLocalAngle = POCKETS[currentPocketIdx].localAngle;', 'const targetLocalAngle = POCKETS[state.forcedPocketIndex ?? currentPocketIdx].localAngle;');
+replace('                    state.settledPocketIndex = currentPocketIdx;', `                    const winningIndex = state.forcedPocketIndex ?? currentPocketIdx;
+                    state.settledPocketIndex = winningIndex;
+                    state.ballAngle = state.wheelAngle + POCKETS[winningIndex].localAngle;
+                    state.forcedPocketIndex = null;`);
+replace('                    evaluateSpinOutcome(currentPocketIdx);', '                    evaluateSpinOutcome(winningIndex);');
 // Custom roulette chips use an exact amount and never silently spend a smaller balance.
 replace("document.querySelectorAll('[data-bet]').forEach(btn => {", "document.querySelectorAll('#roulette-controls [data-bet]').forEach(btn => {");
 replace('                <!-- Clear / Rebet -->', `                <form id="roulette-custom-form" class="custom-bet-form" novalidate>

@@ -26,6 +26,7 @@ function createLucky777(engine, callbacks) {
         toggle.setAttribute('aria-expanded', String(!panels.hidden));
     });
     return {
+        forceJackpot() { if (visible && machine) machine.forceJackpot(); },
         get dragging() { return machine?.dragging || false; },
         get displayBalance() { return machine?.displayBalance ?? null; },
         update(locked) { machine?.update(locked); custom.update(locked || !!engine.armedCard); customToggle.disabled = locked || !!engine.armedCard; },

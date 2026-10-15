@@ -138,3 +138,9 @@ test('equipped merchant card overrides selected wager, drives real reel stops an
     m.finish();assert.equal(m.get('uiWin').textContent,'3,425');
     m.click('QuickPullAndSpin()');m.finish();assert.equal(m.get('uiWin').textContent,'5,000');
 });
+
+test('jackpot controller drives a paid 777 spin and blocks a duplicate while the reels animate',()=>{
+    const m=machineFixture();m.machine.setCustomBet(137);m.machine.forceJackpot();
+    assert.equal(m.engine.active.balance,7713);m.machine.forceJackpot();assert.equal(m.engine.active.balance,7713);
+    m.finish();assert.equal(m.get('uiWin').textContent,'6,850');assert.equal(m.engine.lock,null);
+});

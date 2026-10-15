@@ -997,15 +997,15 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
                 : sevens === 2 ? 5 : cherries === 2 ? 2 : cherries === 1 ? 1 : 0;
             return { reels: [...reels], symbols: landed, multiplier, wager, payout: wager * multiplier, net: wager * (multiplier - 1) };
         }
-        spinSlots(value, forcedIndices = null, { allIn = false } = {}) {
+        spinSlots(value, forcedIndices = null, { allIn = false, jackpot = false } = {}) {
             this.ensureIdle();
             const n = this.amount(value), u = this.active;
-            const card = this.armedCard;
+            const card = jackpot ? null : this.armedCard;
             if (card && n !== card.stake) throw new Error('已装备卡绑定下注 ' + card.stake.toLocaleString() + '，请取消装备后更改。');
             if (allIn && n !== u.balance) throw new Error('All In must wager your whole wallet.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips for this spin.');
             if (u.balance + n * 49 > MAX) throw new Error('Your wallet is too close to its chip limit.');
-            const reels = card ? cards[card.type].reels : forcedIndices === null ? Array.from({ length: 3 }, () => {
+            const reels = jackpot ? [0, 6, 0] : card ? cards[card.type].reels : forcedIndices === null ? Array.from({ length: 3 }, () => {
                 const roll = this.random();
                 if (!(roll >= 0 && roll < 1)) throw new Error('Could not generate a valid spin. Try again.');
                 return Math.floor(roll * reelStrip.length);
@@ -1050,6 +1050,29 @@ function bindCustomBet(prefix, engine, options) {
         } catch (error) { options.notify(error.message, true); }
     });
     return { update(locked) { input.disabled = locked; button.disabled = locked; } };
+}
+
+function bindJackpotShortcut(target, action) {
+    let leftShift = false;
+    target.addEventListener('keydown', event => {
+        if (event.code === 'ShiftLeft') leftShift = true;
+        if (!leftShift || !event.shiftKey || event.code !== 'KeyF' || event.repeat || event.isComposing
+            || event.ctrlKey || event.altKey || event.metaKey
+            || event.target?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+        if (action() === false) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+    });
+    target.addEventListener('keyup', event => { if (event.code === 'ShiftLeft') leftShift = false; });
+    target.addEventListener('blur', () => { leftShift = false; });
+}
+function bestRouletteNumber(bets) {
+    let best = 0, highest = -1;
+    for (let number = 0; number < 24; number++) {
+        const payout = (bets.numbers[number] || 0) * 24 + (number === 0 ? bets.GREEN * 24
+            : number % 2 ? (bets.RED + bets.ODD) * 2 : (bets.BLACK + bets.EVEN) * 2);
+        if (payout > highest) { highest = payout; best = number; }
+    }
+    return best;
 }
 
 function createLuckyInput(canvas, actions) {
@@ -2378,11 +2401,11 @@ function createLuckyMachine(engine, callbacks, host) {
       }
     });
 
-    function QuickPullAndSpin() {
+    function QuickPullAndSpin(jackpot = false) {
       if (isSpinning || !visible || callbacks.locked()) return;
       armPullRatio = 1.0;
       syncArmVisuals(1.0);
-      executeReelSpin();
+      executeReelSpin(jackpot);
     }
 
     /* ============================================================================
@@ -2441,11 +2464,11 @@ function createLuckyMachine(engine, callbacks, host) {
       callbacks.market?.();
     }
 
-    function executeReelSpin() {
+    function executeReelSpin(jackpot = false) {
       if (isSpinning || !visible || callbacks.locked()) return;
 
       const wager = getActiveBetAmount();
-      try { spinResult = engine.spinSlots(wager, null, { allIn: wager === engine.active.balance }); }
+      try { spinResult = engine.spinSlots(wager, null, { allIn: wager === engine.active.balance, jackpot }); }
       catch (error) { callbacks.notify(error.message, true); return; }
       const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
       isSpinning = true;
@@ -2759,6 +2782,7 @@ function createLuckyMachine(engine, callbacks, host) {
       button.addEventListener('click', actions[button.dataset.machineAction]);
     });
     return {
+      forceJackpot: () => QuickPullAndSpin(true),
       setCustomBet(value) {
         if (isSpinning || callbacks.locked()) return;
         if (engine.armedCard) { callbacks.notify('请先取消装备卡片，再更改绑定下注。', true); return; }
@@ -2819,6 +2843,7 @@ function createLucky777(engine, callbacks) {
         toggle.setAttribute('aria-expanded', String(!panels.hidden));
     });
     return {
+        forceJackpot() { if (visible && machine) machine.forceJackpot(); },
         get dragging() { return machine?.dragging || false; },
         get displayBalance() { return machine?.displayBalance ?? null; },
         update(locked) { machine?.update(locked); custom.update(locked || !!engine.armedCard); customToggle.disabled = locked || !!engine.armedCard; },
@@ -2921,14 +2946,18 @@ function createLucky777(engine, callbacks) {
             return r.shoe.pop();
         }
         _save() { this.engine.save(); }
-        start(value) {
+        start(value, { jackpot = false } = {}) {
             this.engine.ensureIdle();
             const bet = this.engine.amount(value), user = this.engine.active;
             if (bet > user.balance) throw new Error('Not enough chips. Lower your bet or visit the bank.');
             if (user.balance + bet * 4 > 1000000000) throw new Error('Your wallet is too close to its chip limit.');
             const previous = this.round;
-            const shoe = previous && previous.shoe.length >= 52 ? [...previous.shoe] : this.shoeFactory();
+            const shoe = jackpot ? makeShoe(() => .5) : previous && previous.shoe.length >= 52 ? [...previous.shoe] : this.shoeFactory();
             if (!Array.isArray(shoe) || shoe.length < 4 || !shoe.every(validCard)) throw new Error('The shoe could not be prepared.');
+            if (jackpot) {
+                const ordered = [1, 10, 13, 9].map(rank => shoe.splice(shoe.findIndex(card => card.rank === rank), 1)[0]);
+                shoe.push(...ordered.reverse());
+            }
             const r = { version: 1, id: root.crypto.randomUUID(), ownerId: user.id, phase: 'player', shoe,
                 dealer: [], hands: [{ cards: [], bet, split: false, status: 'playing' }], activeHand: 0, result: null };
             r.hands[0].cards.push(this._draw(r)); r.dealer.push(this._draw(r));
@@ -2981,6 +3010,22 @@ function createLucky777(engine, callbacks) {
             r.dealer.push(this._draw(r));
             if (score(r.dealer).total >= 17) return this._settle();
             this._save(); return r;
+        }
+        forceJackpot(value) {
+            if (!this.pending) return this.start(value, { jackpot: true });
+            const r = this.round;
+            if (this.engine.lock !== 'blackjack') throw new Error('Wait for the current game to finish.');
+            const maximum = r.hands.reduce((sum, hand) => sum + Math.floor(hand.bet * (!hand.split && hand.cards.length === 2 ? 2.5 : 2)), 0);
+            if (this.engine.active.balance + maximum > 1000000000) throw new Error('Your wallet is too close to its chip limit.');
+            r.shoe = makeShoe(() => .5);
+            const take = rank => r.shoe.splice(r.shoe.findIndex(card => card.rank === rank), 1)[0];
+            r.dealer = [take(10), take(9)];
+            for (const hand of r.hands) {
+                hand.cards = hand.cards.length === 2 ? [take(1), take(13)] : [take(1), take(5), take(5)];
+                hand.status = 'stood';
+            }
+            r.activeHand = r.hands.length;
+            return this._settle();
         }
         _settle() {
             const r = this.round;
@@ -3302,6 +3347,14 @@ function createBlackjackTable(engine, callbacks) {
             schedule(finishedMotion,action==='deal'?1050:600);
         } catch(error) {callbacks.notify(error.message,true);update();}
     }
+    function forceJackpot() {
+        if (!visible || animating) { callbacks.notify('Wait for the cards to finish moving.', true); return; }
+        try {
+            game.forceJackpot(wager());
+            animating = true; tone(660, .12); changed();
+            schedule(finishedMotion, 1050);
+        } catch (error) { callbacks.notify(error.message, true); update(); }
+    }
     for(const action of ['hit','stand','double','split']) $('bj-'+action).addEventListener('click',()=>act(action));
     $('bj-deal').addEventListener('click',()=>act('deal'));
     function changeWager(delta) {
@@ -3319,7 +3372,7 @@ function createBlackjackTable(engine, callbacks) {
         const action={h:'hit',s:'stand',d:'double',p:'split'}[event.key.toLowerCase()];
         if(action&&game.available()[action]) {event.preventDefault();event.stopImmediatePropagation();act(action);}
     });
-    return { update, game, get pending(){return game.pending;}, get animating(){return animating;},
+    return { update, game, forceJackpot, get pending(){return game.pending;}, get animating(){return animating;},
         setVisible(value) {
             visible=value;
             if(value&&!scene) {
@@ -3506,6 +3559,14 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
+        bindJackpotShortcut(window, () => {
+            if (!['roulette', 'slots', 'blackjack'].includes(view)) return false;
+            if (roulette.isChargingSpin || roulette.isDraggingTurret || lucky?.dragging) { toast('Release the controls before using the shortcut.', true); return; }
+            if (view === 'blackjack') blackjack.forceJackpot();
+            else if (view === 'roulette') forceRouletteJackpot();
+            else if (!busy()) lucky.forceJackpot();
+            else toast('Wait for this spin to finish, then use the shortcut again.', true);
+        });
         economy = createEconomyUI(engine, { locked: viewLocked, transact, playSlots: () => setView('slots') });
         customRoulette = bindCustomBet('roulette-custom', engine, {
             locked: viewLocked, notify: toast,
@@ -4394,6 +4455,16 @@ function createCasinoClub(roulette) {
         // ============================================================================
         // 4. PHYSICS & SPIN SIMULATION LOOP
         // ============================================================================
+        function forceRouletteJackpot() {
+            if (!window.THREE || !renderer) { casino.toast('The 3D wheel is unavailable.', true); return; }
+            if (casino.engine.lock && casino.engine.lock !== 'roulette') return;
+            if (getTotalActiveBet() === 0) placeNumberBet(0);
+            if (getTotalActiveBet() === 0) { casino.toast('Not enough chips to place a bet.', true); return; }
+            const winningNumber = bestRouletteNumber(state.bets);
+            state.forcedPocketIndex = POCKETS.findIndex(pocket => pocket.number === winningNumber);
+            if (casino.engine.lock !== 'roulette') triggerSpin();
+        }
+
         function triggerSpin(powerNormalized = 0.75, direction = 1) {
             if (casino.busy()) return;
 
@@ -4502,7 +4573,7 @@ function createCasinoClub(roulette) {
                 state.ballHeight = 0.34 + bounceWave * bounceAmp;
 
                 // Magnetic pocket capture force when relative speed is low
-                const targetLocalAngle = POCKETS[currentPocketIdx].localAngle;
+                const targetLocalAngle = POCKETS[state.forcedPocketIndex ?? currentPocketIdx].localAngle;
                 const targetWorldAngle = state.wheelAngle + targetLocalAngle;
                 let angleDiff = Math.atan2(
                     Math.sin(targetWorldAngle - state.ballAngle),
@@ -4514,10 +4585,13 @@ function createCasinoClub(roulette) {
                 }
 
                 if (Math.abs(relVel) < 0.22 && Math.abs(angleDiff) < 0.08) {
-                    state.settledPocketIndex = currentPocketIdx;
+                    const winningIndex = state.forcedPocketIndex ?? currentPocketIdx;
+                    state.settledPocketIndex = winningIndex;
+                    state.ballAngle = state.wheelAngle + POCKETS[winningIndex].localAngle;
+                    state.forcedPocketIndex = null;
                     state.phase = 'SETTLED';
                     sfx.playBallSettle();
-                    evaluateSpinOutcome(currentPocketIdx);
+                    evaluateSpinOutcome(winningIndex);
                 }
 
                 updateBall3DPosition();

@@ -62,3 +62,10 @@ test('typing a custom wager updates the deal button and debits the exact amount'
     input.value='1.5';input.fire('input');assert.equal(t.elements.get('bj-deal').disabled,true);
     input.value='2000';input.fire('input');assert.equal(t.elements.get('bj-deal').disabled,true);
 });
+
+test('jackpot controller plays the winning deal and ignores another request during its animation',()=>{
+    const t=ui();t.elements.get('bj-wager').value='137';t.controller.forceJackpot();
+    assert.equal(t.engine.active.balance,1205);assert.equal(t.controller.animating,true);
+    t.controller.forceJackpot();assert.equal(t.engine.active.balance,1205);t.flush();
+    assert.equal(t.controller.animating,false);assert.match(t.elements.get('bj-status').textContent,/Blackjack/);
+});

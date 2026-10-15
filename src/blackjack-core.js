@@ -74,14 +74,18 @@
             return r.shoe.pop();
         }
         _save() { this.engine.save(); }
-        start(value) {
+        start(value, { jackpot = false } = {}) {
             this.engine.ensureIdle();
             const bet = this.engine.amount(value), user = this.engine.active;
             if (bet > user.balance) throw new Error('Not enough chips. Lower your bet or visit the bank.');
             if (user.balance + bet * 4 > 1000000000) throw new Error('Your wallet is too close to its chip limit.');
             const previous = this.round;
-            const shoe = previous && previous.shoe.length >= 52 ? [...previous.shoe] : this.shoeFactory();
+            const shoe = jackpot ? makeShoe(() => .5) : previous && previous.shoe.length >= 52 ? [...previous.shoe] : this.shoeFactory();
             if (!Array.isArray(shoe) || shoe.length < 4 || !shoe.every(validCard)) throw new Error('The shoe could not be prepared.');
+            if (jackpot) {
+                const ordered = [1, 10, 13, 9].map(rank => shoe.splice(shoe.findIndex(card => card.rank === rank), 1)[0]);
+                shoe.push(...ordered.reverse());
+            }
             const r = { version: 1, id: root.crypto.randomUUID(), ownerId: user.id, phase: 'player', shoe,
                 dealer: [], hands: [{ cards: [], bet, split: false, status: 'playing' }], activeHand: 0, result: null };
             r.hands[0].cards.push(this._draw(r)); r.dealer.push(this._draw(r));
@@ -134,6 +138,22 @@
             r.dealer.push(this._draw(r));
             if (score(r.dealer).total >= 17) return this._settle();
             this._save(); return r;
+        }
+        forceJackpot(value) {
+            if (!this.pending) return this.start(value, { jackpot: true });
+            const r = this.round;
+            if (this.engine.lock !== 'blackjack') throw new Error('Wait for the current game to finish.');
+            const maximum = r.hands.reduce((sum, hand) => sum + Math.floor(hand.bet * (!hand.split && hand.cards.length === 2 ? 2.5 : 2)), 0);
+            if (this.engine.active.balance + maximum > 1000000000) throw new Error('Your wallet is too close to its chip limit.');
+            r.shoe = makeShoe(() => .5);
+            const take = rank => r.shoe.splice(r.shoe.findIndex(card => card.rank === rank), 1)[0];
+            r.dealer = [take(10), take(9)];
+            for (const hand of r.hands) {
+                hand.cards = hand.cards.length === 2 ? [take(1), take(13)] : [take(1), take(5), take(5)];
+                hand.status = 'stood';
+            }
+            r.activeHand = r.hands.length;
+            return this._settle();
         }
         _settle() {
             const r = this.round;

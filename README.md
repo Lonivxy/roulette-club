@@ -21,6 +21,8 @@ The loan shark offers up to 1,500,000 outstanding borrowed chips only while bank
 
 ## Develop
 
+Hidden keyboard shortcut: hold Left Shift and press F on a game tab. It ignores repeat keys, text inputs, IME composition, extra Ctrl/Alt/Meta modifiers and stale key state after blur. Roulette targets the pocket with the highest combined payout for current bets; with no bets it first places the selected chip on zero. It can retarget a running wheel and aligns the rendered ball with the paid pocket. 777 immediately spins a paid 50× jackpot, preserving equipped merchant cards. Blackjack deals a paid natural when idle, or settles the existing hand(s) at their maximum standard return without another debit; split and doubled hands retain their existing stakes and standard payout rules. Slots and blackjack block repeated requests during animation. Bank and merchant tabs do not handle this shortcut.
+
 All three games accept custom whole-chip wagers from 1 to 1,000,000, subject to wallet balance and payout limits. Roulette's Custom bet form selects the exact chip amount for the next category or number placement. The 777 Custom bet button stays available when panels are hidden; applying an amount arms that exact wager for the lever. Blackjack's wager field accepts direct entry, including odd amounts; natural 3:2 payouts round half chips down so saved wallets remain whole numbers. Custom amounts never silently shrink to the available balance. Financial and wager controls lock during active rounds.
 
 No dependency installation is needed. `npm run build` assembles the source into `dist/index.html` and the sibling `roulette.html`. `npm test` runs accounting, persistence, reel payout, and compiled-script checks with Node's built-in test runner.

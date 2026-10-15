@@ -209,15 +209,15 @@
                 : sevens === 2 ? 5 : cherries === 2 ? 2 : cherries === 1 ? 1 : 0;
             return { reels: [...reels], symbols: landed, multiplier, wager, payout: wager * multiplier, net: wager * (multiplier - 1) };
         }
-        spinSlots(value, forcedIndices = null, { allIn = false } = {}) {
+        spinSlots(value, forcedIndices = null, { allIn = false, jackpot = false } = {}) {
             this.ensureIdle();
             const n = this.amount(value), u = this.active;
-            const card = this.armedCard;
+            const card = jackpot ? null : this.armedCard;
             if (card && n !== card.stake) throw new Error('已装备卡绑定下注 ' + card.stake.toLocaleString() + '，请取消装备后更改。');
             if (allIn && n !== u.balance) throw new Error('All In must wager your whole wallet.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips for this spin.');
             if (u.balance + n * 49 > MAX) throw new Error('Your wallet is too close to its chip limit.');
-            const reels = card ? cards[card.type].reels : forcedIndices === null ? Array.from({ length: 3 }, () => {
+            const reels = jackpot ? [0, 6, 0] : card ? cards[card.type].reels : forcedIndices === null ? Array.from({ length: 3 }, () => {
                 const roll = this.random();
                 if (!(roll >= 0 && roll < 1)) throw new Error('Could not generate a valid spin. Try again.');
                 return Math.floor(roll * reelStrip.length);

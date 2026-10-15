@@ -1275,11 +1275,11 @@ function createLuckyMachine(engine, callbacks, host) {
       }
     });
 
-    function QuickPullAndSpin() {
+    function QuickPullAndSpin(jackpot = false) {
       if (isSpinning || !visible || callbacks.locked()) return;
       armPullRatio = 1.0;
       syncArmVisuals(1.0);
-      executeReelSpin();
+      executeReelSpin(jackpot);
     }
 
     /* ============================================================================
@@ -1338,11 +1338,11 @@ function createLuckyMachine(engine, callbacks, host) {
       callbacks.market?.();
     }
 
-    function executeReelSpin() {
+    function executeReelSpin(jackpot = false) {
       if (isSpinning || !visible || callbacks.locked()) return;
 
       const wager = getActiveBetAmount();
-      try { spinResult = engine.spinSlots(wager, null, { allIn: wager === engine.active.balance }); }
+      try { spinResult = engine.spinSlots(wager, null, { allIn: wager === engine.active.balance, jackpot }); }
       catch (error) { callbacks.notify(error.message, true); return; }
       const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
       isSpinning = true;
@@ -1656,6 +1656,7 @@ function createLuckyMachine(engine, callbacks, host) {
       button.addEventListener('click', actions[button.dataset.machineAction]);
     });
     return {
+      forceJackpot: () => QuickPullAndSpin(true),
       setCustomBet(value) {
         if (isSpinning || callbacks.locked()) return;
         if (engine.armedCard) { callbacks.notify('请先取消装备卡片，再更改绑定下注。', true); return; }

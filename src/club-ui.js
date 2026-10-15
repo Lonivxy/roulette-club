@@ -108,6 +108,14 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
+        bindJackpotShortcut(window, () => {
+            if (!['roulette', 'slots', 'blackjack'].includes(view)) return false;
+            if (roulette.isChargingSpin || roulette.isDraggingTurret || lucky?.dragging) { toast('Release the controls before using the shortcut.', true); return; }
+            if (view === 'blackjack') blackjack.forceJackpot();
+            else if (view === 'roulette') forceRouletteJackpot();
+            else if (!busy()) lucky.forceJackpot();
+            else toast('Wait for this spin to finish, then use the shortcut again.', true);
+        });
         economy = createEconomyUI(engine, { locked: viewLocked, transact, playSlots: () => setView('slots') });
         customRoulette = bindCustomBet('roulette-custom', engine, {
             locked: viewLocked, notify: toast,

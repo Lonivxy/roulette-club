@@ -97,6 +97,14 @@ function createBlackjackTable(engine, callbacks) {
             schedule(finishedMotion,action==='deal'?1050:600);
         } catch(error) {callbacks.notify(error.message,true);update();}
     }
+    function forceJackpot() {
+        if (!visible || animating) { callbacks.notify('Wait for the cards to finish moving.', true); return; }
+        try {
+            game.forceJackpot(wager());
+            animating = true; tone(660, .12); changed();
+            schedule(finishedMotion, 1050);
+        } catch (error) { callbacks.notify(error.message, true); update(); }
+    }
     for(const action of ['hit','stand','double','split']) $('bj-'+action).addEventListener('click',()=>act(action));
     $('bj-deal').addEventListener('click',()=>act('deal'));
     function changeWager(delta) {
@@ -114,7 +122,7 @@ function createBlackjackTable(engine, callbacks) {
         const action={h:'hit',s:'stand',d:'double',p:'split'}[event.key.toLowerCase()];
         if(action&&game.available()[action]) {event.preventDefault();event.stopImmediatePropagation();act(action);}
     });
-    return { update, game, get pending(){return game.pending;}, get animating(){return animating;},
+    return { update, game, forceJackpot, get pending(){return game.pending;}, get animating(){return animating;},
         setVisible(value) {
             visible=value;
             if(value&&!scene) {
