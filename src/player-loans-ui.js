@@ -20,8 +20,8 @@ function createPlayerLoansUI(engine, callbacks) {
         for (const name of ['amount','rate','minutes']) $('peer-loan-' + name).disabled = locked;
         $('players-greeting').textContent = user.name + ' · 玩家往来'; $('players-wallet').textContent = fmt(user.balance);
         const loans = engine.data.loans.filter(loan => [loan.lenderId, loan.borrowerId].includes(user.id));
-        $('peer-debt').textContent = fmt(loans.filter(loan => loan.status === 'active' && loan.borrowerId === user.id).reduce((sum, loan) => sum + loan.balance,0));
-        $('peer-receivable').textContent = fmt(loans.filter(loan => loan.status === 'active' && loan.lenderId === user.id).reduce((sum, loan) => sum + loan.balance,0));
+        $('peer-debt').textContent = fmt(loans.filter(loan => loan.status === 'active' && loan.borrowerId === user.id).reduce((sum, loan) => engine.money.add(sum, loan.balance),0));
+        $('peer-receivable').textContent = fmt(loans.filter(loan => loan.status === 'active' && loan.lenderId === user.id).reduce((sum, loan) => engine.money.add(sum, loan.balance),0));
         clocks = [];
         const rows = loans.slice(0, 100).map(loan => {
             const row = element('article', '', 'peer-loan-row'), actions = element('div', '', 'club-actions');
@@ -38,11 +38,11 @@ function createPlayerLoansUI(engine, callbacks) {
                 const clock = element('p', '', 'club-muted'); row.append(clock); clocks.push({node:clock, loan});
                 if (loan.borrowerId === user.id) {
                     const form = document.createElement('form'), input = document.createElement('input'), submit = element('button', '还给 ' + loan.lenderName, 'club-action');
-                    form.className = 'peer-repay-form'; input.className = 'club-input'; input.type = 'number'; input.min = '1'; input.max = String(loan.balance); input.step = '1'; input.required = true;
-                    input.setAttribute('aria-label', '偿还给 ' + loan.lenderName + ' 的金额'); input.value = repaymentValues.get(loan.id) ?? String(Math.max(1, Math.min(loan.balance, user.balance)));
+                    form.className = 'peer-repay-form'; input.className = 'club-input'; input.type = 'text'; input.inputMode = 'numeric'; input.pattern = '[0-9]+'; input.required = true;
+                    input.setAttribute('aria-label', '偿还给 ' + loan.lenderName + ' 的金额'); input.value = repaymentValues.get(loan.id) ?? String(engine.money.max(1, engine.money.min(loan.balance, user.balance)));
                     input.disabled = locked || Boolean(user.recovery); submit.type = 'submit'; submit.disabled = locked || Boolean(user.recovery);
                     input.addEventListener('input', () => repaymentValues.set(loan.id, input.value));
-                    form.addEventListener('submit', async event => { event.preventDefault(); callbacks.transact(() => engine.repayLoan(loan.id, Number(input.value)), '还款已进入出借人钱包。'); });
+                    form.addEventListener('submit', async event => { event.preventDefault(); callbacks.transact(() => engine.repayLoan(loan.id, input.value), '还款已进入出借人钱包。'); });
                     form.append(input, submit); row.append(form);
                     const all = button('一键还清这笔', () => callbacks.transact(() => engine.repayAll('peer', loan.id), '这笔玩家借款已全部还清。'));
                     all.disabled = locked || Boolean(user.recovery) || user.balance < loan.balance; actions.append(all);
@@ -54,7 +54,7 @@ function createPlayerLoansUI(engine, callbacks) {
     }
     $('peer-loan-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (await callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, Number($('peer-loan-amount').value), Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), '协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
+        if (await callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, $('peer-loan-amount').value, Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), '协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
     });
     return { render, tick };
 }

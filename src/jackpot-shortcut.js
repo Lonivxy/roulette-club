@@ -14,8 +14,8 @@ function bindJackpotShortcut(target, action) {
 function bestRouletteNumber(bets) {
     let best = 0, highest = -1;
     for (let number = 0; number < 24; number++) {
-        const payout = (bets.numbers[number] || 0) * 24 + (number === 0 ? bets.GREEN * 24
-            : number % 2 ? (bets.RED + bets.ODD) * 2 : (bets.BLACK + bets.EVEN) * 2);
+        const payout = CasinoEngine.money.add(CasinoEngine.money.mul(bets.numbers[number] || 0, 24), number === 0 ? CasinoEngine.money.mul(bets.GREEN, 24)
+            : number % 2 ? CasinoEngine.money.mul(CasinoEngine.money.add(bets.RED, bets.ODD), 2) : CasinoEngine.money.mul(CasinoEngine.money.add(bets.BLACK, bets.EVEN), 2));
         if (payout > highest) { highest = payout; best = number; }
     }
     return best;

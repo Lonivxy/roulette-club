@@ -1,5 +1,7 @@
 (function(root) {
     'use strict';
+    if (!root.CasinoMoney && typeof require === 'function') require('./money.js');
+    const M = root.CasinoMoney;
     const rows = 12;
     const tables = Object.freeze({
         low:Object.freeze([800,400,200,140,110,70,40,70,110,140,200,400,800]),
@@ -8,17 +10,17 @@
     });
     const lanes = Object.freeze({left:.44,center:.5,right:.56});
     const sumReturns = Object.freeze({4:61,5:31,6:19,7:13,8:9,9:7,10:7,11:7,12:7,13:9,14:13,15:19,16:31,17:61});
-    const wager = value => {if(!Number.isSafeInteger(value)||value<1||value>1000000)throw new Error('下注需为 1–1,000,000 的整数。');return value;};
+    const wager = value => M.positive(value);
     const sample = random => {const n=random();if(!(n>=0&&n<1))throw new Error('无法生成有效结果，请重试。');return n;};
     function plinkoSettings(risk,lane) {
         if(!Object.hasOwn(tables,risk)||!Object.hasOwn(lanes,lane))throw new Error('请选择有效的风险和落球口。');
         return {table:tables[risk],rightChance:lanes[lane]};
     }
     function plinkoResult(value,risk,lane,path) {
-        wager(value);const {table}=plinkoSettings(risk,lane);
+        value=wager(value);const {table}=plinkoSettings(risk,lane);
         if(!Array.isArray(path)||path.length!==rows||!path.every(bit=>bit===0||bit===1))throw new Error('弹珠路径无效。');
-        const pocket=path.reduce((sum,bit)=>sum+bit,0),multiplier=table[pocket]/100,payout=Math.floor(value*table[pocket]/100);
-        return {game:'plinko',wager:value,risk,lane,path:[...path],pocket,multiplier,payout,net:payout-value};
+        const pocket=path.reduce((sum,bit)=>sum+bit,0),multiplier=table[pocket]/100,payout=M.ratio(value,table[pocket],100);
+        return {game:'plinko',wager:value,risk,lane,path:[...path],pocket,multiplier,payout,net:M.sub(payout,value)};
     }
     function plinko(value,risk,lane,random,jackpot=false) {
         const {rightChance}=plinkoSettings(risk,lane);wager(value);
@@ -42,12 +44,12 @@
         return kind==='sum'?sumReturns[target]:kind==='triple'?31:2;
     }
     function diceResult(value,kind,target,faces) {
-        wager(value);const maxReturn=diceSettings(kind,target);
+        value=wager(value);const maxReturn=diceSettings(kind,target);
         if(!Array.isArray(faces)||faces.length!==3||!faces.every(n=>Number.isInteger(n)&&n>=1&&n<=6))throw new Error('骰子结果无效。');
         const total=faces.reduce((sum,n)=>sum+n,0),triple=faces.every(n=>n===faces[0]);
         const won=kind==='triple'?triple:kind==='sum'?total===target:!triple&&(kind==='small'?total>=4&&total<=10:kind==='big'?total>=11&&total<=17:kind==='odd'?total%2===1:total%2===0);
-        const multiplier=won?maxReturn:0,payout=value*multiplier;
-        return {game:'dice',wager:value,kind,target:kind==='sum'?target:null,dice:[...faces],total,triple,multiplier,payout,net:payout-value};
+        const multiplier=won?maxReturn:0,payout=M.mul(value,multiplier);
+        return {game:'dice',wager:value,kind,target:kind==='sum'?target:null,dice:[...faces],total,triple,multiplier,payout,net:M.sub(payout,value)};
     }
     function dice(value,kind,target,random,jackpot=false) {
         diceSettings(kind,target);wager(value);let faces;

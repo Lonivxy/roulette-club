@@ -10,7 +10,11 @@ On first use, open `/admin`, choose the Windows Hello setup button and approve t
 
 If this browser has an older local save, authenticate in ADMIN and import it before playing. The import is allowed only before the shared server account has any activity, so it cannot overwrite an active server balance. The original browser save remains available as a backup. Other browsers use the shared server account rather than separate local balances.
 
-Administrators can add or remove whole chips with an optional reason recorded in the account log. Adjustments cannot produce a negative balance or exceed the wallet cap. This is a play-chip app; balances have no cash redemption.
+Administrators can add or remove whole chips with an optional reason recorded in the account log. Ordinary adjustments cannot produce a negative balance. Wallets and administrator credit/debit amounts have no configured maximum. This is a play-chip app; balances have no cash redemption.
+
+## Exact large amounts
+
+Money uses integer arithmetic: safe small values remain ordinary numbers for legacy compatibility, and larger values use BigInt. JSON snapshots, command arguments, response receipts and server bootstrap encode large amounts as `{ "$chips": "digits" }`. The database schema is unchanged, and old numeric player records load normally. Inputs accept complete decimal digits, not scientific notation or fractional chips. Gifts, peer loans, merchant stakes, game payouts, recovery deficits, account summaries and All In use the same exact arithmetic. Windows Hello administrator authorization is still required for balance adjustments. Bank/shark borrowing ceilings and the ten-chip recovery allowance remain in force. Storage and request capacity remain practical limits, rather than a configured chip ceiling.
 
 ## Games
 
@@ -25,7 +29,7 @@ Administrators can add or remove whole chips with an optional reason recorded in
 - Roulette: the supplied 24-pocket wheel; individual player stakes, history and rebet snapshots. Custom chips apply their exact amount to categories or numbers.
 - Lucky 777: directly touch physical bet buttons, tap SPIN or pull the red lever. Panels start hidden; Show controls restores camera and sound controls. Custom bet remains available with panels hidden. Triples return 50× for 777, 25× for diamonds, 20× for BAR, 15× for bells, 10× for clovers, 5× for cherries. Double sevens return 5×; one or two cherries return 1× or 2×. Outcomes, card consumption and wallet changes save before the animation completes.
 - Blackjack: six decks, dealer stands on all 17s, natural blackjack pays 3:2, ordinary wins pay 1:1 and pushes return the stake. Split equal-value cards once; double after split; split aces receive one card each. Odd natural wagers round half chips down. Pending hands and dealer turns resume after reload.
-- All games support custom whole-chip wagers from 1 to 1,000,000, with wallet and payout caps. Ordinary empty wallets require gifts or borrowing. Negative mode provides the separate ten-chip game allowance described below.
+- All games support custom whole-chip wagers of at least 1, with no configured wager, payout or wallet maximum. A wager must still be affordable. Ordinary empty wallets require gifts or borrowing. Negative mode provides the separate ten-chip game allowance described below.
 
 Left Shift + F is a hidden jackpot shortcut on game tabs. Roulette targets the highest combined payout among the current bets (or first places the selected chip on zero); 777 spins a paid jackpot without consuming an equipped merchant card; blackjack deals a paid natural or settles existing hands at the maximum standard return for their existing stakes. The shortcut ignores text fields, right Shift, extra modifiers, repeat keys and stale key state after blur. Slots and blackjack reject duplicate requests during animations.
 
@@ -40,7 +44,7 @@ Deletion requires two clicks and removes the selected player's wallet and cards.
 - PLAYER's Players tab includes a searchable directory with twenty players per page and sorting by name, wallet, net assets or total debt. It can switch the selected player. ADMIN's management list has its own search and pagination; adding, removing and adjusting players still require Windows Hello.
 - Net assets include ordinary cash, reserved roulette/blackjack wagers and active peer-loan receivables, minus bank debt, shark debt, active peer borrowing and the separate negative record. Pending agreements and cards are not valued. The ten-chip recovery allowance and its reserved wagers are excluded from assets.
 - Bank includes an assets/liabilities summary and 3-, 10-, 30- or 60-minute debt forecasts. Forecasts use each loan's existing interest boundary, round every period up, obey debt caps and never mutate balances. They assume no intervening transactions. Negative records have no added interest of their own.
-- Bank, shark and active peer loans have one-click full repayment. The server accrues due interest before choosing the amount and validates cash, counterparty capacity, active games and negative-mode restrictions. Duplicate requests use the existing receipt protection.
+- Bank, shark and active peer loans have one-click full repayment. The server accrues due interest before choosing the amount and validates cash, counterparties, active games and negative-mode restrictions. Duplicate requests use the existing receipt protection.
 - Account activity can be searched by player name, action, date or note and exported as UTF-8 CSV. Search and export cover the currently retained ledger (at most the latest 100 entries), not a permanent complete history. CSV cells are quoted, and formula-like content is neutralized.
 
 ## Bank and real-time interest
@@ -51,11 +55,11 @@ The separate Bank tab belongs to the selected player:
 | --- | --- | --- |
 | Bank | 100,000 | 15% per complete ten minutes |
 | Loan shark | 1,500,000 | 125% per complete three minutes |
-| Player loan | 1,000,000 per agreement | Lender's agreed rate; ten-minute default period |
+| Player loan | Available lender cash; no fixed amount cap | Lender's agreed rate; ten-minute default period |
 
 The bank adds 15% interest per period (debt multiplies by 1.15); the shark adds 125% (debt multiplies by 2.25). Existing debts first settle completed periods under their previous schedule when loaded by the updated server, then start a fresh timer under the new schedule. This conversion is saved once and does not apply the increased rates retroactively. Player-to-player loan terms remain those accepted by both parties.
 
-Interest uses actual wall time, including offline time and time spent on other profiles. Every completed period rounds its interest up to a whole chip and adds it to the outstanding debt. Borrowing into an existing bank/shark balance preserves that account's current period; partial repayment also preserves its clock. Paying off the balance clears its clock. Reload settles elapsed periods once and persists the new boundary. Debt is capped at 1,000,000,000 per account/agreement. A backwards clock adjustment does not charge periods twice. Existing round-based saves retain their debts and begin the new timer when first opened after this update.
+Interest uses actual wall time, including offline time and time spent on other profiles. Every completed period rounds its interest up to a whole chip and adds it to the outstanding debt. Borrowing into an existing bank/shark balance preserves that account's current period; partial repayment also preserves its clock. Paying off the balance clears its clock. Reload settles elapsed periods once and persists the new boundary. Bank and shark interest retain their existing 1,000,000,000 debt ceiling. Player-loan amounts and their agreed interest have no configured maximum. A backwards clock adjustment does not charge periods twice. Existing round-based saves retain their debts and begin the new timer when first opened after this update.
 
 Loan-shark borrowing appears only when bank credit is exhausted, cash is zero or negative, and there are no unsettled roulette stakes or active games. Repayment remains available while a shark balance exists. Interest may push debt above its borrowing ceiling; repay to restore room.
 

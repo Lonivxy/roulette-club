@@ -9,7 +9,7 @@ function createAccountUI(engine, callbacks) {
     function tick() {
         const minutes = Number($('forecast-minutes').value || 10);
         const now = engine.projectDebts(0), later = engine.projectDebts(minutes);
-        const key = JSON.stringify([engine.active.id, minutes, now, later]);
+        const key = engine.money.stringify([engine.active.id, minutes, now, later]);
         if (key === forecastKey) return;
         forecastKey = key;
         $('forecast-heading').textContent = minutes + ' 分钟后';
@@ -17,7 +17,7 @@ function createAccountUI(engine, callbacks) {
             const row = document.createElement('tr'); row.append(element('th',label),element('td',fmt(now[kind])),element('td',fmt(later[kind])));
             row.children[0].setAttribute('scope','row'); return row;
         }));
-        $('forecast-growth').textContent = `未来 ${minutes} 分钟预计增加 ${fmt(later.total-now.total)} 筹码欠款。`;
+        $('forecast-growth').textContent = `未来 ${minutes} 分钟预计增加 ${fmt(engine.money.sub(later.total,now.total))} 筹码欠款。`;
     }
     function render() {
         const rows = CasinoAccounts.summaries(engine.data), current = rows.find(row => row.id === engine.active.id), locked = callbacks.locked();

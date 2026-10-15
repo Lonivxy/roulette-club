@@ -144,3 +144,10 @@ test('jackpot controller drives a paid 777 spin and blocks a duplicate while the
     assert.equal(m.engine.active.balance,7713);await m.machine.forceJackpot();assert.equal(m.engine.active.balance,7713);
     m.finish();assert.equal(m.get('uiWin').textContent,'6,850');assert.equal(m.engine.lock,null);
 });
+
+
+test('real slot animation code supports uncapped whole-wallet bets and exact final credit display',async()=>{
+    const m=machineFixture(),H=10n**100n+7n;m.engine.active.balance=H;m.machine.update();await m.click("setBetMode('ALL_IN')");
+    await m.click('QuickPullAndSpin()');assert.equal(m.engine.active.balance,H*50n);m.finish();
+    assert.equal(m.get('uiCredits').textContent,(H*50n).toLocaleString());assert.equal(m.notices.length,0);
+});

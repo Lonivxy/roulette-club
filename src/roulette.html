@@ -1246,16 +1246,16 @@
         // 5. BETTING, PAYOUTS & UI UPDATES
         // ============================================================================
         function getTotalActiveBet() {
-            let sum = state.bets.RED + state.bets.BLACK + state.bets.GREEN + state.bets.ODD + state.bets.EVEN;
+            let sum = CasinoEngine.money.add(state.bets.RED, state.bets.BLACK, state.bets.GREEN, state.bets.ODD, state.bets.EVEN);
             for (const k in state.bets.numbers) {
-                sum += state.bets.numbers[k];
+                sum = CasinoEngine.money.add(sum, state.bets.numbers[k]);
             }
             return sum;
         }
 
         function getChipIncrement() {
             if (state.selectedChip === 'ALL') return state.balance;
-            return Math.min(state.balance, Number(state.selectedChip));
+            return CasinoEngine.money.min(state.balance, CasinoEngine.money.parse(state.selectedChip));
         }
 
         function placeCategoryBet(category) {
@@ -1263,8 +1263,8 @@
             const amount = getChipIncrement();
             if (amount <= 0) return;
 
-            state.balance -= amount;
-            state.bets[category] += amount;
+            state.balance = CasinoEngine.money.sub(state.balance, amount);
+            state.bets[category] = CasinoEngine.money.add(state.bets[category], amount);
             sfx.playChipSound();
             updateBettingHUD();
         }
@@ -1274,8 +1274,8 @@
             const amount = getChipIncrement();
             if (amount <= 0) return;
 
-            state.balance -= amount;
-            state.bets.numbers[pocketNum] = (state.bets.numbers[pocketNum] || 0) + amount;
+            state.balance = CasinoEngine.money.sub(state.balance, amount);
+            state.bets.numbers[pocketNum] = CasinoEngine.money.add(state.bets.numbers[pocketNum] || 0, amount);
             sfx.playChipSound();
             updateBettingHUD();
             renderNumberModalGrid();
@@ -1286,7 +1286,7 @@
             const refund = getTotalActiveBet();
             if (refund === 0) return;
 
-            state.balance += refund;
+            state.balance = CasinoEngine.money.add(state.balance, refund);
             state.bets = { RED: 0, BLACK: 0, GREEN: 0, ODD: 0, EVEN: 0, numbers: {} };
             sfx.playChipSound();
             updateBettingHUD();
@@ -1298,13 +1298,13 @@
             if (!state.lastBets) return;
 
             // First refund any currently placed bets
-            state.balance += getTotalActiveBet();
+            state.balance = CasinoEngine.money.add(state.balance, getTotalActiveBet());
             state.bets = { RED: 0, BLACK: 0, GREEN: 0, ODD: 0, EVEN: 0, numbers: {} };
 
             // Calculate total needed
-            let needed = state.lastBets.RED + state.lastBets.BLACK + state.lastBets.GREEN + state.lastBets.ODD + state.lastBets.EVEN;
+            let needed = CasinoEngine.money.add(state.lastBets.RED, state.lastBets.BLACK, state.lastBets.GREEN, state.lastBets.ODD, state.lastBets.EVEN);
             for (const k in state.lastBets.numbers) {
-                needed += state.lastBets.numbers[k];
+                needed = CasinoEngine.money.add(needed, state.lastBets.numbers[k]);
             }
 
             if (needed <= 0 || needed > state.balance) {
@@ -1312,8 +1312,8 @@
                 return;
             }
 
-            state.balance -= needed;
-            state.bets = JSON.parse(JSON.stringify(state.lastBets));
+            state.balance = CasinoEngine.money.sub(state.balance, needed);
+            state.bets = structuredClone(state.lastBets);
             sfx.playChipSound();
             updateBettingHUD();
             renderNumberModalGrid();
@@ -1326,19 +1326,19 @@
             // Snapshot current bets for Rebet button before evaluating
             const totalWagered = getTotalActiveBet();
             if (totalWagered > 0) {
-                state.lastBets = JSON.parse(JSON.stringify(state.bets));
+                state.lastBets = structuredClone(state.bets);
             }
 
             let totalPayout = 0;
 
             // 1. Straight-up number bet (24x payout)
             if (state.bets.numbers[num]) {
-                totalPayout += state.bets.numbers[num] * 24;
+                totalPayout = CasinoEngine.money.add(totalPayout, CasinoEngine.money.mul(state.bets.numbers[num], 24));
             }
 
             // 2. Green Zero bet (24x payout)
             if (num === 0 && state.bets.GREEN > 0) {
-                totalPayout += state.bets.GREEN * 24;
+                totalPayout = CasinoEngine.money.add(totalPayout, CasinoEngine.money.mul(state.bets.GREEN, 24));
             }
 
             // 3. Red / Black bets (2x payout)
@@ -1347,21 +1347,21 @@
             // Odd numbers (1, 3, 5..23) are RED & ODD; Even numbers (2, 4, 6..22) are BLACK/DARK & EVEN.
             // PLUS in Image Mode, if a user only bet on RED (because of the 23 red frames meme!) and didn't bet on BLACK, we still honour standard Odd=Red / Even=Dark OR give a bonus! Wait—let's make Red win on Odd pockets (1,3,5...) and Black/Dark win on Even pockets (2,4,6...) consistently for fair 2x payout, and highlight the winning pocket in 3D!
             if (isRedPocket(num) && state.bets.RED > 0) {
-                totalPayout += state.bets.RED * 2;
+                totalPayout = CasinoEngine.money.add(totalPayout, CasinoEngine.money.mul(state.bets.RED, 2));
             }
             if (isBlackPocket(num) && state.bets.BLACK > 0) {
-                totalPayout += state.bets.BLACK * 2;
+                totalPayout = CasinoEngine.money.add(totalPayout, CasinoEngine.money.mul(state.bets.BLACK, 2));
             }
 
             // 4. Odd / Even bets (2x payout)
             if (num !== 0 && num % 2 === 1 && state.bets.ODD > 0) {
-                totalPayout += state.bets.ODD * 2;
+                totalPayout = CasinoEngine.money.add(totalPayout, CasinoEngine.money.mul(state.bets.ODD, 2));
             }
             if (num !== 0 && num !== 0 && num % 2 === 0 && state.bets.EVEN > 0) {
-                totalPayout += state.bets.EVEN * 2;
+                totalPayout = CasinoEngine.money.add(totalPayout, CasinoEngine.money.mul(state.bets.EVEN, 2));
             }
 
-            state.balance += totalPayout;
+            state.balance = CasinoEngine.money.add(state.balance, totalPayout);
 
             // Record in history ribbon
             const colorTag = num === 0 ? 'GREEN' : (isRedPocket(num) ? 'RED' : 'BLACK');
@@ -1395,12 +1395,12 @@
             title.textContent = `POCKET ${num} (${labelMap[colorTag]})`;
 
             if (payout > 0) {
-                const net = payout - wagered;
-                badge.textContent = payout >= wagered * 10 ? 'JACKPOT WIN!' : 'WINNER!';
+                const net = CasinoEngine.money.sub(payout, wagered);
+                badge.textContent = payout >= CasinoEngine.money.mul(wagered, 10) ? 'JACKPOT WIN!' : 'WINNER!';
                 badge.className = 'px-3 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-widest bg-emerald-500/25 text-emerald-300';
                 sub.textContent = `+${payout.toLocaleString()} CHIPS PAID (NET +${net.toLocaleString()})`;
                 sub.className = 'text-xs sm:text-sm font-extrabold text-emerald-400';
-                sfx.playWinSound(payout >= wagered * 10);
+                sfx.playWinSound(payout >= CasinoEngine.money.mul(wagered, 10));
             } else if (wagered > 0) {
                 badge.textContent = 'NO WIN';
                 badge.className = 'px-3 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-widest bg-rose-500/25 text-rose-300';

@@ -22,7 +22,7 @@ test('roulette places the exact custom chip on categories and numbers, without c
     const html=fs.readFileSync(path.join(__dirname,'../dist/index.html'),'utf8');
     const code=html.slice(html.indexOf('        function getChipIncrement()'), html.indexOf('        function clearAllBets()'));
     const engine=new CasinoEngine(null,()=>0), state={ selectedChip:137,customBet:true,phase:'IDLE',...engine.active }, notices=[];
-    const context={ state,casino:{engine,busy:()=>!!engine.lock,toast:text=>notices.push(text)},sfx:{playChipSound(){}},updateBettingHUD(){},renderNumberModalGrid(){} };
+    const context={ CasinoEngine,state,casino:{engine,busy:()=>!!engine.lock,toast:text=>notices.push(text)},sfx:{playChipSound(){}},updateBettingHUD(){},renderNumberModalGrid(){} };
     vm.createContext(context);vm.runInContext(code,context);
     context.placeCategoryBet('RED');assert.equal(state.balance,863);assert.equal(state.bets.RED,137);
     context.placeNumberBet(7);assert.equal(state.balance,726);assert.equal(state.bets.numbers[7],137);

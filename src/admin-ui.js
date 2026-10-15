@@ -1,6 +1,6 @@
 function createAdminUI(engine, callbacks) {
     const $=id=>document.getElementById(id);let auth=engine.auth||{enrolled:false,admin:false,canEnroll:false},working=false;
-    let legacy=null;try{const raw=localStorage.getItem('roulette-club-v1');if(raw)legacy=JSON.parse(raw);}catch{}
+    let legacy=null;try{const raw=localStorage.getItem('roulette-club-v1');if(raw)legacy=engine.money.parseJSON(raw);}catch{}
     async function api(path,body) {
         const response=await fetch(path,{method:body===undefined?'GET':'POST',headers:body===undefined?{}:{'Content-Type':'application/json'},credentials:'same-origin',body:body===undefined?undefined:JSON.stringify(body)});
         const result=await response.json();if(!response.ok)throw new Error(result.error||'管理验证失败。');return result;
@@ -34,7 +34,7 @@ function createAdminUI(engine, callbacks) {
     $('admin-lock').addEventListener('click',async()=>{try{await api('/api/admin/logout',{});auth={...auth,admin:false};engine.auth=auth;callbacks.changed();}catch(error){$('admin-message').textContent=error.message;}render();});
     $('admin-adjust-form').addEventListener('submit',async event=>{
         event.preventDefault();
-        if(await callbacks.transact(()=>engine.adminAdjust($('admin-adjust-player').value,$('admin-adjust-mode').value,Number($('admin-adjust-amount').value),$('admin-adjust-reason').value),'管理员余额调整已保存并记录。')){$('admin-adjust-amount').value='';$('admin-adjust-reason').value='';}
+        if(await callbacks.transact(()=>engine.adminAdjust($('admin-adjust-player').value,$('admin-adjust-mode').value,$('admin-adjust-amount').value,$('admin-adjust-reason').value),'管理员余额调整已保存并记录。')){$('admin-adjust-amount').value='';$('admin-adjust-reason').value='';}
     });
     $('admin-import').addEventListener('click',async()=>{
         if(!legacy)return;

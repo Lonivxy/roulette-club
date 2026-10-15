@@ -34,3 +34,13 @@ test('Space is scoped to the visible game and keyboard fields; unsupported WebGL
     await t.win.fire('keydown',event);await Promise.resolve();assert.equal(t.e.active.arcadeHistory.length,1);t.finish();
     const fail=fixture('plinko',{unavailable:true});fail.ui.setVisible(true);assert.equal(fail.get('plinko-unavailable').hidden,false);await fail.ui.forceJackpot();assert.equal(fail.e.active.balance,1000);assert.equal(fail.get('plinko-play').disabled,true);
 });
+
+
+test('Plinko and dice inputs preserve all digits of uncapped wagers through animation and result display',async()=>{
+    for(const kind of ['plinko','dice']){
+        const t=fixture(kind),H=10n**100n+7n;t.e.active.balance=H;t.ui.setVisible(true);t.get(kind+'-wager').value=String(H);
+        await t.get(kind+'-wager').fire('input');assert.equal(t.get(kind+'-play').disabled,false);
+        await t.ui.forceJackpot();assert.equal(t.result.wager,H);assert.equal(t.ui.displayBalance,0);t.finish();
+        assert.equal(t.e.active.balance,H*(kind==='plinko'?100n:2n));assert.equal(t.notices.length,0);
+    }
+});

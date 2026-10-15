@@ -23,13 +23,13 @@ function createBlackjackTable(engine, callbacks) {
         el.textContent = hidden ? 'R' : ranks[card.rank] + suits[card.suit];
         el.setAttribute('aria-label', hidden ? 'Face-down card' : ranks[card.rank] + ' of ' + names[card.suit]); return el;
     }
-    function wager() { return Number($('bj-wager').value); }
+    function wager() { return engine.money.tryParse($('bj-wager').value); }
     function update() {
         const r = game.round, ownTurn = r?.phase === 'player';
         const playing = r && r.phase !== 'settled', locked = Boolean(engine.lock) || animating;
         $('bj-seat-name').textContent = engine.active.name.toUpperCase() + ' · YOUR SEAT';
-        $('bj-stake').textContent = (r ? r.hands.reduce((sum,h)=>sum+h.bet,0) : 0).toLocaleString() + ' ₵';
-        const validBet = Number.isSafeInteger(wager()) && wager() >= 1 && wager() <= 1000000;
+        $('bj-stake').textContent = (r ? r.hands.reduce((sum,h)=>engine.money.add(sum,h.bet),0) : 0).toLocaleString() + ' ₵';
+        const validBet = wager() !== null && wager() >= 1;
         $('bj-deal').disabled = locked || !validBet || wager() > engine.active.balance;
         $('bj-wager').setAttribute('aria-invalid', String(!validBet));
         $('bj-deal').firstChild.textContent = r?.phase === 'settled' ? 'DEAL AGAIN ' : 'DEAL CARDS ';
@@ -64,10 +64,10 @@ function createBlackjackTable(engine, callbacks) {
             else {
                 const result=r.result, net=result.net, summary=result.hands.map(h=>h.label).join(' / ');
                 $('bj-turn').textContent=net>0?'YOU WIN':net===0?'PUSH · STAKE RETURNED':'ROUND COMPLETE';
-                $('bj-status').textContent=summary+' · Net '+(net>=0?'+':'−')+Math.abs(net).toLocaleString()+' chips';
+                $('bj-status').textContent=summary+' · Net '+(net>=0?'+':'−')+engine.money.abs(net).toLocaleString()+' chips';
             }
         }
-        scene?.sync(r,Number.isFinite(wager())?wager():50);
+        scene?.sync(r,wager() !== null?wager():50);
         host.querySelectorAll('[data-go-bank]').forEach(button=>{button.disabled=Boolean(playing)||animating;});
     }
     function changed() { update(); callbacks.changed(); }
@@ -109,7 +109,7 @@ function createBlackjackTable(engine, callbacks) {
     $('bj-deal').addEventListener('click',()=>act('deal'));
     function changeWager(delta) {
         if(engine.lock||animating) return;
-        $('bj-wager').value=String(Math.max(1,Math.min(1000000,(Number.isFinite(wager())?wager():50)+delta)));tone(360,.04);update();
+        $('bj-wager').value=String(engine.money.max(1,engine.money.add(wager() !== null?wager():50,delta)));tone(360,.04);update();
     }
     $('bj-bet-minus').addEventListener('click',()=>changeWager(-10));$('bj-bet-plus').addEventListener('click',()=>changeWager(10));
     host.querySelectorAll('[data-bj-chip]').forEach(button=>button.addEventListener('click',()=>changeWager(Number(button.dataset.bjChip))));

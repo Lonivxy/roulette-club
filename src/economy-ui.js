@@ -16,8 +16,8 @@ function createEconomyUI(engine, callbacks) {
         return node;
     }
     function validStake() {
-        const n = Number($('market-stake').value);
-        return Number.isSafeInteger(n) && n > 0 && n <= 1000000 ? n : null;
+        const n = engine.money.tryParse($('market-stake').value);
+        return n !== null && n > 0 ? n : null;
     }
     function render() {
         const user = engine.active, locked = callbacks.locked(), stake = validStake();
@@ -27,17 +27,17 @@ function createEconomyUI(engine, callbacks) {
         $('shark-repayment').hidden = user.sharkDebt === 0;
         $('shark-debt').textContent = fmt(user.sharkDebt);
         $('shark-credit').textContent = fmt(engine.availableSharkCredit);
-        $('bank-total-debt').textContent = fmt(user.debt + user.sharkDebt);
+        $('bank-total-debt').textContent = fmt(engine.money.add(user.debt, user.sharkDebt));
         $('market-stake').disabled = locked;
         $('market-stake').setAttribute('aria-invalid', String(stake === null));
         buyButtons = [];
         $('market-catalog').replaceChildren(...Object.entries(CasinoEngine.cards).map(([type, item]) => {
             const card = element('article', '', 'club-card market-product');
             card.append(element('div', item.symbol, 'market-symbols'), element('h3', item.name));
-            card.append(element('p', stake === null ? '请输入 1–1,000,000 的整数下注。' : `卡价 ${fmt(stake * item.factor)} · 使用时另扣 ${fmt(stake)}`, 'market-price'));
-            card.append(element('p', stake === null ? '' : `保底返回 ${fmt(stake * item.multiplier)} · 扣除卡价与下注后净赚 ${fmt(stake * (item.multiplier - item.factor - 1))}`, 'club-muted'));
+            card.append(element('p', stake === null ? '请输入至少 1 筹码的整数下注，无上限。' : `卡价 ${fmt(engine.money.mul(stake, item.factor))} · 使用时另扣 ${fmt(stake)}`, 'market-price'));
+            card.append(element('p', stake === null ? '' : `保底返回 ${fmt(engine.money.mul(stake, item.multiplier))} · 扣除卡价与下注后净赚 ${fmt(engine.money.mul(stake, item.multiplier - item.factor - 1))}`, 'club-muted'));
             const button = element('button', '购买此卡', 'club-action'); button.type = 'button';
-            button.disabled = locked || Boolean(user.recovery) || stake === null || user.cards.length >= 50 || (stake !== null && stake * (item.factor + 1) > user.balance);
+            button.disabled = locked || Boolean(user.recovery) || stake === null || user.cards.length >= 50 || (stake !== null && engine.money.mul(stake, item.factor + 1) > user.balance);
             buyButtons.push({button, blocked: button.disabled});
             button.addEventListener('click', () => callbacks.transact(() => engine.buyCard(type, validStake()), '卡片已放入当前玩家的卡包。'));
             card.append(button); return card;
@@ -62,11 +62,11 @@ function createEconomyUI(engine, callbacks) {
     $('market-stake').addEventListener('input', render);
     $('shark-borrow-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (await callbacks.transact(() => engine.borrowShark(Number($('shark-borrow-amount').value)), '高利贷已到账，欠款及计息进度已保存。')) $('shark-borrow-form').reset();
+        if (await callbacks.transact(() => engine.borrowShark($('shark-borrow-amount').value), '高利贷已到账，欠款及计息进度已保存。')) $('shark-borrow-form').reset();
     });
     $('shark-repay-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (await callbacks.transact(() => engine.repayShark(Number($('shark-repay-amount').value)), '高利贷还款已入账。')) $('shark-repay-form').reset();
+        if (await callbacks.transact(() => engine.repayShark($('shark-repay-amount').value), '高利贷还款已入账。')) $('shark-repay-form').reset();
     });
     $('lucky-card-cancel').addEventListener('click', () => callbacks.transact(() => engine.armCard(null), '已取消装备。'));
     return { render, tick };

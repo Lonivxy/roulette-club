@@ -103,7 +103,7 @@ test('roulette rounds do not advance real-time interest', () => {
     const source=html.slice(html.indexOf('        function evaluateSpinOutcome('),html.indexOf('        function showResultBanner('));
     const {e}=game();e.borrow(1000);
     const state={balance:e.active.balance,bets:Engine.emptyBets(),history:[]};
-    const context={ state,casino:{engine:e},POCKETS:[{number:0}],getTotalActiveBet:()=>Engine.sumBets(state.bets),
+    const context={ CasinoEngine:Engine,structuredClone,state,casino:{engine:e},POCKETS:[{number:0}],getTotalActiveBet:()=>Engine.sumBets(state.bets),
         isRedPocket:()=>false,isBlackPocket:()=>false,renderHistoryRibbon(){},updateBettingHUD(){},renderNumberModalGrid(){},showResultBanner(){},document:{getElementById:()=>({})} };
     vm.createContext(context);vm.runInContext(source,context);context.evaluateSpinOutcome(0);
     assert.equal(e.active.debt,1000);

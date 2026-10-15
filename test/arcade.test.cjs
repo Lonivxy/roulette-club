@@ -48,12 +48,12 @@ test('new-game accounting persists the exact wager, bounded history, jackpot ret
     reloaded.switchUser('jamie');assert.equal(reloaded.active.balance,1000);assert.equal(reloaded.active.arcadeHistory,undefined);
     for(let i=0;i<35;i++){reloaded.playDice(1,'small');reloaded.lock=null;}assert.equal(reloaded.active.arcadeHistory.length,30);assert.equal(reloaded.data.users[0].arcadeHistory.length,1);
 });
-test('invalid wagers, settings, random samples and wallet caps fail before taking chips',()=>{
+test('invalid wagers, settings and random samples fail before taking chips; payouts have no wallet cap',()=>{
     const {e}=fixture();const before=JSON.stringify(e.data);
     for(const wager of [0,-1,1.5,NaN,Infinity,1001,1000001]){assert.throws(()=>e.playPlinko(wager));assert.throws(()=>e.playDice(wager));}
     for(const action of [()=>e.playPlinko(10,'__proto__'),()=>e.playPlinko(10,'low','missing'),()=>e.playDice(10,'missing'),()=>e.playDice(10,'sum',3),()=>e.playDice(10,'sum',18)])assert.throws(action);
     e.random=()=>1;assert.throws(()=>e.playPlinko(10));assert.throws(()=>e.playDice(10));assert.equal(JSON.stringify(e.data),before);
-    e.active.balance=999999999;e.random=()=>.5;assert.throws(()=>e.playPlinko(10,'high'));assert.throws(()=>e.playDice(10,'triple'));assert.equal(e.active.balance,999999999);
+    e.active.balance=999999999;e.random=()=>.5;e.playPlinko(10,'high','center',{jackpot:true});assert.equal(e.active.balance,1000000989);e.lock=null;e.playDice(10,'triple',null,{jackpot:true});assert.equal(e.active.balance,1000001289);
 });
 test('both games support the fixed ten-chip negative ledger and profit-based recovery',()=>{
     const {e}=fixture(()=>.999);e.borrow(100000);e.active.balance=0;e.borrowShark(10);e.playDice(10,'small');e.lock=null;

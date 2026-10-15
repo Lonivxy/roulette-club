@@ -22,12 +22,12 @@ test('peer loans accrue offline, repay partially or fully to the lender, and rel
     restored.repayLoan(loan.id,411);assert.equal(active.status,'repaid');assert.equal(active.balance,0);assert.equal(active.interestAt,null);
     assert.equal(restored.active.balance,989);assert.equal(restored.data.users[0].balance,1011);assert.throws(()=>restored.repayLoan(loan.id,1));
 });
-test('acceptance rechecks lender funds and borrower wallet capacity without partial transfers',()=>{
+test('acceptance rechecks lender funds and supports uncapped borrower wallets',()=>{
     const {engine:e}=fixture(),loan=e.offerLoan('jamie',1000,1);
     e.transfer('taylor',1000);e.switchUser('jamie');let before=JSON.stringify(e.data);
     assert.throws(()=>e.respondLoan(loan.id,true));assert.equal(JSON.stringify(e.data),before);assert.equal(loan.status,'pending');
     e.data.users[0].balance=1000;e.active.balance=1000000000;before=JSON.stringify(e.data);
-    assert.throws(()=>e.respondLoan(loan.id,true));assert.equal(JSON.stringify(e.data),before);
+    e.respondLoan(loan.id,true);assert.equal(e.active.balance,1000001000);assert.equal(e.data.users[0].balance,0);
 });
 test('only lender may cancel, only borrower may decline, and neither moves chips',()=>{
     const {engine:e}=fixture(),first=e.offerLoan('jamie',10,0),second=e.offerLoan('taylor',20,100,1);

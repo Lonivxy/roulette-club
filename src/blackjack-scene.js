@@ -121,7 +121,8 @@ function createBlackjackScene(container) {
     const chipGeometry = new T.CylinderGeometry(.225, .225, .055, 40), chipMaps = new Map();
     function chipStack(value, x, z) {
         const denominations = [500,100,50,10], colors = ['#76518e','#292c31','#a33941','#276599'];
-        let height = 0, remaining = value;
+        // The chip stack is a bounded visual illustration; accounting retains the full wager.
+        let height = 0, remaining = Number(value > 100000 ? 100000 : value);
         denominations.forEach((denom, index) => {
             const count = Math.floor(remaining / denom); remaining %= denom;
             if (!chipMaps.has(denom)) {

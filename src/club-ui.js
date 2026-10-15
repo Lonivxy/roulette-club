@@ -58,7 +58,7 @@ function createCasinoClub(roulette) {
             const data = document.createElement('div'); data.className = 'club-player-data';
             const name = document.createElement('div'); name.className = 'club-player-name'; name.textContent = p.name;
             const detail = document.createElement('div'); detail.className = 'club-player-detail';
-            detail.textContent = `${p.recovery ? '-' + fmt(p.recovery.deficit) + ' · 可用 ' : ''}${fmt(p.balance)} chips · ${fmt(p.debt + p.sharkDebt)} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
+            detail.textContent = `${p.recovery ? '-' + fmt(p.recovery.deficit) + ' · 可用 ' : ''}${fmt(p.balance)} chips · ${fmt(engine.money.add(p.debt, p.sharkDebt))} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
             data.append(name, detail);
             const button = document.createElement('button'); button.type = 'button'; button.className = 'club-action secondary';
             button.textContent = p.id === u.id ? 'Playing' : 'Switch';
@@ -175,12 +175,12 @@ function createCasinoClub(roulette) {
         $('club-user').addEventListener('change', e => switchPlayer(e.target.value));
         $('transfer-form').addEventListener('submit', async e => {
             e.preventDefault();
-            if (await transact(() => engine.transfer($('transfer-user').value, Number($('transfer-amount').value)), 'Chips transferred successfully.')) $('transfer-form').reset();
+            if (await transact(() => engine.transfer($('transfer-user').value, $('transfer-amount').value), 'Chips transferred successfully.')) $('transfer-form').reset();
         });
         $('bank-form').addEventListener('submit', async e => {
             e.preventDefault();
             const repay = e.submitter?.value === 'repay';
-            if (await transact(() => engine[repay ? 'repay' : 'borrow'](Number($('bank-amount').value)), repay ? 'Debt repaid. Available credit updated.' : 'Borrowed chips added to your wallet.')) $('bank-form').reset();
+            if (await transact(() => engine[repay ? 'repay' : 'borrow']($('bank-amount').value), repay ? 'Debt repaid. Available credit updated.' : 'Borrowed chips added to your wallet.')) $('bank-form').reset();
         });
         $('player-form').addEventListener('submit', async e => {
             e.preventDefault();

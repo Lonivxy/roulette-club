@@ -15,7 +15,7 @@ async function fixture() {
         const headers={};if(actor)headers['oai-authenticated-user-id']=actor;
         if(body!==undefined){headers['Content-Type']='application/json';headers.Origin=origin;}
         if(cookies)headers.Cookie=[...jar].map(([key,value])=>key+'='+value).join('; ');
-        const response=await service.fetch(new Request(ORIGIN+route,{method:body===undefined?'GET':'POST',headers,body:body===undefined?undefined:JSON.stringify(body)}),{DB});
+        const response=await service.fetch(new Request(ORIGIN+route,{method:body===undefined?'GET':'POST',headers,body:body===undefined?undefined:globalThis.CasinoMoney.stringify(body)}),{DB});
         const set=response.headers.get('Set-Cookie');if(set&&cookies){const pair=set.split(';')[0],index=pair.indexOf('=');jar.set(pair.slice(0,index),pair.slice(index+1));}
         return response;
     }
@@ -262,4 +262,39 @@ test('ADMIN screen enrolls through WebAuthn, adjusts a chosen player only after 
     get('admin-adjust-player').value='jamie';get('admin-adjust-mode').value='add';get('admin-adjust-amount').value='500';get('admin-adjust-reason').value='bonus';
     await get('admin-adjust-form').fire('submit');assert.equal(engine.data.users[1].balance,1500);
     await get('admin-lock').fire('click');assert.equal(get('admin-panel').hidden,true);assert.equal(controller.unlocked,false);
+});
+
+
+test('100-digit admin adjustments, roulette wins, gifts and receipts persist exactly through D1 and Worker reload',async()=>{
+    const t=await fixture();await t.enroll();const M=globalThis.CasinoMoney,H=10n**100n+137n;
+    const read=async response=>{assert.equal(response.status,200);return M.hydrate(await response.json());};
+    let data=await read(await t.cmd('adminAdjust',['alex','add',String(H)]));assert.equal(data.data.users[0].balance,H+1000n);
+    await read(await t.cmd('roulette.bet',[0,String(H)]));data=await read(await t.cmd('roulette.spin',[true]));assert.equal(data.result.payout,H*24n);assert.equal(data.data.users[0].balance,H*24n+1000n);
+    const id=crypto.randomUUID(),args=['jamie',H*20n];
+    data=await read(await t.cmd('gift',args,{id}));assert.equal(data.data.users[0].balance,H*4n+1000n);assert.equal(data.data.users[1].balance,H*20n+1000n);
+    const replay=await read(await t.cmd('gift',args,{id}));assert.equal(replay.revision,data.revision);assert.equal(replay.data.users[1].balance,H*20n+1000n);
+    const raw=t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot;assert.equal(M.parseJSON(raw).users[1].balance,H*20n+1000n);
+    const built=(await import('../dist/server/index.js')).default;
+    const response=await built.fetch(new Request(t.ORIGIN+'/api/state',{headers:{'oai-authenticated-user-id':'owner-site-user'}}),{DB:t.DB});
+    data=await read(response);assert.equal(data.data.users[0].balance,H*4n+1000n);
+    const page=await built.fetch(new Request(t.ORIGIN+'/player',{headers:{'oai-authenticated-user-id':'owner-site-user'}}),{DB:t.DB});
+    assert.equal(page.status,200);assert.ok((await page.text()).includes(String(H*20n+1000n)));
+    await t.request('/api/admin/logout',{body:{}});assert.equal((await t.cmd('adminAdjust',['alex','add',String(H)])).status,403);
+});
+
+test('remote engine hydrates 100-digit bootstrap and API results and sends exact All In without duplicate credit',async()=>{
+    const t=await fixture();await t.enroll();const H=10n**80n+7n,M=globalThis.CasinoMoney;
+    assert.equal((await t.cmd('adminAdjust',['alex','add',String(H)])).status,200);
+    const bootstrap=await (await t.request('/api/state')).json(),vm=require('node:vm');
+    const window={__CASINO_BOOTSTRAP__:bootstrap},sandbox={window,CasinoEngine:globalThis.CasinoEngine,CasinoBlackjack:globalThis.CasinoBlackjack,
+        crypto,AbortSignal,Date,sessionStorage:{getItem(){},setItem(){}},localStorage:{getItem(){return null;}},fetch:async(url,options={})=>t.request(url,options.body?{body:JSON.parse(options.body)}:{})};
+    vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/remote-engine.js'),'utf8'),sandbox);
+    const engine=new window.CasinoEngine();assert.equal(engine.active.balance,H+1000n);
+    const result=await engine.spinSlots(engine.active.balance,null,{allIn:true,jackpot:true});assert.equal(result.payout,(H+1000n)*50n);assert.equal(engine.active.balance,result.payout);
+    engine.lock=null;await engine.sync();assert.equal(engine.active.balance,result.payout);
+    await engine.transfer('jamie',H);assert.equal(engine.data.users[1].balance,H+1000n);
+    await engine.playPlinko(H,'high','center',{jackpot:true});assert.equal(engine.active.balance,(H+1000n)*50n+98n*H);
+    engine.lock=null;await engine.playDice(H,'sum',4,{jackpot:true});assert.equal(engine.active.balance,(H+1000n)*50n+158n*H);
+    engine.lock=null;const game=new window.CasinoBlackjack(engine);const round=await game.forceJackpot(H);
+    assert.equal(round.result.payout,H*5n/2n);assert.equal(M.valid(engine.active.balance),true);
 });

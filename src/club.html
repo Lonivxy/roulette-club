@@ -36,12 +36,12 @@
     <div class="club-grid">
       <form id="transfer-form" class="club-card"><h3>赠送筹码</h3><p class="club-muted">这是赠送，不产生欠款，确认赠送后立即转入对方钱包。</p>
         <label class="club-field" for="transfer-user">收款玩家</label><select id="transfer-user" class="club-select" required></select>
-        <label class="club-field" for="transfer-amount">赠送金额</label><input id="transfer-amount" class="club-input" type="number" min="1" max="1000000" step="1" inputmode="numeric" required placeholder="例如 100">
+        <label class="club-field" for="transfer-amount">赠送金额</label><input id="transfer-amount" class="club-input" type="text" pattern="[0-9]+" inputmode="numeric" required placeholder="例如 100">
         <div class="club-actions"><button type="submit" class="club-action" data-idle-only>确认赠送 →</button></div>
       </form>
       <form id="peer-loan-form" class="club-card"><h3>向玩家出借</h3><p class="club-muted">当前玩家为出借人。设定金额、周期及利率后发出协议；对方接受前不扣款、不计息。接受时重新检查双方余额。</p>
         <label class="club-field" for="peer-loan-user">借款人</label><select id="peer-loan-user" class="club-select" required></select>
-        <label class="club-field" for="peer-loan-amount">借款金额</label><input id="peer-loan-amount" class="club-input" type="number" min="1" max="1000000" step="1" required inputmode="numeric" placeholder="例如 1,000">
+        <label class="club-field" for="peer-loan-amount">借款金额</label><input id="peer-loan-amount" class="club-input" type="text" pattern="[0-9]+" required inputmode="numeric" placeholder="例如 1,000">
         <div class="loan-term-inputs"><div><label class="club-field" for="peer-loan-minutes">每隔多少分钟</label><input id="peer-loan-minutes" class="club-input" type="number" min="1" max="1440" step="1" value="10" required></div><div><label class="club-field" for="peer-loan-rate">每期利率 / %</label><input id="peer-loan-rate" class="club-input" type="number" min="0" max="100" step="0.01" value="1" required></div></div>
         <div class="club-actions"><button type="submit" class="club-action" data-idle-only>发出借款协议</button></div>
       </form>
@@ -66,12 +66,12 @@
     </section>
     <div class="club-grid">
       <form id="bank-form" class="club-card club-wide"><h3>银行借款与还款</h3><p class="club-muted">借款额度 100,000；每 10 分钟，未还欠款加 15%。还款恢复可借额度。</p><p id="bank-interest-progress" class="club-muted"></p>
-        <label class="club-field" for="bank-amount">金额 / 筹码</label><input id="bank-amount" class="club-input" type="number" min="1" max="1000000000" step="1" inputmode="numeric" required placeholder="例如 500">
+        <label class="club-field" for="bank-amount">金额 / 筹码</label><input id="bank-amount" class="club-input" type="text" pattern="[0-9]+" inputmode="numeric" required placeholder="例如 500">
         <div class="club-actions"><button id="bank-borrow" type="submit" class="club-action" value="borrow" data-idle-only>向银行借款</button><button type="submit" class="club-action secondary" value="repay" data-idle-only>偿还银行欠款</button></div>
       </form>
       <div id="shark-panel" class="club-card shark-panel club-wide" hidden><div class="club-eyebrow">最后的筹码</div><h3>高利贷</h3><p class="club-muted">最多借 1,500,000；每 3 分钟，未还欠款加 125%。只有银行额度耗尽、钱包 ≤ 0 且无未结算下注时开放借款。</p><p>高利贷欠款：<strong id="shark-debt">0</strong> · 剩余额度：<strong id="shark-credit">1,500,000</strong></p><p id="shark-progress" class="club-muted"></p>
         <div id="shark-offer" hidden><form id="shark-borrow-form"><label class="club-field" for="shark-borrow-amount">借入金额</label><input id="shark-borrow-amount" class="club-input" type="number" min="1" max="1500000" step="1" required inputmode="numeric" placeholder="最多 1,500,000"><div class="club-actions"><button type="submit" class="club-action" data-idle-only>借入高利贷 · 每 3 分钟 125%</button></div></form></div>
-        <div id="shark-repayment" hidden><form id="shark-repay-form"><label class="club-field" for="shark-repay-amount">偿还高利贷</label><input id="shark-repay-amount" class="club-input" type="number" min="1" max="1000000000" step="1" required inputmode="numeric" placeholder="还款金额"><div class="club-actions"><button type="submit" class="club-action secondary" data-idle-only>偿还高利贷</button></div></form></div>
+        <div id="shark-repayment" hidden><form id="shark-repay-form"><label class="club-field" for="shark-repay-amount">偿还高利贷</label><input id="shark-repay-amount" class="club-input" type="text" pattern="[0-9]+" required inputmode="numeric" placeholder="还款金额"><div class="club-actions"><button type="submit" class="club-action secondary" data-idle-only>偿还高利贷</button></div></form></div>
       </div>
       <div class="club-card club-wide"><div class="account-section-heading"><h3>账户活动</h3><button type="button" class="club-action secondary" id="activity-export">导出筛选记录 CSV</button></div><label class="club-field" for="activity-search">搜索流水</label><input type="search" id="activity-search" class="club-input" maxlength="100" placeholder="玩家名称、游戏、借款或备注"><p id="activity-count" class="club-muted" role="status"></p><ol id="club-ledger" class="club-ledger" aria-label="Table activity"></ol></div>
     </div>

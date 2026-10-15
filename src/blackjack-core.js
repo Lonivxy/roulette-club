@@ -1,5 +1,7 @@
 (function (root) {
     'use strict';
+    if (!root.CasinoMoney && typeof require === 'function') require('./money.js');
+    const M = root.CasinoMoney;
     const cardValue = card => Math.min(card.rank, 10);
     const validCard = card => card && Number.isInteger(card.rank) && card.rank >= 1 && card.rank <= 13
         && Number.isInteger(card.suit) && card.suit >= 0 && card.suit <= 3;
@@ -26,7 +28,7 @@
             || !Array.isArray(r.hands) || r.hands.length < 1 || r.hands.length > 2
             || !Number.isInteger(r.activeHand) || r.activeHand < 0 || r.activeHand > r.hands.length) return false;
         if (!r.hands.every(h => Array.isArray(h.cards) && h.cards.length >= 2 && h.cards.length <= 32 && h.cards.every(validCard)
-            && Number.isSafeInteger(h.bet) && h.bet >= 1 && h.bet <= 2000000
+            && M.valid(h.bet) && h.bet >= 1
             && typeof h.split === 'boolean' && ['playing', 'stood', 'bust'].includes(h.status))) return false;
         if (r.phase === 'player' && r.hands[r.activeHand]?.status !== 'playing') return false;
         const counts = new Map();
@@ -34,11 +36,11 @@
             const key = c.rank + ':' + c.suit; counts.set(key, (counts.get(key) || 0) + 1);
             if (counts.get(key) > 6) return false;
         }
-        if (r.phase === 'settled' && (!r.result || !Number.isSafeInteger(r.result.payout) || r.result.payout < 0
-            || !Number.isSafeInteger(r.result.wager) || !Array.isArray(r.result.hands)
+        if (r.phase === 'settled' && (!r.result || !M.valid(r.result.payout) || r.result.payout < 0
+            || !M.valid(r.result.wager) || !Array.isArray(r.result.hands)
             || r.result.hands.length !== r.hands.length
-            || !r.result.hands.every(h => h && typeof h.label === 'string' && Number.isSafeInteger(h.payout) && h.payout >= 0)
-            || !Number.isSafeInteger(r.result.net))) return false;
+            || !r.result.hands.every(h => h && typeof h.label === 'string' && M.valid(h.payout) && h.payout >= 0)
+            || !M.valid(r.result.net))) return false;
         return true;
     }
     class CasinoBlackjack {
@@ -78,7 +80,6 @@
             this.engine.ensureIdle();
             const bet = this.engine.amount(value), user = this.engine.active;
             if (bet > user.balance) throw new Error('Not enough chips. Lower your bet or visit the bank.');
-            if (user.balance + bet * 4 > 1000000000) throw new Error('Your wallet is too close to its chip limit.');
             const previous = this.round;
             const shoe = jackpot ? makeShoe(() => .5) : previous && previous.shoe.length >= 52 ? [...previous.shoe] : this.shoeFactory();
             if (!Array.isArray(shoe) || shoe.length < 4 || !shoe.every(validCard)) throw new Error('The shoe could not be prepared.');
@@ -90,7 +91,7 @@
                 dealer: [], hands: [{ cards: [], bet, split: false, status: 'playing' }], activeHand: 0, result: null };
             r.hands[0].cards.push(this._draw(r)); r.dealer.push(this._draw(r));
             r.hands[0].cards.push(this._draw(r)); r.dealer.push(this._draw(r));
-            user.balance -= bet;
+            user.balance = M.sub(user.balance, bet);
             user.blackjack = r;
             this.engine.lock = 'blackjack';
             if (score(r.hands[0].cards).blackjack || score(r.dealer).blackjack) this._settle();
@@ -116,7 +117,7 @@
         double() {
             const r = this._playing('double'), hand = r.hands[r.activeHand];
             const card = this._draw(r);
-            this.engine.active.balance -= hand.bet; hand.bet *= 2; hand.cards.push(card);
+            this.engine.active.balance = M.sub(this.engine.active.balance, hand.bet); hand.bet = M.mul(hand.bet, 2); hand.cards.push(card);
             hand.status = score(hand.cards).bust ? 'bust' : 'stood'; this._advance();
             this._save(); return r;
         }
@@ -125,7 +126,7 @@
             if (r.shoe.length < 2) throw new Error('The shoe does not have enough cards to split.');
             const second = { cards: [first.cards.pop()], bet: first.bet, split: true, status: 'playing' };
             first.split = true;
-            this.engine.active.balance -= first.bet;
+            this.engine.active.balance = M.sub(this.engine.active.balance, first.bet);
             first.cards.push(this._draw(r)); second.cards.push(this._draw(r)); r.hands.push(second);
             const aces = first.cards[0].rank === 1;
             for (const hand of r.hands) if (aces || score(hand.cards).total === 21) hand.status = 'stood';
@@ -143,8 +144,6 @@
             if (!this.pending) return this.start(value, { jackpot: true });
             const r = this.round;
             if (this.engine.lock !== 'blackjack') throw new Error('Wait for the current game to finish.');
-            const maximum = r.hands.reduce((sum, hand) => sum + Math.floor(hand.bet * (!hand.split && hand.cards.length === 2 ? 2.5 : 2)), 0);
-            if (this.engine.active.balance + maximum > 1000000000) throw new Error('Your wallet is too close to its chip limit.');
             r.shoe = makeShoe(() => .5);
             const take = rank => r.shoe.splice(r.shoe.findIndex(card => card.rank === rank), 1)[0];
             r.dealer = [take(10), take(9)];
@@ -168,12 +167,12 @@
                 else if (dealer.bust || value.total > dealer.total) { multiplier = 2; label = dealer.bust ? 'Dealer busts · You win' : 'You win'; }
                 else if (value.total === dealer.total) { multiplier = 1; label = 'Push'; }
                 // Wallets store whole chips; odd natural wagers round the half chip down.
-                return { label, total: value.total, bet: hand.bet, payout: Math.floor(hand.bet * multiplier) };
+                return { label, total: value.total, bet: hand.bet, payout: M.ratio(hand.bet, multiplier * 2, 2) };
             });
-            const wager = r.hands.reduce((sum, h) => sum + h.bet, 0), payout = hands.reduce((sum, h) => sum + h.payout, 0);
-            r.result = { hands, wager, payout, net: payout - wager, dealer: dealer.total };
+            const wager = r.hands.reduce((sum, h) => M.add(sum, h.bet), 0), payout = hands.reduce((sum, h) => M.add(sum, h.payout), 0);
+            r.result = { hands, wager, payout, net: M.sub(payout, wager), dealer: dealer.total };
             r.phase = 'settled';
-            this.engine.active.balance += payout;
+            this.engine.active.balance = M.add(this.engine.active.balance, payout);
             this.engine.lock = null;
             this.engine.record(`${this.engine.active.name} · Blackjack: wager ${wager.toLocaleString()}, payout ${payout.toLocaleString()} (${hands.map(h => h.label).join(' / ')}).`);
             this.engine.completeRound(r.result.net);

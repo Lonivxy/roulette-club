@@ -6,7 +6,7 @@ if (window.__CASINO_BOOTSTRAP__) {
             super(null);
             this.remote = true; this.requestBusy = false; this.onChange = null;
             this.applySnapshot(window.__CASINO_BOOTSTRAP__);
-            try { this.legacyPending = this.revision === 0 && Boolean(JSON.parse(localStorage.getItem('roulette-club-v1') || 'null')?.users?.length); } catch { this.legacyPending = false; }
+            try { this.legacyPending = this.revision === 0 && Boolean(this.money.parseJSON(localStorage.getItem('roulette-club-v1') || 'null')?.users?.length); } catch { this.legacyPending = false; }
             try { const selected = sessionStorage.getItem('club-selected-player'); if (this.data.users.some(user => user.id === selected)) this.data.activeId = selected; } catch {}
         }
         get lock() { return this.requestBusy ? 'network' : this.animationLock || (this.active?.blackjack && this.active.blackjack.phase !== 'settled' ? 'blackjack' : null); }
@@ -14,6 +14,7 @@ if (window.__CASINO_BOOTSTRAP__) {
         save() {}
         accrueInterest() { return false; }
         applySnapshot(snapshot) {
+            snapshot = this.money.hydrate(snapshot);
             if (this.revision !== undefined && snapshot.revision < this.revision) return;
             const selected = this.revision !== undefined ? this.data?.activeId : null;
             if (selected && snapshot.data.users.some(user => user.id === selected)) snapshot.data.activeId = selected;
@@ -27,7 +28,7 @@ if (window.__CASINO_BOOTSTRAP__) {
         async send(command, args = [], {admin = false} = {}) {
             if (this.legacyPending && command !== 'import') throw new Error('检测到旧存档，请先进入 ADMIN，通过 Windows Hello 验证并导入后继续。');
             if (this.requestBusy) throw new Error('上一项操作仍在处理，请稍后再试。');
-            const id = crypto.randomUUID(), body = JSON.stringify({id,command,args,playerId:this.data.activeId});
+            const id = crypto.randomUUID(), body = this.money.stringify({id,command,args,playerId:this.data.activeId});
             this.requestBusy = true; this.onChange?.();
             try {
                 let response;
@@ -35,7 +36,7 @@ if (window.__CASINO_BOOTSTRAP__) {
                     try { response = await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body,credentials:'same-origin',signal:AbortSignal.timeout(15000)}); break; }
                     catch(error) { if(attempt===1) throw new Error('无法连接服务器。请刷新以确认余额，操作不会重复入账。'); }
                 }
-                const data = await response.json();
+                const data = this.money.hydrate(await response.json());
                 if(!response.ok) { if(response.status===403&&admin)this.auth={...(this.auth||{}),admin:false}; throw new Error(data.error || '操作失败。'); }
                 this.applySnapshot(data);
                 return data.result;

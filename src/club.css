@@ -143,3 +143,6 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     .club-stat-row div { padding: 12px 9px; }
     .club-stat-row dt { font-size: 8px; }
 }
+
+/* Full amounts stay readable even when wallets contain hundreds of digits. */
+#club-wallet, #bank-wallet, #balance-display, .club-card, .club-table td, .club-table th { overflow-wrap:anywhere; min-width:0; }

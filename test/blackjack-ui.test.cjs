@@ -69,3 +69,13 @@ test('jackpot controller plays the winning deal and ignores another request duri
     await t.controller.forceJackpot();assert.equal(t.engine.active.balance,1205);await t.flush();
     assert.equal(t.controller.animating,false);assert.match(t.elements.get('bj-status').textContent,/Blackjack/);
 });
+
+
+test('blackjack input, chip increment, table total and net result preserve 100-digit wagers',async()=>{
+    const t=ui(),H=10n**100n+1n;t.engine.active.balance=H*10n;
+    const input=t.elements.get('bj-wager');input.value=String(H);await input.fire('input');assert.equal(t.elements.get('bj-deal').disabled,false);
+    await t.click('bet-plus');assert.equal(input.value,String(H+10n));
+    await t.controller.forceJackpot();await t.flush();assert.equal(t.controller.game.round.result.wager,H+10n);
+    assert.ok(t.elements.get('bj-stake').textContent.includes((H+10n).toLocaleString()));
+    assert.match(t.elements.get('bj-status').textContent,/Blackjack/);assert.equal(t.notices.length,0);
+});

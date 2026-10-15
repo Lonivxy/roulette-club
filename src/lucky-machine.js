@@ -16,8 +16,8 @@ function createLuckyMachine(engine, callbacks, host) {
     function getActiveBetAmount() {
       if (engine.armedCard) return engine.armedCard.stake;
       if (selectedBetMode === 'CUSTOM') return customBet;
-      if (selectedBetMode === 'ALL_IN') return Math.max(0, credits);
-      return Math.min(credits, selectedBetMode);
+      if (selectedBetMode === 'ALL_IN') return engine.money.max(0, credits);
+      return engine.money.min(credits, selectedBetMode);
     }
 
     let audioCtx = null;
@@ -871,7 +871,7 @@ function createLuckyMachine(engine, callbacks, host) {
       ledCtx.font = '900 54px Orbitron, sans-serif';
       // Credits Value
       ledCtx.fillStyle = '#4ade80';
-      ledCtx.fillText(credits.toLocaleString(), 170, 110);
+      ledCtx.fillText(credits.toLocaleString(), 170, 110, 290);
 
       // Bet Value
       const betVal = getActiveBetAmount();
@@ -879,12 +879,13 @@ function createLuckyMachine(engine, callbacks, host) {
       ledCtx.fillText(
         selectedBetMode === 'ALL_IN' ? `ALL (${betVal})` : betVal.toLocaleString(),
         512,
-        110
+        110,
+        300
       );
 
       // Last Win Value
       ledCtx.fillStyle = '#38bdf8';
-      ledCtx.fillText(lastWinAmount.toLocaleString(), 852, 110);
+      ledCtx.fillText(lastWinAmount.toLocaleString(), 852, 110, 290);
 
       ledTexture.needsUpdate = true;
     }
@@ -1347,7 +1348,7 @@ function createLuckyMachine(engine, callbacks, host) {
       const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
       isSpinning = true;
       if (engine.remote) engine.lock = 'slots';
-      visualBalance = spinResult.walletAfterWager ?? engine.active.balance - spinResult.payout;
+      visualBalance = spinResult.walletAfterWager ?? engine.money.sub(engine.active.balance, spinResult.payout);
       credits = visualBalance;
       lastWinAmount = 0;
       callbacks.changed();
@@ -1461,7 +1462,7 @@ function createLuckyMachine(engine, callbacks, host) {
       }
 
       if (winMult > 0) {
-        const payout = wager * winMult;
+        const payout = engine.money.mul(wager, winMult);
         // The engine saved this payout before animation began.
         lastWinAmount = payout;
         setStatus(`${bannerMsg} (+${payout.toLocaleString()} Credits!)`);

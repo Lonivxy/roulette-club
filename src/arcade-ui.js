@@ -9,7 +9,7 @@ function createArcadeGame(kind,engine,callbacks) {
     function update(){
         if(lastPlayer!==engine.active.id){lastPlayer=engine.active.id;$('wager').value='10';$('result').textContent='';$('status').textContent=kind==='plinko'?'选择落球口，准备投球。':'选择下注，准备掷骰。';}
         if(engine.active.recovery&&!lastRecovery)$('wager').value='10';lastRecovery=Boolean(engine.active.recovery);
-        const locked=callbacks.locked()||pending||animating,wager=Number($('wager').value),valid=Number.isSafeInteger(wager)&&wager>=1&&wager<=1000000;
+        const locked=callbacks.locked()||pending||animating,wager=engine.money.tryParse($('wager').value),valid=wager!==null&&wager>=1;
         inputs.forEach(name=>$(name).disabled=locked);wagers.forEach(button=>button.disabled=locked);
         $('wager').setAttribute('aria-invalid',String(!valid));$('play').disabled=locked||!scene||!valid||wager>engine.active.balance;
         if(kind==='plinko'){
@@ -26,7 +26,7 @@ function createArcadeGame(kind,engine,callbacks) {
     async function play(jackpot=false){
         if(!visible||pending||animating||callbacks.locked())return;
         if(!scene){callbacks.notify('3D 画面尚不可用，请检查浏览器的 WebGL 支持。',true);return;}
-        const wager=Number($('wager').value);let result;
+        const wager=$('wager').value;let result;
         pending=true;update();callbacks.changed();
         try {
             result=kind==='plinko'?await engine.playPlinko(wager,$('risk').value,$('lane').value,{jackpot}):await engine.playDice(wager,$('kind').value,$('kind').value==='sum'?Number($('target').value):null,{jackpot});

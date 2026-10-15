@@ -14,10 +14,10 @@ replace('    </style>', read('club.css') + lucky.css + read('lucky-layout.css') 
 replace('<body>', '<body>\n' + read('club.html').replace('<!-- LUCKY_777 -->', lucky.html).replace('<!-- BLACKJACK -->', read('blackjack.html')).replace('<!-- ARCADE -->', read('arcade.html')).replace('<!-- MARKET -->', read('market.html')).replace('<!-- ADMIN -->', read('admin.html')));
 replace('class="fixed top-0 left-0 right-0 z-20', 'class="club-roulette-hud fixed top-0 left-0 right-0 z-20');
 replace('<div class="fixed bottom-0', '<div id="roulette-controls" class="fixed bottom-0');
-replace('    <script>\n', '    <script>\n' + read('arcade-core.js') + '\n' + read('club-core.js') + '\n' + read('account-tools.js') + '\n' + read('custom-bet.js') + '\n' + read('jackpot-shortcut.js') + '\n' + read('lucky-input.js') + '\n' + lucky.script + '\n' + read('blackjack-core.js') + '\n' + read('remote-engine.js') + '\n' + read('blackjack-scene.js') + '\n' + read('blackjack-ui.js') + '\n' + read('arcade-scene.js') + '\n' + read('arcade-ui.js') + '\n' + read('economy-ui.js') + '\n' + read('player-loans-ui.js') + '\n' + read('distress-ui.js') + '\n' + read('account-ui.js') + '\n' + read('admin-ui.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
+replace('    <script>\n', '    <script>\n' + read('money.js') + '\n' + read('arcade-core.js') + '\n' + read('club-core.js') + '\n' + read('account-tools.js') + '\n' + read('custom-bet.js') + '\n' + read('jackpot-shortcut.js') + '\n' + read('lucky-input.js') + '\n' + lucky.script + '\n' + read('blackjack-core.js') + '\n' + read('remote-engine.js') + '\n' + read('blackjack-scene.js') + '\n' + read('blackjack-ui.js') + '\n' + read('arcade-scene.js') + '\n' + read('arcade-ui.js') + '\n' + read('economy-ui.js') + '\n' + read('player-loans-ui.js') + '\n' + read('distress-ui.js') + '\n' + read('account-ui.js') + '\n' + read('admin-ui.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
 replace('        // Helper to determine pocket color', '        const casino = createCasinoClub(state);\n        casino.init();\n        updateBettingHUD();\n        renderHistoryRibbon();\n\n        // Helper to determine pocket color');
 replace("            sfx.init();\n            hideBanner();", "            if (casino.busy() || casino.view !== 'roulette') return;\n            casino.engine.lock = 'roulette';\n            casino.engine.active.pendingRoulette = true;\n            casino.refresh();\n            sfx.init();\n            hideBanner();");
-replace('            state.balance += totalPayout;', "            state.balance += totalPayout;\n            casino.engine.lock = null;\n            casino.engine.active.pendingRoulette = false;\n            casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);");
+replace('            state.balance = CasinoEngine.money.add(state.balance, totalPayout);', "            state.balance = CasinoEngine.money.add(state.balance, totalPayout);\n            casino.engine.lock = null;\n            casino.engine.active.pendingRoulette = false;\n            casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);");
 replace("            document.getElementById('balance-display').textContent = state.balance.toLocaleString();", "            casino.refresh();\n            document.getElementById('balance-display').textContent = state.balance.toLocaleString();");
 // Bank access replaces the former unlimited chip reset.
 replace("            document.getElementById('reset-chips-btn').addEventListener('click', () => {\n                if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;\n                state.balance = 1000;\n                state.bets = { RED: 0, BLACK: 0, GREEN: 0, ODD: 0, EVEN: 0, numbers: {} };\n                sfx.playChipSound();\n                updateBettingHUD();\n            });", '');
@@ -26,7 +26,7 @@ replace("hits.length > 0 && state.phase !== 'ORBITING' && state.phase !== 'DROPP
 replace("                state.isChargingSpin = true;", "                if (casino.view !== 'roulette') return;\n                state.isChargingSpin = true;");
 replace("num !== 0 && num !== 0 &&", "num !== 0 &&");
 // Preserve a correct sign for winning payouts smaller than the total wager.
-replace('NET +${net.toLocaleString()}', "NET ${net >= 0 ? '+' : '−'}${Math.abs(net).toLocaleString()}");
+replace('NET +${net.toLocaleString()}', "NET ${net >= 0 ? '+' : '−'}${CasinoEngine.money.abs(net).toLocaleString()}");
 replace('            updatePhysics(dt);\n            renderer.render(scene, camera);', "            if (casino.view === 'roulette') {\n                updatePhysics(dt);\n                renderer.render(scene, camera);\n            }");
 replace('            build3DScene();', "            if (!window.THREE) {\n                casino.toast('The 3D wheel needs an internet connection. Players, bank and 777 are available.', true);\n                return;\n            }\n            build3DScene();");
 html = html.replace('let raycaster = new THREE.Raycaster();', 'let raycaster = window.THREE ? new THREE.Raycaster() : null;')
@@ -54,14 +54,14 @@ replace('                    evaluateSpinOutcome(currentPocketIdx);', '         
 replace("document.querySelectorAll('[data-bet]').forEach(btn => {", "document.querySelectorAll('#roulette-controls [data-bet]').forEach(btn => {");
 replace('                <!-- Clear / Rebet -->', `                <form id="roulette-custom-form" class="custom-bet-form" novalidate>
                     <label for="roulette-custom-amount">Custom bet</label>
-                    <input id="roulette-custom-amount" type="number" min="1" max="1000000" step="1" inputmode="numeric" placeholder="Amount" required aria-describedby="roulette-custom-selected">
+                    <input id="roulette-custom-amount" type="text" pattern="[0-9]+" inputmode="numeric" placeholder="Amount" required aria-describedby="roulette-custom-selected">
                     <button id="roulette-custom-apply" type="submit">Use amount</button>
-                    <span id="roulette-custom-selected">1–1,000,000 chips per bet</span>
+                    <span id="roulette-custom-selected">Whole chips · no maximum</span>
                 </form>
                 <!-- Clear / Rebet -->`);
 replace("            if (state.selectedChip === 'ALL') return state.balance;", `            if (state.customBet) {
                 try {
-                    const amount = casino.engine.amount(Number(state.selectedChip));
+                    const amount = casino.engine.amount(state.selectedChip);
                     if (amount > state.balance) throw new Error('Not enough chips for your custom bet. Lower it or visit the bank.');
                     return amount;
                 } catch (error) { casino.toast(error.message, true); return 0; }
@@ -115,7 +115,7 @@ replace('        function evaluateSpinOutcome(winningIndex) {', `        functio
                 showResultBanner(result.number,result.number===0?'GREEN':result.number%2?'RED':'BLACK',result.wager,result.payout);
                 document.getElementById('hint-text').textContent='Spin complete!';return;
             }`);
-replace('            // Display result banner', '            if (totalWagered > 0) casino.engine.completeRound(totalPayout - totalWagered);\n            updateBettingHUD();\n            // Display result banner');
+replace('            // Display result banner', '            if (totalWagered > 0) casino.engine.completeRound(CasinoEngine.money.sub(totalPayout, totalWagered));\n            updateBettingHUD();\n            // Display result banner');
 fs.mkdirSync(path.join(base, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(base, 'dist', 'index.html'), html);
 fs.writeFileSync(path.join(base, '..', 'roulette.html'), html);

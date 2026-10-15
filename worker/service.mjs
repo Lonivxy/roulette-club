@@ -1,13 +1,15 @@
+import '../src/money.js';
 import '../src/arcade-core.js';
 import '../src/club-core.js';
 import '../src/blackjack-core.js';
 import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
 
+const M = globalThis.CasinoMoney;
 const Engine = globalThis.CasinoEngine, Blackjack = globalThis.CasinoBlackjack;
 export const ORIGIN = 'https://roulette-club-777-oct15.lonivxy.chatgpt.site';
 const RP = new URL(ORIGIN).hostname, SESSION = '__Host-club-admin', CHALLENGE = '__Host-club-challenge';
 const SESSION_MS = 15 * 60000;
-const json = (value, status = 200, headers = {}) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers } });
+const json = (value, status = 200, headers = {}) => new Response(M.stringify(value), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers } });
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
 const bytesToB64 = value => btoa(String.fromCharCode(...value)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
 const fromB64 = value => Uint8Array.from(atob(value.replaceAll('-','+').replaceAll('_','/')), c => c.charCodeAt(0));
@@ -26,24 +28,23 @@ function bestRoulette(bets) {
     for(let n=0;n<24;n++){const p=roulettePayout(bets,n);if(p>payout){payout=p;number=n;}}
     return number;
 }
-function roulettePayout(bets,n) { return (bets.numbers[n]||0)*24+(n===0?bets.GREEN*24:n%2?(bets.RED+bets.ODD)*2:(bets.BLACK+bets.EVEN)*2); }
+function roulettePayout(bets,n) { return M.add(M.mul(bets.numbers[n]||0,24),n===0?M.mul(bets.GREEN,24):n%2?M.mul(M.add(bets.RED,bets.ODD),2):M.mul(M.add(bets.BLACK,bets.EVEN),2)); }
 function rouletteBet(engine, [kind, value]) {
     engine.ensureIdle();const user=engine.active,amount=engine.amount(value);
     if(amount>user.balance)fail('钱包余额不足。');
-    if(typeof kind==='number'&&Number.isInteger(kind)&&kind>=0&&kind<24)user.bets.numbers[kind]=(user.bets.numbers[kind]||0)+amount;
-    else if(['RED','BLACK','GREEN','ODD','EVEN'].includes(kind))user.bets[kind]+=amount;
+    if(typeof kind==='number'&&Number.isInteger(kind)&&kind>=0&&kind<24)user.bets.numbers[kind]=M.add(user.bets.numbers[kind]||0,amount);
+    else if(['RED','BLACK','GREEN','ODD','EVEN'].includes(kind))user.bets[kind]=M.add(user.bets[kind],amount);
     else fail('无效的轮盘下注。');
-    user.balance-=amount;
+    user.balance=M.sub(user.balance,amount);
 }
 function rouletteSpin(engine, jackpot) {
     engine.ensureIdle();const user=engine.active,wager=Engine.sumBets(user.bets);
     if(!wager)fail('请先放置筹码。');
     const bets=structuredClone(user.bets),number=jackpot?bestRoulette(bets):Math.floor(engine.random()*24),payout=roulettePayout(bets,number);
-    if(user.balance+payout>1000000000)fail('钱包已接近上限。');
     const recoveryBefore=structuredClone(user.recovery||null);
-    user.balance+=payout;user.lastBets=bets;user.bets=Engine.emptyBets();user.pendingRoulette=false;
+    user.balance=M.add(user.balance,payout);user.lastBets=bets;user.bets=Engine.emptyBets();user.pendingRoulette=false;
     const result={roundId:crypto.randomUUID(),number,index:number,wager,payout,bets,rigged:Boolean(jackpot)};
-    engine.completeRound(payout-wager);
+    engine.completeRound(M.sub(payout,wager));
     result.recoveryBefore=recoveryBefore;
     result.settlement={balance:user.balance,recovery:structuredClone(user.recovery||null)};
     user.lastRoulette=result;user.history.unshift({num:number,colorTag:number===0?'GREEN':number%2?'RED':'BLACK'});user.history=user.history.slice(0,10);
@@ -70,23 +71,22 @@ export async function applyCommand(engine, command, args, admin) {
     }
     if(command==='roulette.bet'){rouletteBet(engine,args);return null;}
     if(command==='roulette.clear'){
-        engine.ensureIdle();engine.active.balance+=Engine.sumBets(engine.active.bets);engine.active.bets=Engine.emptyBets();return null;
+        engine.ensureIdle();engine.active.balance=M.add(engine.active.balance,Engine.sumBets(engine.active.bets));engine.active.bets=Engine.emptyBets();return null;
     }
     if(command==='roulette.rebet'){
         engine.ensureIdle();const user=engine.active;if(!user.lastBets)fail('没有上一轮下注。');
-        const total=Engine.sumBets(user.lastBets),available=user.balance+Engine.sumBets(user.bets);
-        if(total>available)fail('余额不足以重复下注。');user.balance=available-total;user.bets=structuredClone(user.lastBets);return null;
+        const total=Engine.sumBets(user.lastBets),available=M.add(user.balance,Engine.sumBets(user.bets));
+        if(total>available)fail('余额不足以重复下注。');user.balance=M.sub(available,total);user.bets=structuredClone(user.lastBets);return null;
     }
     if(command==='roulette.spin')return rouletteSpin(engine,Boolean(args[0]));
     if(command==='roulette.rig'){
         engine.ensureIdle();const user=engine.active,last=user.lastRoulette;
         if(!last||last.roundId!==args[0])fail('这轮轮盘已经结束。');
-        const number=bestRoulette(last.bets),payout=roulettePayout(last.bets,number),delta=payout-last.payout;
+        const number=bestRoulette(last.bets),payout=roulettePayout(last.bets,number),delta=M.sub(payout,last.payout);
         if(!delta)return last;
-        if(last.settlement&&(user.balance!==last.settlement.balance||JSON.stringify(user.recovery||null)!==JSON.stringify(last.settlement.recovery)))fail('账户已发生其他变动，不能再调整这轮结果。');
-        if(user.balance+delta>1000000000)fail('钱包已接近上限。');
-        if(!last.recoveryBefore&&last.settlement?.recovery){user.recovery=null;user.balance-=10;}
-        user.balance+=delta;last.number=last.index=number;last.payout=payout;last.rigged=true;
+        if(last.settlement&&(user.balance!==last.settlement.balance||M.stringify(user.recovery||null)!==M.stringify(last.settlement.recovery)))fail('账户已发生其他变动，不能再调整这轮结果。');
+        if(!last.recoveryBefore&&last.settlement?.recovery){user.recovery=null;user.balance=M.sub(user.balance,10);}
+        user.balance=M.add(user.balance,delta);last.number=last.index=number;last.payout=payout;last.rigged=true;
         engine.completeRound(delta);last.settlement={balance:user.balance,recovery:structuredClone(user.recovery||null)};
         if(user.history[0])user.history[0]={num:number,colorTag:number===0?'GREEN':number%2?'RED':'BLACK'};
         if(delta)engine.record(`${user.name} · Roulette jackpot adjustment +${delta.toLocaleString()}.`);return last;
@@ -97,7 +97,7 @@ export async function applyCommand(engine, command, args, admin) {
 export function createService({page='',webauthn={generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse}}={}) {
     async function readState(db) {
         let row=await db.prepare('SELECT snapshot, revision FROM casino_state WHERE id = ?').bind('club').first();
-        if(!row){const e=engineFrom(JSON.stringify(new Engine(null).data));await db.prepare('INSERT OR IGNORE INTO casino_state (id,snapshot,revision,last_op) VALUES (?,?,0,?)').bind('club',JSON.stringify(e.data),'initial').run();row=await db.prepare('SELECT snapshot, revision FROM casino_state WHERE id = ?').bind('club').first();}
+        if(!row){const e=engineFrom(M.stringify(new Engine(null).data));await db.prepare('INSERT OR IGNORE INTO casino_state (id,snapshot,revision,last_op) VALUES (?,?,0,?)').bind('club',M.stringify(e.data),'initial').run();row=await db.prepare('SELECT snapshot, revision FROM casino_state WHERE id = ?').bind('club').first();}
         return row;
     }
     async function adminSession(request,db) {
@@ -117,13 +117,13 @@ export function createService({page='',webauthn={generateRegistrationOptions,ver
         const who=actor(request),admin=await adminSession(request,db);
         const {id,command:operation,args=[],playerId}=body;
         if(typeof id!=='string'||id.length<16||id.length>80||typeof operation!=='string')fail('无效的操作编号。');
-        const digest=await hash(JSON.stringify({operation,args,playerId}));
+        const digest=await hash(M.stringify({operation,args,playerId}));
         for(let attempt=0;attempt<4;attempt++){
             const prior=await db.prepare('SELECT actor,payload,response FROM casino_operations WHERE id = ?').bind(id).first();
             if(prior){
                 if(prior.actor!==who||prior.payload!==digest)fail('操作编号已被使用。',409);
                 const current=await state(request,db);if(current.data.users.some(user=>user.id===playerId))current.data.activeId=playerId;
-                return json({...current,result:JSON.parse(prior.response).result});
+                return json({...current,result:M.parseJSON(prior.response).result});
             }
             const row=await readState(db);let engine=engineFrom(row.snapshot);
             if(typeof playerId!=='string'||!engine.data.users.some(user=>user.id===playerId))fail('请选择有效玩家。');
@@ -134,15 +134,15 @@ export function createService({page='',webauthn={generateRegistrationOptions,ver
             if(operation==='import'){
                 if(!admin)fail('需要管理验证。',403);if(row.revision!==0)fail('服务器已有新记录，不能覆盖导入。',409);
                 if(!args[0]||typeof args[0]!=='object')fail('旧存档无效。');
-                const legacy=JSON.stringify(args[0]);const imported=new Engine({getItem:()=>legacy,setItem(){}});
+                const legacy=M.stringify(args[0]);const imported=new Engine({getItem:()=>legacy,setItem(){}});
                 if(imported.storageWarning)fail('旧存档校验失败，已保留原文件。');
                 engine=imported;engine.record('管理员导入了此前浏览器的玩家存档。');result=null;
             }else {
                 try { result=await applyCommand(engine,operation,args,admin); }
                 catch(error){ if(error.status)throw error;fail(error.message||'操作未完成。'); }
             }
-            engine.save();const snapshot=JSON.stringify(engine.data),response={data:engine.data,revision:row.revision+1,result:result??null,now:Date.now()};
-            const encoded=JSON.stringify({result:response.result,revision:response.revision});
+            engine.save();const snapshot=M.stringify(engine.data),response={data:engine.data,revision:row.revision+1,result:result??null,now:Date.now()};
+            const encoded=M.stringify({result:response.result,revision:response.revision});
             const batch=await db.batch([
                 db.prepare('UPDATE casino_state SET snapshot=?,revision=revision+1,last_op=? WHERE id=? AND revision=?').bind(snapshot,id,'club',row.revision),
                 db.prepare('INSERT INTO casino_operations (id,actor,payload,response,created_at) SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM casino_state WHERE id=? AND last_op=?)').bind(id,who,digest,encoded,Date.now(),'club',id)
@@ -153,7 +153,7 @@ export function createService({page='',webauthn={generateRegistrationOptions,ver
     }
     async function state(request,db) {
         for(let attempt=0;attempt<4;attempt++){
-            const row=await readState(db),engine=engineFrom(row.snapshot),snapshot=JSON.stringify(engine.data);
+            const row=await readState(db),engine=engineFrom(row.snapshot),snapshot=M.stringify(engine.data);
             if(snapshot!==row.snapshot){const result=await db.prepare('UPDATE casino_state SET snapshot=?,revision=revision+1 WHERE id=? AND revision=?').bind(snapshot,'club',row.revision).run();if(!result.meta.changes)continue;row.revision++;}
             const selected=new URL(request.url).searchParams.get('playerId');if(selected&&engine.data.users.some(user=>user.id===selected))engine.data.activeId=selected;
             return {data:engine.data,revision:row.revision,now:Date.now(),auth:await status(request,db)};
@@ -203,7 +203,7 @@ export function createService({page='',webauthn={generateRegistrationOptions,ver
             if(!env.DB)fail('账户数据库尚未连接。',503);
             if(request.method==='POST'){
                 if(request.headers.get('origin')!==ORIGIN||!request.headers.get('content-type')?.startsWith('application/json'))fail('请求来源校验失败。',403);
-                const text=await request.text();if(text.length>1000000)fail('请求过大。',413);let body;try{body=JSON.parse(text);}catch{fail('请求内容无效。');}
+                const text=await request.text();if(text.length>1000000)fail('请求过大。',413);let body;try{body=M.parseJSON(text);}catch{fail('请求内容无效。');}
                 if(path==='/api/command')return await command(request,env.DB,body);
                 if(/^\/api\/admin\/(register|authenticate)\/(options|verify)$/.test(path)||path==='/api/admin/logout')return await passkey(request,env.DB,path,body);
                 fail('不存在的接口。',404);
@@ -213,7 +213,7 @@ export function createService({page='',webauthn={generateRegistrationOptions,ver
             if(path==='/api/admin/status')return await passkey(request,env.DB,path);
             if(path.startsWith('/api/'))fail('不存在的接口。',404);
             if(!['/','/player','/admin','/index.html'].includes(path))return new Response('Not found',{status:404});
-            const boot=await state(request,env.DB),encoded=JSON.stringify(boot).replaceAll('<','\\u003c');
+            const boot=await state(request,env.DB),encoded=M.stringify(boot).replaceAll('<','\\u003c');
             return new Response(page.replace('/* SERVER_BOOTSTRAP */',`window.__CASINO_BOOTSTRAP__=${encoded};`),{headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'private, no-store','Permissions-Policy':'publickey-credentials-create=(self), publickey-credentials-get=(self)','X-Frame-Options':'SAMEORIGIN','X-Content-Type-Options':'nosniff'}});
         }catch(error){return json({error:error.status?error.message:'操作未完成，请刷新后重试。'},error.status||400);}
     }};

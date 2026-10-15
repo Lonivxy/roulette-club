@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 require('../src/club-core.js');
 function keyboard() {
     const listeners={};let fired=0,prevented=0,stopped=0;
-    const target={addEventListener(type,fn){(listeners[type]||=[]).push(fn);}},context={};
+    const target={addEventListener(type,fn){(listeners[type]||=[]).push(fn);}},context={CasinoEngine};
     vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/jackpot-shortcut.js'),'utf8'),context);
     context.bindJackpotShortcut(target,()=>fired++);
     const send=(type,code,extra={})=>{const event={code,shiftKey:true,target:{closest:()=>false},preventDefault(){prevented++;},stopImmediatePropagation(){stopped++;},...extra};for(const fn of listeners[type]||[])fn(event);};
@@ -38,7 +38,7 @@ test('slot shortcut pays 777 once at the selected wager and preserves equipped m
 test('roulette shortcut places a selected chip if needed, targets the best existing bet and never places a duplicate during a spin',()=>{
     const html=fs.readFileSync(path.join(__dirname,'../dist/index.html'),'utf8');
     const source=html.slice(html.indexOf('        function forceRouletteJackpot()'),html.indexOf('        function triggerSpin('));
-    const context={window:{THREE:{}},renderer:{},state:{bets:CasinoEngine.emptyBets()},POCKETS:Array.from({length:24},(_,number)=>({number})),casino:{engine:{lock:null},toast(){}},
+    const context={CasinoEngine,window:{THREE:{}},renderer:{},state:{bets:CasinoEngine.emptyBets()},POCKETS:Array.from({length:24},(_,number)=>({number})),casino:{engine:{lock:null},toast(){}},
         getTotalActiveBet(){return CasinoEngine.sumBets(context.state.bets);},placeNumberBet(n){context.state.bets.numbers[n]=137;},triggerSpin(){context.casino.engine.lock='roulette';}};
     vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/jackpot-shortcut.js'),'utf8')+'\n'+source,context);
     context.forceRouletteJackpot();assert.equal(context.state.bets.numbers[0],137);assert.equal(context.state.forcedPocketIndex,0);
