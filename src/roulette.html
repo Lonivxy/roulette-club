@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Low-Poly Roulette</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1c1829;
+            font-family: 'Inter', sans-serif;
+            color: #f8fafc;
+        }
+        #canvas-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            cursor: crosshair;
+        }
+        .glass-panel {
+            background: rgba(18, 16, 28, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 215, 100, 0.18);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+        }
+        .chip-btn {
+            transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .chip-btn:hover {
+            transform: translateY(-3px) scale(1.06);
+        }
+        .chip-btn.active {
+            transform: translateY(-4px) scale(1.12);
+            box-shadow: 0 0 18px rgba(251, 191, 36, 0.75);
+            border-color: #fde047 !important;
+        }
+        .bet-spot {
+            transition: all 0.15s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .bet-spot:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.15);
+        }
+        .bet-spot:active:not(:disabled) {
+            transform: translateY(0px) scale(0.98);
+        }
+        .power-bar-fill {
+            transition: width 0.04s linear;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.45); }
+            50% { box-shadow: 0 0 28px rgba(251, 191, 36, 0.85); }
+        }
+        .spin-btn-glow {
+            animation: pulseGlow 2s infinite;
+        }
+        /* Custom scrollbar for number modal if needed */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(251, 191, 36, 0.4);
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Scene Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Top HUD Bar -->
+    <div class="fixed top-0 left-0 right-0 z-20 p-2.5 sm:p-4 pointer-events-none flex flex-wrap items-center justify-between gap-2">
+        <!-- Left: Brand & Visual Mode Toggle -->
+        <div class="flex flex-wrap items-center gap-2 pointer-events-auto">
+            <div class="glass-panel px-3.5 py-2 rounded-xl flex items-center gap-2.5">
+                <div class="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_10px_#fbbf24]"></div>
+                <div>
+                    <h1 class="text-xs sm:text-sm font-black tracking-wider uppercase text-amber-300 leading-none">VR Low-Poly Roulette</h1>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Flick Golden Turret or Hold Spin</p>
+                </div>
+            </div>
+
+            <!-- Mode Toggle: Image Mode vs Classic Mode -->
+            <button id="mode-toggle-btn" class="glass-panel px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:border-amber-400/50 transition">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500" id="mode-dot"></span>
+                <span id="mode-label">Image Mode (23 Red Frames / 1 Green)</span>
+            </button>
+
+            <!-- Camera View Toggle -->
+            <button id="camera-toggle-btn" class="glass-panel px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-amber-300 hover:border-amber-400/50 transition flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                <span id="camera-label">View: Screenshot Angle</span>
+            </button>
+
+            <!-- Labels 3D Toggle -->
+            <button id="labels-toggle-btn" class="glass-panel px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-amber-300 transition">
+                <span id="labels-label"># Numbers: ON</span>
+            </button>
+
+            <!-- Audio Toggle -->
+            <button id="audio-toggle-btn" class="glass-panel px-2.5 py-2 rounded-xl text-xs font-semibold text-amber-300 hover:border-amber-400/50 transition" title="Toggle Sound Effects">
+                <span id="audio-label">🔊 SFX</span>
+            </button>
+        </div>
+
+        <!-- Right: History Ribbon -->
+        <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2 pointer-events-auto">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">History</span>
+            <div id="history-ribbon" class="flex items-center gap-1.5 min-w-[120px] justify-end">
+                <span class="text-xs text-slate-500 italic">No spins yet</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Center Result Banner / Live Spin Telemetry -->
+    <div id="status-banner" class="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none transition-all duration-300 opacity-0 scale-95">
+        <div class="glass-panel px-6 py-3 rounded-2xl border-amber-400/40 text-center flex flex-col items-center gap-1 shadow-2xl">
+            <div id="banner-badge" class="px-3 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-widest bg-amber-500/20 text-amber-300">
+                Spin Result
+            </div>
+            <div id="banner-title" class="text-xl sm:text-2xl font-black text-white tracking-tight">
+                POCKET 0 - GREEN
+            </div>
+            <div id="banner-subtitle" class="text-xs sm:text-sm font-semibold text-emerald-400">
+                +240 CHIPS WON!
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Hint Pill -->
+    <div id="hint-pill" class="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+        <div class="bg-black/45 backdrop-blur-md border border-white/10 px-3.5 py-1 rounded-full text-[11px] text-amber-200/90 flex items-center gap-2 shadow-lg">
+            <span class="inline-block w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            <span id="hint-text">Grab & flick the glowing golden cross in 3D, or hold the SPIN button below!</span>
+        </div>
+    </div>
+
+    <!-- Number Picker Modal (24 Pockets) -->
+    <div id="number-modal" class="fixed inset-0 z-30 bg-black/65 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full rounded-2xl p-4 sm:p-5 border border-amber-400/30 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+                <div>
+                    <h2 class="text-sm sm:text-base font-black text-amber-300 uppercase tracking-wider">Straight-Up Pocket Bets (24x Payout)</h2>
+                    <p class="text-xs text-slate-400">Click any pocket number (0–23) to place your selected chip</p>
+                </div>
+                <button id="close-number-modal" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200">
+                    Done ✕
+                </button>
+            </div>
+            <div id="number-grid" class="grid grid-cols-6 gap-2 max-h-[60vh] overflow-y-auto p-1">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Betting & Control HUD -->
+    <div class="fixed bottom-0 left-0 right-0 z-20 p-2 sm:p-3.5 pointer-events-none flex justify-center">
+        <div class="glass-panel w-full max-w-5xl rounded-2xl p-2.5 sm:p-3.5 pointer-events-auto flex flex-col gap-2.5">
+            
+            <!-- Top Row: Balance, Chip Selector, Action Buttons -->
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+                <!-- Balance & Total Bet -->
+                <div class="flex items-center gap-3">
+                    <div class="bg-slate-950/70 border border-amber-500/30 px-3 py-1.5 rounded-xl flex items-center gap-2">
+                        <div class="w-5 h-5 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center text-[10px] font-black text-slate-950 shadow">₵</div>
+                        <div>
+                            <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold leading-none">Chips Balance</div>
+                            <div id="balance-display" class="text-sm sm:text-base font-black text-amber-300 leading-tight">1,000</div>
+                        </div>
+                        <button id="reset-chips-btn" class="ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 text-[10px] font-bold transition" title="Refill to 1,000 Chips">
+                            +Reset
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-950/70 border border-white/10 px-3 py-1.5 rounded-xl">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold leading-none">Active Bet</div>
+                        <div id="current-bet-display" class="text-sm sm:text-base font-black text-white leading-tight">0</div>
+                    </div>
+                </div>
+
+                <!-- Chip Selector -->
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 hidden md:inline mr-1">Chip:</span>
+                    <button data-chip="10" class="chip-btn active w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-b from-blue-500 to-blue-700 border-2 border-dashed border-white/80 text-[11px] font-black text-white shadow flex items-center justify-center">10</button>
+                    <button data-chip="50" class="chip-btn w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-b from-emerald-500 to-emerald-700 border-2 border-dashed border-white/80 text-[11px] font-black text-white shadow flex items-center justify-center">50</button>
+                    <button data-chip="100" class="chip-btn w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-b from-rose-500 to-rose-700 border-2 border-dashed border-white/80 text-[11px] font-black text-white shadow flex items-center justify-center">100</button>
+                    <button data-chip="500" class="chip-btn w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-b from-purple-500 to-purple-800 border-2 border-dashed border-white/80 text-[11px] font-black text-white shadow flex items-center justify-center">500</button>
+                    <button data-chip="ALL" class="chip-btn px-2.5 h-8 sm:h-9 rounded-full bg-gradient-to-b from-amber-400 to-amber-600 border-2 border-white text-[10px] font-black text-slate-950 shadow flex items-center justify-center">ALL IN</button>
+                </div>
+
+                <!-- Clear / Rebet -->
+                <div class="flex items-center gap-1.5">
+                    <button id="rebet-btn" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-white/10 text-xs font-bold text-slate-200 transition">
+                        ↻ Rebet
+                    </button>
+                    <button id="clear-bets-btn" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-rose-950/80 border border-white/10 hover:border-rose-500/40 text-xs font-bold text-slate-300 hover:text-rose-200 transition">
+                        ✕ Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Betting Spots + Hold-to-Spin Power Button -->
+            <div class="grid grid-cols-2 sm:grid-cols-7 gap-2 items-stretch">
+                <!-- RED BET -->
+                <button data-bet="RED" class="bet-spot group rounded-xl bg-gradient-to-b from-red-600/90 to-red-800/95 border border-red-400/40 p-2 flex flex-col justify-between items-center text-center shadow">
+                    <div class="flex items-center justify-between w-full">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-red-200">Red</span>
+                        <span id="red-odds-label" class="text-[10px] font-bold bg-black/30 px-1.5 py-0.5 rounded text-amber-300">2x</span>
+                    </div>
+                    <div class="text-xs sm:text-sm font-black text-white my-0.5">RED POCKETS</div>
+                    <div id="bet-badge-RED" class="hidden px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black shadow">0</div>
+                </button>
+
+                <!-- BLACK / DARK BET -->
+                <button data-bet="BLACK" class="bet-spot group rounded-xl bg-gradient-to-b from-zinc-700/90 to-zinc-900/95 border border-zinc-400/30 p-2 flex flex-col justify-between items-center text-center shadow">
+                    <div class="flex items-center justify-between w-full">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-zinc-300">Black / Dark</span>
+                        <span class="text-[10px] font-bold bg-black/40 px-1.5 py-0.5 rounded text-amber-300">2x</span>
+                    </div>
+                    <div class="text-xs sm:text-sm font-black text-white my-0.5">DARK / EVEN</div>
+                    <div id="bet-badge-BLACK" class="hidden px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black shadow">0</div>
+                </button>
+
+                <!-- GREEN ZERO BET -->
+                <button data-bet="GREEN" class="bet-spot group rounded-xl bg-gradient-to-b from-emerald-600/90 to-emerald-800/95 border border-emerald-400/40 p-2 flex flex-col justify-between items-center text-center shadow">
+                    <div class="flex items-center justify-between w-full">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-200">Zero</span>
+                        <span class="text-[10px] font-bold bg-black/30 px-1.5 py-0.5 rounded text-amber-300">24x</span>
+                    </div>
+                    <div class="text-xs sm:text-sm font-black text-white my-0.5">GREEN (0)</div>
+                    <div id="bet-badge-GREEN" class="hidden px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black shadow">0</div>
+                </button>
+
+                <!-- ODD BET -->
+                <button data-bet="ODD" class="bet-spot group rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-white/15 p-2 flex flex-col justify-between items-center text-center shadow">
+                    <div class="flex items-center justify-between w-full">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-300">1, 3, 5...</span>
+                        <span class="text-[10px] font-bold bg-black/30 px-1.5 py-0.5 rounded text-amber-300">2x</span>
+                    </div>
+                    <div class="text-xs sm:text-sm font-black text-white my-0.5">ODD</div>
+                    <div id="bet-badge-ODD" class="hidden px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black shadow">0</div>
+                </button>
+
+                <!-- EVEN BET -->
+                <button data-bet="EVEN" class="bet-spot group rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-white/15 p-2 flex flex-col justify-between items-center text-center shadow">
+                    <div class="flex items-center justify-between w-full">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-300">2, 4, 6...</span>
+                        <span class="text-[10px] font-bold bg-black/30 px-1.5 py-0.5 rounded text-amber-300">2x</span>
+                    </div>
+                    <div class="text-xs sm:text-sm font-black text-white my-0.5">EVEN</div>
+                    <div id="bet-badge-EVEN" class="hidden px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black shadow">0</div>
+                </button>
+
+                <!-- PICK INDIVIDUAL POCKET NUMBER -->
+                <button id="open-number-modal-btn" class="bet-spot group rounded-xl bg-indigo-950/90 hover:bg-indigo-900/90 border border-indigo-400/35 p-2 flex flex-col justify-between items-center text-center shadow">
+                    <div class="flex items-center justify-between w-full">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-300">#0–23</span>
+                        <span class="text-[10px] font-bold bg-black/30 px-1.5 py-0.5 rounded text-amber-300">24x</span>
+                    </div>
+                    <div class="text-xs sm:text-sm font-black text-white my-0.5">PICK POCKET</div>
+                    <div id="bet-badge-NUMBERS" class="hidden px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black shadow">0</div>
+                </button>
+
+                <!-- HOLD & RELEASE SPIN BUTTON -->
+                <button id="spin-btn" class="col-span-2 sm:col-span-1 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-slate-950 font-black p-2 flex flex-col justify-between items-center relative overflow-hidden spin-btn-glow shadow-lg active:scale-95 transition">
+                    <div class="text-[10px] uppercase tracking-wider font-extrabold opacity-80">Hold & Release</div>
+                    <div id="spin-btn-label" class="text-sm sm:text-base font-black tracking-tight">SPIN WHEEL</div>
+                    <div class="w-full h-1.5 bg-black/25 rounded-full overflow-hidden mt-1">
+                        <div id="spin-power-bar" class="power-bar-fill h-full bg-white w-0"></div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // 1. SOUND ENGINE (Web Audio API Mechanical Clacks, Rim Roll, & Win Fanfare)
+        // ============================================================================
+        class RouletteSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playPocketClick(intensity = 1.0) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                // Crisp wooden/metallic low-poly clack
+                osc.type = 'triangle';
+                const baseFreq = 520 + Math.random() * 140;
+                osc.frequency.setValueAtTime(baseFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.035);
+
+                const vol = Math.min(0.35, Math.max(0.03, intensity * 0.28));
+                gain.gain.setValueAtTime(vol, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.042);
+            }
+
+            playChipSound() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1400, now);
+                osc.frequency.exponentialRampToValueAtTime(2200, now + 0.045);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.055);
+            }
+
+            playBallSettle() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.exponentialRampToValueAtTime(65, now + 0.14);
+
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.16);
+            }
+
+            playWinSound(isBigWin = false) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const notes = isBigWin ? [523.25, 659.25, 783.99, 1046.5, 1318.5] : [523.25, 659.25, 783.99, 1046.5];
+                notes.forEach((freq, idx) => {
+                    const now = this.ctx.currentTime + idx * 0.08;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.36);
+                });
+            }
+
+            playLoseSound() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const freqs = [310, 260];
+                freqs.forEach((freq, idx) => {
+                    const now = this.ctx.currentTime + idx * 0.14;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.24);
+                });
+            }
+        }
+
+        const sfx = new RouletteSoundEngine();
+
+        // ============================================================================
+        // 2. GAME STATE & CONFIGURATION (24-Pocket Low-Poly Wheel)
+        // ============================================================================
+        const NUM_POCKETS = 24;
+        // Pocket 0 is positioned at the ~2 o'clock angle in the initial resting wheel
+        // Standard 24-pocket sequence
+        const POCKETS = Array.from({ length: NUM_POCKETS }, (_, i) => {
+            // In our wheel, index 0 is Green Zero (0).
+            // Indices 1..23 alternate Odd (Red) and Even (Black/Dark).
+            return {
+                index: i,
+                number: i,
+                // Angle around the wheel in local wheel coordinates
+                // Place index 0 at -Math.PI / 6 (approx 2 o'clock in screenshot!)
+                localAngle: -Math.PI / 6 + (i * (Math.PI * 2 / NUM_POCKETS))
+            };
+        });
+
+        const state = {
+            imageMode: true, // true = 23 Red frames + 1 Green frame (matches screenshot!), false = Alternating Red & Black frames
+            cameraMode: 'SCREENSHOT', // 'SCREENSHOT' | 'TOPDOWN'
+            showNumberLabels: true,
+            balance: 1000,
+            selectedChip: 10,
+            bets: {
+                RED: 0,
+                BLACK: 0,
+                GREEN: 0,
+                ODD: 0,
+                EVEN: 0,
+                numbers: {} //pocketNumber: amount
+            },
+            lastBets: null,
+            history: [],
+
+            // Physics & Wheel State
+            phase: 'IDLE', // 'IDLE' | 'ORBITING' | 'DROPPING' | 'SETTLED'
+            wheelAngle: 0,
+            wheelAngularVel: 0,
+
+            // Ball state: stored in world polar coordinates around wheel center
+            // Initially resting in pocket #19 (top-left ~11 o'clock, matching the silver ball in the reference image!)
+            ballAngle: -Math.PI / 6 + (19 * (Math.PI * 2 / NUM_POCKETS)),
+            ballAngularVel: 0,
+            ballRadius: 2.38,
+            ballHeight: 0.42,
+            ballRadialVel: 0,
+            settledPocketIndex: 19,
+            lastDividerIndex: -1,
+
+            // Power button charging
+            isChargingSpin: false,
+            spinCharge: 0,
+
+            // Direct 3D Turret Drag/Flick
+            isDraggingTurret: false,
+            dragLastAngle: 0,
+            dragAngularVelSample: 0
+        };
+
+        // Helper to determine pocket color according to active mode or logical roulette rules
+        function getPocketVisualFrameColor(pocketIndex) {
+            if (pocketIndex === 0) return 0x388e2c; // Bright Leaf Green at 2 o'clock
+            if (state.imageMode) {
+                return 0xd61f26; // Uncanny Screenshot Mode: all 23 other pocket frames are Crimson Red!
+            } else {
+                // Classic Mode: Odd is Crimson Red, Even is Charcoal Black
+                return (pocketIndex % 2 === 1) ? 0xd61f26 : 0x26262c;
+            }
+        }
+
+        // Logical winning category for bets
+        function isRedPocket(num) {
+            if (num === 0) return false;
+            return num % 2 === 1;
+        }
+        function isBlackPocket(num) {
+            if (num === 0) return false;
+            return num % 2 === 0;
+        }
+
+        // ============================================================================
+        // 3. THREE.JS 3D SCENE & LOW-POLY ROULETTE CONSTRUCTION
+        // ============================================================================
+        let scene, camera, renderer;
+        let wheelGroup, rotatingAssembly, turretMesh, ballMesh;
+        let pocketFrameMeshes = [];
+        let pocketLabelSprites = [];
+        let vrLaserLine, vrLaserDot, vrSecondaryLine;
+        let turretPointLight, glowSprite;
+        let raycaster = new THREE.Raycaster();
+        let mouseNDC = new THREE.Vector2(0, 0);
+        let interactivePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.8);
+
+        // Camera orbital offset for smooth subtle mouse/touch inspection
+        let camOrbitAzimuth = 0;
+        let camOrbitElevation = 0;
+        let isDraggingCamera = false;
+        let prevPointer = { x: 0, y: 0 };
+
+        function createRadialGlowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(128, 128, 6, 128, 128, 128);
+            grad.addColorStop(0.0, 'rgba(255, 250, 210, 1.0)');
+            grad.addColorStop(0.22, 'rgba(255, 210, 75, 0.85)');
+            grad.addColorStop(0.55, 'rgba(245, 145, 20, 0.32)');
+            grad.addColorStop(1.0, 'rgba(245, 145, 20, 0.0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 256, 256);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createPocketNumberSprite(number, isZero) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = isZero ? 'rgba(22, 163, 74, 0.9)' : (number % 2 === 1 ? 'rgba(185, 28, 28, 0.85)' : 'rgba(24, 24, 27, 0.9)');
+            ctx.beginPath();
+            ctx.arc(32, 32, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(253, 224, 71, 0.75)';
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 24px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(number), 32, 33);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+            const sprite = new THREE.Sprite(mat);
+            sprite.scale.set(0.34, 0.34, 1);
+            return sprite;
+        }
+
+        function buildHalfRingGeometry(rInner1, rInner2, rOuter1, rOuter2, yBottom, yTop, startAngle, endAngle, segments) {
+            // Creates a faceted low-poly half-bowl rim section with custom cross-section profile
+            const geom = new THREE.BufferGeometry();
+            const positions = [];
+            const indices = [];
+
+            // Cross section of rim has 4 profile vertices:
+            // 0: inner bottom (rInner1, yBottom)
+            // 1: inner top lip (rInner2, yTop)
+            // 2: outer top bevel (rOuter1, yTop - 0.08)
+            // 3: outer bottom base (rOuter2, yBottom - 0.35)
+            const profile = [
+                { r: rInner1, y: yBottom },
+                { r: rInner2, y: yTop },
+                { r: rOuter1, y: yTop - 0.08 },
+                { r: rOuter2, y: yBottom - 0.35 }
+            ];
+
+            for (let i = 0; i <= segments; i++) {
+                const t = i / segments;
+                const theta = startAngle + t * (endAngle - startAngle);
+                const cos = Math.cos(theta);
+                const sin = Math.sin(theta);
+
+                for (let p = 0; p < profile.length; p++) {
+                    positions.push(
+                        cos * profile[p].r,
+                        profile[p].y,
+                        sin * profile[p].r
+                    );
+                }
+            }
+
+            const stride = profile.length;
+            for (let i = 0; i < segments; i++) {
+                const base = i * stride;
+                const next = (i + 1) * stride;
+                for (let p = 0; p < stride - 1; p++) {
+                    indices.push(base + p, next + p, base + p + 1);
+                    indices.push(base + p + 1, next + p, next + p + 1);
+                }
+            }
+
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            geom.setIndex(indices);
+            geom.computeVertexNormals();
+            return geom;
+        }
+
+        function build3DScene() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x282138); // Moody dark purple-indigo ambient backdrop from screenshot
+            scene.fog = new THREE.FogExp2(0x282138, 0.032);
+
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
+            updateCameraPosition();
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // --- LIGHTING (Warm Golden Center Glow + Soft Tabletop Studio Lights) ---
+            const ambientLight = new THREE.AmbientLight(0xb8a8d8, 0.68);
+            scene.add(ambientLight);
+
+            const mainDirLight = new THREE.DirectionalLight(0xfff1d0, 0.72);
+            mainDirLight.position.set(5, 11, 6);
+            mainDirLight.castShadow = true;
+            mainDirLight.shadow.mapSize.width = 1024;
+            mainDirLight.shadow.mapSize.height = 1024;
+            mainDirLight.shadow.bias = -0.001;
+            scene.add(mainDirLight);
+
+            // --- ENVIRONMENT: GREEN FELT TABLE, PLAYING CARD ON LEFT, GOLD/RED RAIL ON RIGHT ---
+            buildTableEnvironment();
+
+            // --- ROULETTE WHEEL ASSEMBLY ---
+            wheelGroup = new THREE.Group();
+            scene.add(wheelGroup);
+
+            buildOuterSplitBowl();
+            buildRotatingWheelInterior();
+            buildSilverBall();
+            buildVRLaserPointers();
+        }
+
+        function buildTableEnvironment() {
+            // 1. Dark Emerald-Green Felt Table Surface (angled slightly like screenshot)
+            const feltGeo = new THREE.BoxGeometry(11.5, 0.4, 11.5);
+            const feltMat = new THREE.MeshStandardMaterial({
+                color: 0x264830,
+                roughness: 0.92,
+                metalness: 0.05,
+                flatShading: true
+            });
+            const feltMesh = new THREE.Mesh(feltGeo, feltMeshMat = feltMat);
+            feltMesh.position.set(-1.1, -0.35, 0.6);
+            feltMesh.rotation.y = 0.16;
+            feltMesh.receiveShadow = true;
+            scene.add(feltMesh);
+
+            // Subtle dark burgundy table trim along the back-left edge of the green felt
+            const leftTrimGeo = new THREE.BoxGeometry(11.6, 0.45, 0.35);
+            const leftTrimMat = new THREE.MeshStandardMaterial({
+                color: 0x4c1d30,
+                roughness: 0.8,
+                flatShading: true
+            });
+            const leftTrim = new THREE.Mesh(leftTrimGeo, leftTrimMat);
+            leftTrim.position.set(-1.1, -0.32, -4.9);
+            leftTrim.rotation.y = 0.16;
+            scene.add(leftTrim);
+
+            // 2. Playing Card resting to the left of the wheel (matching screenshot!)
+            const cardGroup = new THREE.Group();
+            // White card base
+            const cardBaseGeo = new THREE.BoxGeometry(1.42, 0.03, 1.95);
+            const cardBaseMat = new THREE.MeshStandardMaterial({
+                color: 0xdbe2ea,
+                roughness: 0.5,
+                flatShading: true
+            });
+            const cardBase = new THREE.Mesh(cardBaseGeo, cardBaseMat);
+            cardBase.castShadow = true;
+            cardGroup.add(cardBase);
+
+            // Dark charcoal/slate card back inset
+            const cardBackGeo = new THREE.BoxGeometry(1.24, 0.034, 1.76);
+            const cardBackMat = new THREE.MeshStandardMaterial({
+                color: 0x464852,
+                roughness: 0.65,
+                flatShading: true
+            });
+            const cardBack = new THREE.Mesh(cardBackGeo, cardBackMat);
+            cardGroup.add(cardBack);
+
+            cardGroup.position.set(-4.65, -0.12, -0.25);
+            cardGroup.rotation.y = 0.54;
+            scene.add(cardGroup);
+
+            // Small purple VR token/chip hint at bottom-left edge of screenshot
+            const tokenGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.1, 12);
+            const tokenMat = new THREE.MeshStandardMaterial({ color: 0x5b21b6, flatShading: true });
+            const tokenMesh = new THREE.Mesh(tokenGeo, tokenMat);
+            tokenMesh.position.set(-3.1, -0.1, 4.15);
+            scene.add(tokenMesh);
+
+            // 3. Right-Side Golden/Wooden Stepped Rail & Red Table Area (matching right side of screenshot!)
+            const rightStructure = new THREE.Group();
+
+            // Golden stepped rail frame
+            const goldRailMat = new THREE.MeshStandardMaterial({
+                color: 0xc8962e,
+                roughness: 0.45,
+                metalness: 0.25,
+                flatShading: true
+            });
+
+            const railLong = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.55, 8.5), goldRailMat);
+            railLong.position.set(4.15, 0.05, 0.8);
+            rightStructure.add(railLong);
+
+            const railInnerStep = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.35, 8.5), goldRailMat);
+            railInnerStep.position.set(3.85, -0.05, 0.8);
+            rightStructure.add(railInnerStep);
+
+            const railTopCross = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.55, 0.45), goldRailMat);
+            railTopCross.position.set(5.6, 0.05, -2.1);
+            rightStructure.add(railTopCross);
+
+            // Warm ochre/brown wood top header above the rail
+            const woodMat = new THREE.MeshStandardMaterial({
+                color: 0x85582a,
+                roughness: 0.7,
+                flatShading: true
+            });
+            const woodHeader = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.45, 1.3), woodMat);
+            woodHeader.position.set(5.6, 0.12, -2.85);
+            rightStructure.add(woodHeader);
+
+            // Crimson red right-side table surface
+            const rightRedFelt = new THREE.Mesh(
+                new THREE.BoxGeometry(3.4, 0.35, 7.2),
+                new THREE.MeshStandardMaterial({ color: 0x9e1c28, roughness: 0.8, flatShading: true })
+            );
+            rightRedFelt.position.set(5.9, -0.12, 1.8);
+            rightStructure.add(rightRedFelt);
+
+            rightStructure.rotation.y = 0.16;
+            scene.add(rightStructure);
+        }
+
+        function buildOuterSplitBowl() {
+            // The outer stationary roulette bowl is split down the middle!
+            // Left half: Dark matte olive-charcoal with a thin gold inner trim lip.
+            // Right half: Matte crimson red.
+            const bowlGroup = new THREE.Group();
+
+            // Split plane angle matching the screenshot (~100 degrees to ~280 degrees)
+            const splitAngleTop = -Math.PI * 0.53; // ~11:30 o'clock
+            const splitAngleBottom = Math.PI * 0.47; // ~5:30 o'clock
+            const facetsPerHalf = 9; // 18-sided low-poly faceted bowl
+
+            // 1. RIGHT HALF: Matte Crimson Red Outer Rim
+            const redHalfGeo = buildHalfRingGeometry(
+                2.82, 3.05, 4.02, 4.22,
+                0.28, 0.82,
+                splitAngleTop, splitAngleBottom,
+                facetsPerHalf
+            );
+            const redRimMat = new THREE.MeshStandardMaterial({
+                color: 0xd11925,
+                roughness: 0.62,
+                metalness: 0.08,
+                flatShading: true,
+                side: THREE.DoubleSide
+            });
+            const redHalfMesh = new THREE.Mesh(redHalfGeo, redRimMat);
+            redHalfMesh.castShadow = true;
+            redHalfMesh.receiveShadow = true;
+            bowlGroup.add(redHalfMesh);
+
+            // 2. LEFT HALF: Matte Dark Charcoal/Olive-Black Outer Rim
+            const blackHalfGeo = buildHalfRingGeometry(
+                2.82, 3.05, 4.02, 4.22,
+                0.28, 0.82,
+                splitAngleBottom, splitAngleTop + Math.PI * 2,
+                facetsPerHalf
+            );
+            const blackRimMat = new THREE.MeshStandardMaterial({
+                color: 0x35332a,
+                roughness: 0.72,
+                metalness: 0.1,
+                flatShading: true,
+                side: THREE.DoubleSide
+            });
+            const blackHalfMesh = new THREE.Mesh(blackHalfGeo, blackRimMat);
+            blackHalfMesh.castShadow = true;
+            blackHalfMesh.receiveShadow = true;
+            bowlGroup.add(blackHalfMesh);
+
+            // 3. Thin Golden Inner Lip Trim on the Left (Dark) Half (clearly visible in the screenshot!)
+            const goldLipGeo = buildHalfRingGeometry(
+                2.76, 2.94, 2.99, 2.82,
+                0.24, 0.62,
+                splitAngleBottom, splitAngleTop + Math.PI * 2,
+                facetsPerHalf
+            );
+            const goldLipMat = new THREE.MeshStandardMaterial({
+                color: 0xd9a13b,
+                roughness: 0.4,
+                metalness: 0.5,
+                flatShading: true,
+                side: THREE.DoubleSide
+            });
+            const goldLipMesh = new THREE.Mesh(goldLipGeo, goldLipMat);
+            bowlGroup.add(goldLipMesh);
+
+            // 4. Dark Recessed Outer Base Cylinder under the wheel
+            const baseCylGeo = new THREE.CylinderGeometry(4.15, 4.0, 0.5, 18);
+            const baseCylMat = new THREE.MeshStandardMaterial({
+                color: 0x1a1721,
+                roughness: 0.9,
+                flatShading: true
+            });
+            const baseCyl = new THREE.Mesh(baseCylGeo, baseCylMat);
+            baseCyl.position.y = -0.12;
+            bowlGroup.add(baseCyl);
+
+            wheelGroup.add(bowlGroup);
+        }
+
+        function buildRotatingWheelInterior() {
+            rotatingAssembly = new THREE.Group();
+            wheelGroup.add(rotatingAssembly);
+
+            // 1. Dark Recessed Pocket Track Floor
+            const trackFloorGeo = new THREE.CylinderGeometry(2.88, 2.88, 0.18, 24);
+            const trackFloorMat = new THREE.MeshStandardMaterial({
+                color: 0x1d1b27,
+                roughness: 0.85,
+                metalness: 0.15,
+                flatShading: true
+            });
+            const trackFloor = new THREE.Mesh(trackFloorGeo, trackFloorMat);
+            trackFloor.position.y = 0.15;
+            trackFloor.receiveShadow = true;
+            rotatingAssembly.add(trackFloor);
+
+            // 2. Inner Raised Dark Cone/Platter (between pockets and golden turret)
+            const innerConeGeo = new THREE.CylinderGeometry(1.78, 1.92, 0.34, 24);
+            const innerConeMat = new THREE.MeshStandardMaterial({
+                color: 0x332e2c,
+                roughness: 0.55,
+                metalness: 0.2,
+                flatShading: true
+            });
+            const innerCone = new THREE.Mesh(innerConeGeo, innerConeMat);
+            innerCone.position.y = 0.25;
+            innerCone.receiveShadow = true;
+            rotatingAssembly.add(innerCone);
+
+            // 3. 24 Raised Low-Poly Rectangular Pocket Frames (with dark hollow center slot!)
+            pocketFrameMeshes = [];
+            pocketLabelSprites = [];
+
+            for (let i = 0; i < NUM_POCKETS; i++) {
+                const pocket = POCKETS[i];
+                const frameGroup = new THREE.Group();
+
+                const frameColor = getPocketVisualFrameColor(i);
+                const frameMat = new THREE.MeshStandardMaterial({
+                    color: frameColor,
+                    roughness: 0.48,
+                    metalness: 0.1,
+                    flatShading: true
+                });
+
+                // Construct a 3D rectangular pocket frame with an open dark center slot
+                // Outer radial length: ~0.78, width: ~0.42, height: ~0.16
+                const sideWallGeo = new THREE.BoxGeometry(0.76, 0.15, 0.085);
+                const leftWall = new THREE.Mesh(sideWallGeo, frameMat);
+                leftWall.position.set(0, 0.08, -0.155);
+                leftWall.castShadow = true;
+                leftWall.receiveShadow = true;
+                frameGroup.add(leftWall);
+
+                const rightWall = new THREE.Mesh(sideWallGeo, frameMat);
+                rightWall.position.set(0, 0.08, 0.155);
+                rightWall.castShadow = true;
+                rightWall.receiveShadow = true;
+                frameGroup.add(rightWall);
+
+                // Inner & outer end caps of the rectangular pocket frame
+                const endWallGeo = new THREE.BoxGeometry(0.11, 0.15, 0.395);
+                const innerWall = new THREE.Mesh(endWallGeo, frameMat);
+                innerWall.position.set(-0.33, 0.08, 0);
+                innerWall.castShadow = true;
+                frameGroup.add(innerWall);
+
+                const outerWall = new THREE.Mesh(endWallGeo, frameMat);
+                outerWall.position.set(0.33, 0.08, 0);
+                outerWall.castShadow = true;
+                frameGroup.add(outerWall);
+
+                // Dark recessed pocket bottom inside the frame
+                const slotBottomGeo = new THREE.BoxGeometry(0.56, 0.04, 0.22);
+                const slotBottomMat = new THREE.MeshStandardMaterial({
+                    color: 0x16141f,
+                    roughness: 0.9
+                });
+                const slotBottom = new THREE.Mesh(slotBottomGeo, slotBottomMat);
+                slotBottom.position.set(0, 0.03, 0);
+                frameGroup.add(slotBottom);
+
+                // Position around the ring at radius 2.34
+                const r = 2.34;
+                frameGroup.position.set(
+                    Math.cos(pocket.localAngle) * r,
+                    0.23,
+                    Math.sin(pocket.localAngle) * r
+                );
+                frameGroup.rotation.y = -pocket.localAngle;
+
+                // Store material reference so we can toggle Image Mode vs Classic Mode smoothly
+                frameGroup.userData = {
+                    pocketIndex: i,
+                    coloredMeshes: [leftWall, rightWall, innerWall, outerWall]
+                };
+
+                rotatingAssembly.add(frameGroup);
+                pocketFrameMeshes.push(frameGroup);
+
+                // Number label sprite floating subtly over the inner lip of each pocket
+                const sprite = createPocketNumberSprite(pocket.number, i === 0);
+                const labelR = 1.92;
+                sprite.position.set(
+                    Math.cos(pocket.localAngle) * labelR,
+                    0.52,
+                    Math.sin(pocket.localAngle) * labelR
+                );
+                rotatingAssembly.add(sprite);
+                pocketLabelSprites.push(sprite);
+            }
+
+            // 4. GLOWING GOLDEN CENTER TURRET (4-Spoked Cross Handle + Warm Bloom Light)
+            const turretGroup = new THREE.Group();
+            const goldTurretMat = new THREE.MeshStandardMaterial({
+                color: 0xffdf6b,
+                emissive: 0xffaa11,
+                emissiveIntensity: 0.72,
+                roughness: 0.22,
+                metalness: 0.75,
+                flatShading: true
+            });
+
+            // Central vertical pillar/stem
+            const stemGeo = new THREE.CylinderGeometry(0.24, 0.38, 0.95, 12);
+            const stemMesh = new THREE.Mesh(stemGeo, goldTurretMat);
+            stemMesh.position.y = 0.72;
+            stemMesh.castShadow = true;
+            turretGroup.add(stemMesh);
+
+            // Top cap knob
+            const knobGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.18, 12);
+            const knobMesh = new THREE.Mesh(knobGeo, goldTurretMat);
+            knobMesh.position.y = 1.24;
+            turretGroup.add(knobMesh);
+
+            // 4 Golden Cross Spokes (exactly like the glowing golden cross in the screenshot!)
+            const barGeo1 = new THREE.BoxGeometry(2.35, 0.13, 0.15);
+            const bar1 = new THREE.Mesh(barGeo1, goldTurretMat);
+            bar1.position.y = 1.05;
+            bar1.castShadow = true;
+            turretGroup.add(bar1);
+
+            const barGeo2 = new THREE.BoxGeometry(0.15, 0.13, 2.35);
+            const bar2 = new THREE.Mesh(barGeo2, goldTurretMat);
+            bar2.position.y = 1.05;
+            bar2.castShadow = true;
+            turretGroup.add(bar2);
+
+            // Invisible hit cylinder around turret so grabbing/flicking the golden cross is effortless
+            const hitGeo = new THREE.CylinderGeometry(1.45, 1.45, 1.4, 12);
+            const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+            turretMesh = new THREE.Mesh(hitGeo, hitMat);
+            turretMesh.position.y = 0.85;
+            turretGroup.add(turretMesh);
+
+            // Intense Golden Point Light at the base of the turret (radiating onto the inner platter)
+            turretPointLight = new THREE.PointLight(0xffb733, 2.6, 5.5, 1.8);
+            turretPointLight.position.set(0, 0.78, 0);
+            turretGroup.add(turretPointLight);
+
+            // Soft additive golden glow sprite at the center turret (recreates the screenshot bloom!)
+            const glowMat = new THREE.SpriteMaterial({
+                map: createRadialGlowTexture(),
+                color: 0xffd24c,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            glowSprite = new THREE.Sprite(glowMat);
+            glowSprite.scale.set(2.45, 2.45, 1);
+            glowSprite.position.set(-0.08, 0.72, 0.12);
+            turretGroup.add(glowSprite);
+
+            // Rotate turret slightly so the 4 spokes match the angle in the reference image
+            turretGroup.rotation.y = 0.12;
+
+            rotatingAssembly.add(turretGroup);
+        }
+
+        function buildSilverBall() {
+            const ballGeo = new THREE.SphereGeometry(0.135, 20, 20);
+            const ballMat = new THREE.MeshStandardMaterial({
+                color: 0xf1f5f9,
+                roughness: 0.14,
+                metalness: 0.92
+            });
+            ballMesh = new THREE.Mesh(ballGeo, ballMat);
+            ballMesh.castShadow = true;
+            wheelGroup.add(ballMesh);
+            updateBall3DPosition();
+        }
+
+        function buildVRLaserPointers() {
+            // 1. Primary white/grey VR controller ray coming from top-center down to the wheel
+            const laserMat = new THREE.LineBasicMaterial({
+                color: 0xcbd5e1,
+                transparent: true,
+                opacity: 0.55
+            });
+            const points = [
+                new THREE.Vector3(-0.35, 5.2, -1.8),
+                new THREE.Vector3(-0.62, 0.45, -1.55)
+            ];
+            const laserGeo = new THREE.BufferGeometry().setFromPoints(points);
+            vrLaserLine = new THREE.Line(laserGeo, laserMat);
+            scene.add(vrLaserLine);
+
+            // Subtle glowing cursor tip where the VR ray touches the wheel
+            const dotGeo = new THREE.SphereGeometry(0.055, 10, 10);
+            const dotMat = new THREE.MeshBasicMaterial({
+                color: 0xfef08a,
+                transparent: true,
+                opacity: 0.8
+            });
+            vrLaserDot = new THREE.Mesh(dotGeo, dotMat);
+            vrLaserDot.position.copy(points[1]);
+            scene.add(vrLaserDot);
+
+            // 2. Secondary subtle cyan/teal background ray on the upper right (matching the screenshot!)
+            const secMat = new THREE.LineBasicMaterial({
+                color: 0x38bdf8,
+                transparent: true,
+                opacity: 0.35
+            });
+            const secPoints = [
+                new THREE.Vector3(2.5, 5.5, -3.5),
+                new THREE.Vector3(3.35, 0.85, -1.85)
+            ];
+            const secGeo = new THREE.BufferGeometry().setFromPoints(secPoints);
+            vrSecondaryLine = new THREE.Line(secGeo, secMat);
+            scene.add(vrSecondaryLine);
+        }
+
+        function updateBall3DPosition() {
+            if (!ballMesh) return;
+            ballMesh.position.set(
+                Math.cos(state.ballAngle) * state.ballRadius,
+                state.ballHeight,
+                Math.sin(state.ballAngle) * state.ballRadius
+            );
+        }
+
+        function updateCameraPosition() {
+            if (!camera) return;
+            if (state.cameraMode === 'SCREENSHOT') {
+                // High-angle oblique perspective matching the reference image
+                const basePos = new THREE.Vector3(-0.35, 6.55, 4.95);
+                basePos.x += Math.sin(camOrbitAzimuth) * 1.2;
+                basePos.y += camOrbitElevation * 1.0;
+                camera.position.copy(basePos);
+                camera.lookAt(0.05, 0.05, -0.15);
+            } else {
+                // Top-Down Overhead View
+                camera.position.set(0, 9.2, 0.01);
+                camera.lookAt(0, 0, 0);
+            }
+        }
+
+        // ============================================================================
+        // 4. PHYSICS & SPIN SIMULATION LOOP
+        // ============================================================================
+        function triggerSpin(powerNormalized = 0.75, direction = 1) {
+            if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;
+
+            sfx.init();
+            hideBanner();
+
+            // Clamp power between 0.35 and 1.25
+            const p = Math.max(0.35, Math.min(1.25, powerNormalized));
+
+            // Wheel spins clockwise (or in flick direction), ball launches counter-clockwise on upper rim
+            state.wheelAngularVel = direction * (2.6 + p * 2.8 + Math.random() * 0.6);
+            state.ballAngularVel = -direction * (9.5 + p * 6.5 + Math.random() * 1.8);
+
+            state.ballRadius = 2.93; // Upper sloped track lip
+            state.ballHeight = 0.64;
+            state.phase = 'ORBITING';
+            state.lastDividerIndex = -1;
+
+            document.getElementById('hint-text').textContent = 'Ball orbiting rim... Watch it drop into the pockets!';
+        }
+
+        function updatePhysics(dt) {
+            // Clamp delta time to avoid jumps on tab switch
+            const step = Math.min(dt, 0.05);
+
+            // Charge spin power bar if user is holding the spin button
+            if (state.isChargingSpin) {
+                state.spinCharge = (state.spinCharge + step * 1.15) % 1.0;
+                const pct = Math.round((0.25 + state.spinCharge * 0.75) * 100);
+                document.getElementById('spin-power-bar').style.width = `${pct}%`;
+            }
+
+            // 1. Rotate the inner wheel assembly
+            if (!state.isDraggingTurret) {
+                state.wheelAngle += state.wheelAngularVel * step;
+                // Gentle wheel bearing friction
+                state.wheelAngularVel *= Math.pow(0.992, step * 60);
+                if (Math.abs(state.wheelAngularVel) < 0.005 && state.phase === 'IDLE') {
+                    state.wheelAngularVel = 0;
+                }
+            }
+            rotatingAssembly.rotation.y = -state.wheelAngle;
+
+            // Subtle pulsing of the golden center turret light
+            const pulse = 2.5 + Math.sin(performance.now() * 0.005) * 0.25;
+            if (turretPointLight) turretPointLight.intensity = pulse;
+
+            // 2. Ball state machine
+            const sliceAngle = (Math.PI * 2) / NUM_POCKETS;
+
+            if (state.phase === 'IDLE' || state.phase === 'SETTLED') {
+                // Ball stays nestled inside its current pocket and rotates with the wheel!
+                const pocket = POCKETS[state.settledPocketIndex];
+                state.ballAngle = state.wheelAngle + pocket.localAngle;
+                state.ballRadius = 2.34;
+                state.ballHeight = 0.34;
+                updateBall3DPosition();
+            } else if (state.phase === 'ORBITING') {
+                state.ballAngle += state.ballAngularVel * step;
+                // Rim friction slows ball down
+                state.ballAngularVel *= Math.pow(0.984, step * 60);
+
+                // Slight radial wobble as it slows
+                const speed = Math.abs(state.ballAngularVel);
+                state.ballRadius = 2.86 + Math.min(0.08, speed * 0.008);
+                state.ballHeight = 0.56 + Math.min(0.08, speed * 0.008);
+
+                // When ball slows enough, gravity pulls it down the slope into the pocket ring
+                if (speed < 4.6) {
+                    state.phase = 'DROPPING';
+                }
+                updateBall3DPosition();
+            } else if (state.phase === 'DROPPING') {
+                state.ballAngle += state.ballAngularVel * step;
+
+                // Relative angular velocity between ball and spinning wheel pockets
+                let relVel = state.ballAngularVel - state.wheelAngularVel;
+                relVel *= Math.pow(0.962, step * 60);
+                state.ballAngularVel = state.wheelAngularVel + relVel;
+
+                // Move radially inward toward pocket radius (2.34)
+                state.ballRadius += (2.34 - state.ballRadius) * Math.min(1, step * 5.5);
+
+                // Detect passing over pocket frame dividers for mechanical clack audio & bounce!
+                let relAngle = (state.ballAngle - state.wheelAngle) % (Math.PI * 2);
+                if (relAngle < 0) relAngle += Math.PI * 2;
+
+                // Shift by initial pocket offset (-Math.PI/6)
+                let normalizedAngle = (relAngle + Math.PI / 6) % (Math.PI * 2);
+                if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+
+                const currentPocketIdx = Math.floor((normalizedAngle + sliceAngle * 0.5) / sliceAngle) % NUM_POCKETS;
+                if (currentPocketIdx !== state.lastDividerIndex) {
+                    state.lastDividerIndex = currentPocketIdx;
+                    const clackStrength = Math.min(1.0, Math.abs(relVel) / 5.0);
+                    sfx.playPocketClick(clackStrength);
+                }
+
+                // Vertical bounce off the pocket frame walls
+                const bounceWave = Math.abs(Math.sin(normalizedAngle * NUM_POCKETS * 0.5));
+                const bounceAmp = Math.min(0.18, Math.abs(relVel) * 0.025);
+                state.ballHeight = 0.34 + bounceWave * bounceAmp;
+
+                // Magnetic pocket capture force when relative speed is low
+                const targetLocalAngle = POCKETS[currentPocketIdx].localAngle;
+                const targetWorldAngle = state.wheelAngle + targetLocalAngle;
+                let angleDiff = Math.atan2(
+                    Math.sin(targetWorldAngle - state.ballAngle),
+                    Math.cos(targetWorldAngle - state.ballAngle)
+                );
+
+                if (Math.abs(relVel) < 1.35) {
+                    state.ballAngle += angleDiff * Math.min(1, step * 9.0);
+                }
+
+                if (Math.abs(relVel) < 0.22 && Math.abs(angleDiff) < 0.08) {
+                    state.settledPocketIndex = currentPocketIdx;
+                    state.phase = 'SETTLED';
+                    sfx.playBallSettle();
+                    evaluateSpinOutcome(currentPocketIdx);
+                }
+
+                updateBall3DPosition();
+            }
+        }
+
+        // ============================================================================
+        // 5. BETTING, PAYOUTS & UI UPDATES
+        // ============================================================================
+        function getTotalActiveBet() {
+            let sum = state.bets.RED + state.bets.BLACK + state.bets.GREEN + state.bets.ODD + state.bets.EVEN;
+            for (const k in state.bets.numbers) {
+                sum += state.bets.numbers[k];
+            }
+            return sum;
+        }
+
+        function getChipIncrement() {
+            if (state.selectedChip === 'ALL') return state.balance;
+            return Math.min(state.balance, Number(state.selectedChip));
+        }
+
+        function placeCategoryBet(category) {
+            if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;
+            const amount = getChipIncrement();
+            if (amount <= 0) return;
+
+            state.balance -= amount;
+            state.bets[category] += amount;
+            sfx.playChipSound();
+            updateBettingHUD();
+        }
+
+        function placeNumberBet(pocketNum) {
+            if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;
+            const amount = getChipIncrement();
+            if (amount <= 0) return;
+
+            state.balance -= amount;
+            state.bets.numbers[pocketNum] = (state.bets.numbers[pocketNum] || 0) + amount;
+            sfx.playChipSound();
+            updateBettingHUD();
+            renderNumberModalGrid();
+        }
+
+        function clearAllBets() {
+            if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;
+            const refund = getTotalActiveBet();
+            if (refund === 0) return;
+
+            state.balance += refund;
+            state.bets = { RED: 0, BLACK: 0, GREEN: 0, ODD: 0, EVEN: 0, numbers: {} };
+            sfx.playChipSound();
+            updateBettingHUD();
+            renderNumberModalGrid();
+        }
+
+        function rebetLast() {
+            if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;
+            if (!state.lastBets) return;
+
+            // First refund any currently placed bets
+            state.balance += getTotalActiveBet();
+            state.bets = { RED: 0, BLACK: 0, GREEN: 0, ODD: 0, EVEN: 0, numbers: {} };
+
+            // Calculate total needed
+            let needed = state.lastBets.RED + state.lastBets.BLACK + state.lastBets.GREEN + state.lastBets.ODD + state.lastBets.EVEN;
+            for (const k in state.lastBets.numbers) {
+                needed += state.lastBets.numbers[k];
+            }
+
+            if (needed <= 0 || needed > state.balance) {
+                updateBettingHUD();
+                return;
+            }
+
+            state.balance -= needed;
+            state.bets = JSON.parse(JSON.stringify(state.lastBets));
+            sfx.playChipSound();
+            updateBettingHUD();
+            renderNumberModalGrid();
+        }
+
+        function evaluateSpinOutcome(winningIndex) {
+            const winningPocket = POCKETS[winningIndex];
+            const num = winningPocket.number;
+
+            // Snapshot current bets for Rebet button before evaluating
+            const totalWagered = getTotalActiveBet();
+            if (totalWagered > 0) {
+                state.lastBets = JSON.parse(JSON.stringify(state.bets));
+            }
+
+            let totalPayout = 0;
+
+            // 1. Straight-up number bet (24x payout)
+            if (state.bets.numbers[num]) {
+                totalPayout += state.bets.numbers[num] * 24;
+            }
+
+            // 2. Green Zero bet (24x payout)
+            if (num === 0 && state.bets.GREEN > 0) {
+                totalPayout += state.bets.GREEN * 24;
+            }
+
+            // 3. Red / Black bets (2x payout)
+            // Note: In Image Mode, all 23 non-zero frames are visually red, so if the player bet on RED in Image Mode OR if it's an Odd/Red pocket, let's check:
+            // To make both modes rewarding and clear:
+            // Odd numbers (1, 3, 5..23) are RED & ODD; Even numbers (2, 4, 6..22) are BLACK/DARK & EVEN.
+            // PLUS in Image Mode, if a user only bet on RED (because of the 23 red frames meme!) and didn't bet on BLACK, we still honour standard Odd=Red / Even=Dark OR give a bonus! Wait—let's make Red win on Odd pockets (1,3,5...) and Black/Dark win on Even pockets (2,4,6...) consistently for fair 2x payout, and highlight the winning pocket in 3D!
+            if (isRedPocket(num) && state.bets.RED > 0) {
+                totalPayout += state.bets.RED * 2;
+            }
+            if (isBlackPocket(num) && state.bets.BLACK > 0) {
+                totalPayout += state.bets.BLACK * 2;
+            }
+
+            // 4. Odd / Even bets (2x payout)
+            if (num !== 0 && num % 2 === 1 && state.bets.ODD > 0) {
+                totalPayout += state.bets.ODD * 2;
+            }
+            if (num !== 0 && num !== 0 && num % 2 === 0 && state.bets.EVEN > 0) {
+                totalPayout += state.bets.EVEN * 2;
+            }
+
+            state.balance += totalPayout;
+
+            // Record in history ribbon
+            const colorTag = num === 0 ? 'GREEN' : (isRedPocket(num) ? 'RED' : 'BLACK');
+            state.history.unshift({ num, colorTag });
+            if (state.history.length > 10) state.history.pop();
+            renderHistoryRibbon();
+
+            // Clear bets after spin resolution
+            state.bets = { RED: 0, BLACK: 0, GREEN: 0, ODD: 0, EVEN: 0, numbers: {} };
+            updateBettingHUD();
+            renderNumberModalGrid();
+
+            // Display result banner
+            showResultBanner(num, colorTag, totalWagered, totalPayout);
+
+            document.getElementById('hint-text').textContent = 'Spin complete! Flick the golden cross or press SPIN for next round.';
+        }
+
+        function showResultBanner(num, colorTag, wagered, payout) {
+            const banner = document.getElementById('status-banner');
+            const title = document.getElementById('banner-title');
+            const sub = document.getElementById('banner-subtitle');
+            const badge = document.getElementById('banner-badge');
+
+            const labelMap = {
+                GREEN: 'GREEN ZERO',
+                RED: 'RED / ODD',
+                BLACK: state.imageMode ? 'DARK SLOT / EVEN' : 'BLACK / EVEN'
+            };
+
+            title.textContent = `POCKET ${num} (${labelMap[colorTag]})`;
+
+            if (payout > 0) {
+                const net = payout - wagered;
+                badge.textContent = payout >= wagered * 10 ? 'JACKPOT WIN!' : 'WINNER!';
+                badge.className = 'px-3 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-widest bg-emerald-500/25 text-emerald-300';
+                sub.textContent = `+${payout.toLocaleString()} CHIPS PAID (NET +${net.toLocaleString()})`;
+                sub.className = 'text-xs sm:text-sm font-extrabold text-emerald-400';
+                sfx.playWinSound(payout >= wagered * 10);
+            } else if (wagered > 0) {
+                badge.textContent = 'NO WIN';
+                badge.className = 'px-3 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-widest bg-rose-500/25 text-rose-300';
+                sub.textContent = `-${wagered.toLocaleString()} CHIPS`;
+                sub.className = 'text-xs sm:text-sm font-bold text-rose-400';
+                sfx.playLoseSound();
+            } else {
+                badge.textContent = 'FREE SPIN RESULT';
+                badge.className = 'px-3 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-widest bg-amber-500/20 text-amber-300';
+                sub.textContent = 'Place chips below to bet on the next spin!';
+                sub.className = 'text-xs sm:text-sm font-medium text-slate-300';
+            }
+
+            banner.classList.remove('opacity-0', 'scale-95');
+            banner.classList.add('opacity-100', 'scale-100');
+        }
+
+        function hideBanner() {
+            const banner = document.getElementById('status-banner');
+            banner.classList.remove('opacity-100', 'scale-100');
+            banner.classList.add('opacity-0', 'scale-95');
+        }
+
+        function renderHistoryRibbon() {
+            const container = document.getElementById('history-ribbon');
+            if (state.history.length === 0) {
+                container.innerHTML = `<span class="text-xs text-slate-500 italic">No spins yet</span>`;
+                return;
+            }
+            container.innerHTML = state.history.map((item, idx) => {
+                const bg = item.colorTag === 'GREEN'
+                    ? 'bg-emerald-600 border-emerald-300'
+                    : (item.colorTag === 'RED' ? 'bg-red-600 border-red-300' : 'bg-zinc-800 border-zinc-400');
+                const ring = idx === 0 ? 'ring-2 ring-amber-400 scale-110' : 'opacity-85';
+                return `<div class="w-6 h-6 rounded-full ${bg} border text-[11px] font-black text-white flex items-center justify-center shadow ${ring}">${item.num}</div>`;
+            }).join('');
+        }
+
+        function updateBettingHUD() {
+            document.getElementById('balance-display').textContent = state.balance.toLocaleString();
+            document.getElementById('current-bet-display').textContent = getTotalActiveBet().toLocaleString();
+
+            const categories = ['RED', 'BLACK', 'GREEN', 'ODD', 'EVEN'];
+            categories.forEach(cat => {
+                const badge = document.getElementById(`bet-badge-${cat}`);
+                const val = state.bets[cat];
+                if (val > 0) {
+                    badge.textContent = `${val.toLocaleString()} ₵`;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            });
+
+            // Sum of straight-up number bets
+            let numSum = 0;
+            for (const k in state.bets.numbers) numSum += state.bets.numbers[k];
+            const numBadge = document.getElementById('bet-badge-NUMBERS');
+            if (numSum > 0) {
+                numBadge.textContent = `${numSum.toLocaleString()} ₵`;
+                numBadge.classList.remove('hidden');
+            } else {
+                numBadge.classList.add('hidden');
+            }
+        }
+
+        function renderNumberModalGrid() {
+            const grid = document.getElementById('number-grid');
+            grid.innerHTML = POCKETS.map(p => {
+                const num = p.number;
+                const betVal = state.bets.numbers[num] || 0;
+                const bgClass = num === 0
+                    ? 'from-emerald-600 to-emerald-800 border-emerald-400/50'
+                    : (num % 2 === 1
+                        ? 'from-red-600 to-red-800 border-red-400/50'
+                        : 'from-zinc-700 to-zinc-900 border-zinc-400/40');
+                return `
+                    <button data-pocket-num="${num}" class="pocket-num-btn relative rounded-xl bg-gradient-to-b ${bgClass} border p-2.5 flex flex-col items-center justify-center hover:brightness-125 active:scale-95 transition shadow">
+                        <span class="text-sm font-black text-white">${num}</span>
+                        <span class="text-[9px] uppercase font-bold text-white/70">${num === 0 ? 'ZERO' : (num % 2 === 1 ? 'RED/ODD' : 'DARK/EVEN')}</span>
+                        ${betVal > 0 ? `<span class="mt-1 px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black">${betVal}</span>` : ''}
+                    </button>
+                `;
+            }).join('');
+
+            grid.querySelectorAll('.pocket-num-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const n = Number(btn.getAttribute('data-pocket-num'));
+                    placeNumberBet(n);
+                });
+            });
+        }
+
+        function updatePocketFrameColors() {
+            pocketFrameMeshes.forEach((frameGroup, i) => {
+                const hex = getPocketVisualFrameColor(i);
+                frameGroup.userData.coloredMeshes.forEach(mesh => {
+                    mesh.material.color.setHex(hex);
+                });
+            });
+        }
+
+        // ============================================================================
+        // 6. POINTER / VR LASER & TURRET FLICK INTERACTION
+        // ============================================================================
+        function setupInteractions() {
+            const container = document.getElementById('canvas-container');
+
+            function updateLaserFromEvent(clientX, clientY) {
+                mouseNDC.x = (clientX / window.innerWidth) * 2 - 1;
+                mouseNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouseNDC, camera);
+                const hitPoint = new THREE.Vector3();
+                if (raycaster.ray.intersectPlane(interactivePlane, hitPoint)) {
+                    // Clamp laser target to table area
+                    hitPoint.x = Math.max(-5, Math.min(5, hitPoint.x));
+                    hitPoint.z = Math.max(-5, Math.min(5, hitPoint.z));
+
+                    const positions = vrLaserLine.geometry.attributes.position.array;
+                    positions[0] = -0.35;
+                    positions[1] = 5.2;
+                    positions[2] = -1.8;
+                    positions[3] = hitPoint.x;
+                    positions[4] = 0.45;
+                    positions[5] = hitPoint.z;
+                    vrLaserLine.geometry.attributes.position.needsUpdate = true;
+
+                    vrLaserDot.position.set(hitPoint.x, 0.46, hitPoint.z);
+                }
+            }
+
+            container.addEventListener('pointerdown', (e) => {
+                updateLaserFromEvent(e.clientX, e.clientY);
+                raycaster.setFromCamera(mouseNDC, camera);
+
+                // Check if user clicked on the Golden Center Turret to grab/flick it
+                const hits = raycaster.intersectObject(turretMesh, true);
+                if (hits.length > 0 && state.phase !== 'ORBITING' && state.phase !== 'DROPPING') {
+                    state.isDraggingTurret = true;
+                    const hitPt = hits[0].point;
+                    state.dragLastAngle = Math.atan2(hitPt.z, hitPt.x);
+                    state.dragAngularVelSample = 0;
+                    container.style.cursor = 'grabbing';
+                    return;
+                }
+
+                // Otherwise allow subtle camera angle orbit
+                isDraggingCamera = true;
+                prevPointer.x = e.clientX;
+                prevPointer.y = e.clientY;
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                updateLaserFromEvent(e.clientX, e.clientY);
+
+                if (state.isDraggingTurret) {
+                    raycaster.setFromCamera(mouseNDC, camera);
+                    const hitPoint = new THREE.Vector3();
+                    if (raycaster.ray.intersectPlane(interactivePlane, hitPoint)) {
+                        const curAngle = Math.atan2(hitPoint.z, hitPoint.x);
+                        let delta = Math.atan2(
+                            Math.sin(curAngle - state.dragLastAngle),
+                            Math.cos(curAngle - state.dragLastAngle)
+                        );
+                        state.wheelAngle -= delta;
+                        state.dragAngularVelSample = -delta * 45;
+                        state.dragLastAngle = curAngle;
+                        sfx.playPocketClick(0.25);
+                    }
+                    return;
+                }
+
+                if (isDraggingCamera && state.cameraMode === 'SCREENSHOT') {
+                    const dx = (e.clientX - prevPointer.x) * 0.005;
+                    const dy = (e.clientY - prevPointer.y) * 0.005;
+                    camOrbitAzimuth = Math.max(-0.8, Math.min(0.8, camOrbitAzimuth - dx));
+                    camOrbitElevation = Math.max(-0.5, Math.min(0.8, camOrbitElevation + dy));
+                    prevPointer.x = e.clientX;
+                    prevPointer.y = e.clientY;
+                    updateCameraPosition();
+                }
+            });
+
+            window.addEventListener('pointerup', () => {
+                if (state.isDraggingTurret) {
+                    state.isDraggingTurret = false;
+                    container.style.cursor = 'crosshair';
+                    const flickSpeed = Math.abs(state.dragAngularVelSample);
+                    const dir = state.dragAngularVelSample >= 0 ? 1 : -1;
+                    const power = Math.max(0.45, Math.min(1.2, flickSpeed / 4.5));
+                    triggerSpin(power, dir);
+                }
+                isDraggingCamera = false;
+            });
+
+            // UI Controls Wiring
+            document.getElementById('mode-toggle-btn').addEventListener('click', () => {
+                state.imageMode = !state.imageMode;
+                const label = document.getElementById('mode-label');
+                const dot = document.getElementById('mode-dot');
+                if (state.imageMode) {
+                    label.textContent = 'Image Mode (23 Red Frames / 1 Green)';
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-red-500';
+                } else {
+                    label.textContent = 'Classic Mode (Red & Black Frames)';
+                    dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+                }
+                updatePocketFrameColors();
+                sfx.playChipSound();
+            });
+
+            document.getElementById('camera-toggle-btn').addEventListener('click', () => {
+                state.cameraMode = state.cameraMode === 'SCREENSHOT' ? 'TOPDOWN' : 'SCREENSHOT';
+                document.getElementById('camera-label').textContent =
+                    state.cameraMode === 'SCREENSHOT' ? 'View: Screenshot Angle' : 'View: Top-Down';
+                updateCameraPosition();
+            });
+
+            document.getElementById('labels-toggle-btn').addEventListener('click', () => {
+                state.showNumberLabels = !state.showNumberLabels;
+                document.getElementById('labels-label').textContent =
+                    state.showNumberLabels ? '# Numbers: ON' : '# Numbers: OFF';
+                pocketLabelSprites.forEach(s => { s.visible = state.showNumberLabels; });
+            });
+
+            document.getElementById('audio-toggle-btn').addEventListener('click', () => {
+                sfx.enabled = !sfx.enabled;
+                document.getElementById('audio-label').textContent = sfx.enabled ? '🔊 SFX' : '🔇 Muted';
+            });
+
+            // Chip Selector Buttons
+            document.querySelectorAll('.chip-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const val = btn.getAttribute('data-chip');
+                    state.selectedChip = val === 'ALL' ? 'ALL' : Number(val);
+                    sfx.playChipSound();
+                });
+            });
+
+            // Category Bet Buttons
+            document.querySelectorAll('[data-bet]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const cat = btn.getAttribute('data-bet');
+                    placeCategoryBet(cat);
+                });
+            });
+
+            // Number Picker Modal
+            const numModal = document.getElementById('number-modal');
+            document.getElementById('open-number-modal-btn').addEventListener('click', () => {
+                renderNumberModalGrid();
+                numModal.classList.remove('hidden');
+                numModal.classList.add('flex');
+            });
+            document.getElementById('close-number-modal').addEventListener('click', () => {
+                numModal.classList.add('hidden');
+                numModal.classList.remove('flex');
+            });
+
+            // Reset Chips, Clear, Rebet
+            document.getElementById('reset-chips-btn').addEventListener('click', () => {
+                if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;
+                state.balance = 1000;
+                state.bets = { RED: 0, BLACK: 0, GREEN: 0, ODD: 0, EVEN: 0, numbers: {} };
+                sfx.playChipSound();
+                updateBettingHUD();
+            });
+
+            document.getElementById('clear-bets-btn').addEventListener('click', clearAllBets);
+            document.getElementById('rebet-btn').addEventListener('click', rebetLast);
+
+            // Hold & Release Spin Button
+            const spinBtn = document.getElementById('spin-btn');
+            const startCharge = (e) => {
+                e.preventDefault();
+                if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;
+                state.isChargingSpin = true;
+                state.spinCharge = 0;
+                document.getElementById('spin-btn-label').textContent = 'RELEASE!';
+            };
+            const releaseCharge = (e) => {
+                e.preventDefault();
+                if (!state.isChargingSpin) return;
+                state.isChargingSpin = false;
+                const power = 0.35 + state.spinCharge * 0.9;
+                document.getElementById('spin-power-bar').style.width = '0%';
+                document.getElementById('spin-btn-label').textContent = 'SPIN WHEEL';
+                triggerSpin(power, 1);
+            };
+
+            spinBtn.addEventListener('pointerdown', startCharge);
+            window.addEventListener('pointerup', releaseCharge);
+
+            // Keyboard Spacebar support for spinning
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space' && !e.repeat && !state.isChargingSpin) {
+                    startCharge(e);
+                }
+            });
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'Space' && state.isChargingSpin) {
+                    releaseCharge(e);
+                }
+            });
+
+            // Responsive Resize
+            window.addEventListener('resize', () => {
+                if (!camera || !renderer) return;
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        // ============================================================================
+        // 7. MAIN ANIMATION LOOP
+        // ============================================================================
+        let lastTime = performance.now();
+
+        function animate(now) {
+            requestAnimationFrame(animate);
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            updatePhysics(dt);
+            renderer.render(scene, camera);
+        }
+
+        window.onload = function () {
+            build3DScene();
+            setupInteractions();
+            updateBettingHUD();
+            lastTime = performance.now();
+            animate(lastTime);
+        };
+    </script>
+</body>
+</html>

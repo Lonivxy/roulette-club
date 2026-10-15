@@ -1,0 +1,35 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const base = __dirname;
+const read = name => fs.readFileSync(path.join(base, 'src', name), 'utf8').replace(/\r\n/g, '\n');
+let html = read('roulette.html');
+function replace(from, to) {
+    if (!html.includes(from)) throw new Error('Missing integration marker: ' + from.slice(0, 80));
+    html = html.replace(from, to);
+}
+replace('<title>3D Low-Poly Roulette</title>', '<title>Roulette Club · 777 & Player Bank</title>\n    <meta name="description" content="Play 3D roulette and Lucky 777 with local player wallets, chip transfers, and a house bank.">');
+replace('    </style>', read('club.css') + '\n    </style>');
+replace('<body>', '<body>\n' + read('club.html'));
+replace('class="fixed top-0 left-0 right-0 z-20', 'class="club-roulette-hud fixed top-0 left-0 right-0 z-20');
+replace('<div class="fixed bottom-0', '<div id="roulette-controls" class="fixed bottom-0');
+replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
+replace('        // Helper to determine pocket color', '        const casino = createCasinoClub(state, sfx);\n        casino.init();\n        updateBettingHUD();\n        renderHistoryRibbon();\n\n        // Helper to determine pocket color');
+replace("            sfx.init();\n            hideBanner();", "            if (casino.busy() || casino.view !== 'roulette') return;\n            casino.engine.lock = 'roulette';\n            casino.engine.active.pendingRoulette = true;\n            casino.refresh();\n            sfx.init();\n            hideBanner();");
+replace('            state.balance += totalPayout;', "            state.balance += totalPayout;\n            casino.engine.lock = null;\n            casino.engine.active.pendingRoulette = false;\n            casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);");
+replace("            document.getElementById('balance-display').textContent = state.balance.toLocaleString();", "            casino.refresh();\n            document.getElementById('balance-display').textContent = state.balance.toLocaleString();");
+// Bank access replaces the former unlimited chip reset.
+replace("            document.getElementById('reset-chips-btn').addEventListener('click', () => {\n                if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;\n                state.balance = 1000;\n                state.bets = { RED: 0, BLACK: 0, GREEN: 0, ODD: 0, EVEN: 0, numbers: {} };\n                sfx.playChipSound();\n                updateBettingHUD();\n            });", '');
+html = html.replaceAll("if (state.phase === 'ORBITING' || state.phase === 'DROPPING') return;", "if (casino.busy()) return;");
+replace("hits.length > 0 && state.phase !== 'ORBITING' && state.phase !== 'DROPPING'", "hits.length > 0 && !casino.busy()");
+replace("                state.isChargingSpin = true;", "                if (casino.view !== 'roulette') return;\n                state.isChargingSpin = true;");
+replace("num !== 0 && num !== 0 &&", "num !== 0 &&");
+// Preserve a correct sign for winning payouts smaller than the total wager.
+replace('NET +${net.toLocaleString()}', "NET ${net >= 0 ? '+' : '−'}${Math.abs(net).toLocaleString()}");
+replace('            build3DScene();', "            if (!window.THREE) {\n                casino.toast('The 3D wheel needs an internet connection. Players, bank and 777 are available.', true);\n                return;\n            }\n            build3DScene();");
+html = html.replace('let raycaster = new THREE.Raycaster();', 'let raycaster = window.THREE ? new THREE.Raycaster() : null;')
+    .replace('let mouseNDC = new THREE.Vector2(0, 0);', 'let mouseNDC = window.THREE ? new THREE.Vector2(0, 0) : null;')
+    .replace('let interactivePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.8);', 'let interactivePlane = window.THREE ? new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.8) : null;');
+fs.mkdirSync(path.join(base, 'dist'), { recursive: true });
+fs.writeFileSync(path.join(base, 'dist', 'index.html'), html);
+fs.writeFileSync(path.join(base, '..', 'roulette.html'), html);
+console.log('Built roulette club and standalone roulette.html.');

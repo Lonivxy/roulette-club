@@ -1,0 +1,55 @@
+<nav id="club-nav" aria-label="Casino navigation">
+    <div class="club-wordmark">ROULETTE CLUB<small>PLAY CHIPS · LOCAL PROFILES</small></div>
+    <div class="club-tabs" role="tablist" aria-label="Games and bank">
+        <button id="tab-roulette" type="button" role="tab" aria-controls="canvas-container" aria-selected="true" data-view="roulette">Roulette</button>
+        <button id="tab-slots" type="button" role="tab" aria-controls="slots-view" aria-selected="false" data-view="slots">777 Slots</button>
+        <button id="tab-bank" type="button" role="tab" aria-controls="bank-view" aria-selected="false" data-view="bank">Players & Bank</button>
+    </div>
+    <div class="club-account"><span class="club-wallet" id="club-wallet">1,000 ₵</span><label for="club-user" class="sr-only">Active player</label><select id="club-user" class="club-select" aria-label="Active player"></select></div>
+</nav>
+<section id="slots-view" class="club-view" role="tabpanel" aria-labelledby="tab-slots" hidden>
+    <div class="club-shell">
+        <div class="club-eyebrow">The lucky corner</div><h2 class="club-title">Three reels. One lucky spin.</h2>
+        <p class="club-muted">Your roulette wallet works here too. Match all three symbols or land exactly two cherries.</p>
+        <div class="slot-layout">
+            <div class="slot-cabinet" id="slot-cabinet">
+                <div class="slot-marquee">LUCKY <span>777</span></div><div class="slot-sub">Triple seven · 100× total payout</div>
+                <div class="slot-reels" role="img" aria-label="Slot reels: 7, 7, 7" id="slot-reels">
+                    <div class="slot-reel" data-symbol="0"><span>7</span></div><div class="slot-reel" data-symbol="0"><span>7</span></div><div class="slot-reel" data-symbol="0"><span>7</span></div>
+                </div>
+                <div class="slot-result" role="status" aria-live="polite" aria-atomic="true"><strong id="slot-result-title">Feeling lucky?</strong><p id="slot-result-detail">Choose your wager and spin the reels.</p></div>
+                <div class="slot-wager"><label for="slot-wager">Wager per spin</label><select id="slot-wager" class="club-select"><option value="10">10 chips</option><option value="25">25 chips</option><option value="50">50 chips</option><option value="100">100 chips</option><option value="500">500 chips</option></select></div>
+                <button type="button" id="slot-spin" class="club-action slot-spin">SPIN · 10 CHIPS</button>
+            </div>
+            <aside class="club-card"><div class="club-eyebrow">Know your symbols</div><h3 style="margin-top:10px">Payout table</h3>
+                <table class="slot-paytable" aria-label="Slot payouts"><tbody><tr><td>7 · 7 · 7</td><td>100×</td></tr><tr><td>BAR · BAR · BAR</td><td>30×</td></tr><tr><td>★ · ★ · ★</td><td>20×</td></tr><tr><td>🔔 · 🔔 · 🔔</td><td>12×</td></tr><tr><td>🍋 · 🍋 · 🍋</td><td>8×</td></tr><tr><td>🍒 · 🍒 · 🍒</td><td>5×</td></tr><tr><td>Exactly two 🍒</td><td>2×</td></tr></tbody></table>
+                <p class="club-muted">Multipliers show total chips returned, including your stake. Each symbol has the same chance on each independent reel.</p>
+                <p class="club-muted">Need more chips? Borrow from the bank or receive a transfer from another player.</p><button type="button" class="club-action secondary" data-go-bank>Open bank →</button>
+            </aside>
+        </div>
+    </div>
+</section>
+<section id="bank-view" class="club-view" role="tabpanel" aria-labelledby="tab-bank" hidden>
+    <div class="club-shell">
+        <div class="club-eyebrow">Players & Bank</div><h2 class="club-title" id="bank-greeting">Your chips, all in one place.</h2>
+        <p class="club-muted">Switch between local players, send chips, or borrow from the house bank. Profiles and activity are saved in this browser on this device.</p>
+        <p class="club-storage" id="club-storage-note" role="status"></p>
+        <dl class="club-stat-row"><div><dt>Wallet / chips</dt><dd id="bank-wallet">1,000</dd></div><div><dt>Bank debt</dt><dd id="bank-debt">0</dd></div><div><dt>Available credit</dt><dd id="bank-credit">5,000</dd></div></dl>
+        <div class="club-grid">
+            <form id="transfer-form" class="club-card"><h3>Send chips to a player</h3><p class="club-muted">Transfers move chips directly between the two wallets.</p>
+                <label class="club-field" for="transfer-user">Send to</label><select id="transfer-user" class="club-select" required></select>
+                <label class="club-field" for="transfer-amount">Amount / chips</label><input id="transfer-amount" class="club-input" type="number" inputmode="numeric" min="1" max="1000000" step="1" placeholder="e.g. 100" required>
+                <div class="club-actions"><button type="submit" class="club-action" data-idle-only>Transfer chips →</button></div>
+            </form>
+            <form id="bank-form" class="club-card"><h3>Borrow & repay</h3><p class="club-muted">Each player can owe up to 5,000 chips. No interest. Repay to restore your available credit.</p>
+                <label class="club-field" for="bank-amount">Amount / chips</label><input id="bank-amount" class="club-input" type="number" inputmode="numeric" min="1" max="1000000" step="1" placeholder="e.g. 500" required>
+                <div class="club-actions"><button type="submit" class="club-action" value="borrow" data-idle-only>Borrow from bank</button><button type="submit" class="club-action secondary" value="repay" data-idle-only>Repay debt</button></div>
+            </form>
+            <div class="club-card"><h3>Players at your table</h3><p class="club-muted">Each player starts with 1,000 chips and has a separate wallet, debt, and roulette bets.</p><div class="club-account-list" id="club-player-list"></div>
+                <form id="player-form"><label class="club-field" for="player-name">Add a player / up to 12 players</label><input id="player-name" type="text" class="club-input" maxlength="24" placeholder="Player name" required><div class="club-actions"><button type="submit" class="club-action secondary" data-idle-only>Add player</button></div></form>
+            </div>
+            <div class="club-card"><h3>Table activity</h3><p class="club-muted">Latest transfers, bank transactions, and game results.</p><ol id="club-ledger" class="club-ledger" aria-label="Table activity"></ol></div>
+        </div>
+    </div>
+</section>
+<div id="club-toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
