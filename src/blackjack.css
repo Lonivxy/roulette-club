@@ -1,0 +1,74 @@
+#blackjack-view { background: radial-gradient(ellipse at 50% 10%,#353027 0%,#17171c 48%,#0e1013 100%); padding: 24px 24px 40px; }
+.bj-shell { max-width: 1120px; margin: 0 auto; }
+.bj-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin:0 0 18px; }
+.bj-heading h2 { font-family:Georgia,'Times New Roman',serif; font-weight:400; font-size:32px; letter-spacing:.13em; line-height:1; margin:8px 0 0; color:#faf1da; }
+.bj-heading h2 span { color:#c7a56a; font-size:22px; border-left:1px solid #c7a56a50; padding-left:16px; margin-left:8px; }
+.bj-heading-actions { display:flex; gap:7px; }
+.bj-small-btn { background:#ffffff05; border:1px solid #e7ce8a30; border-radius:7px; color:#cfbf9d; padding:9px 12px; font-size:10px; cursor:pointer; }
+.bj-small-btn:hover { background:#e7ce8a10; }
+.bj-stage { position:relative; height:clamp(350px,48vh,530px); border:1px solid #c7a56a40; border-radius:22px 22px 0 0; overflow:hidden; background:radial-gradient(ellipse at center,#123e35,#0b1718 70%); box-shadow:0 25px 55px #0005; }
+#bj-scene { position:absolute; inset:0; }
+#bj-scene canvas { display:block; width:100%; height:100%; touch-action:pan-y; }
+.bj-dealer-label { position:absolute; top:18px; left:50%; transform:translateX(-50%); text-align:center; pointer-events:none; text-shadow:0 2px 5px #000; }
+.bj-dealer-label span { display:block; color:#c5ab72; font-size:9px; letter-spacing:.25em; font-weight:800; }
+.bj-dealer-label strong { display:block; color:#eee4ca; font-size:12px; margin-top:6px; font-weight:600; }
+.bj-shoe-label { position:absolute; right:18px; top:20px; font-size:8px; letter-spacing:.12em; color:#bea57799; pointer-events:none; }
+.bj-seat-label { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); padding:6px 15px; border:1px solid #cab37940; border-radius:99px; color:#e6ce9f; background:#09251c80; font-size:9px; letter-spacing:.16em; white-space:nowrap; pointer-events:none; }
+.bj-render-note { position:absolute; bottom:40%; left:15%; width:70%; font-size:12px; line-height:1.6; color:#ead9b8; text-align:center; }
+.bj-console { position:relative; border:1px solid #c7a56a30; border-top:0; border-radius:0 0 18px 18px; background:linear-gradient(130deg,#211f24,#191a1d); padding:20px 24px 16px; box-shadow:0 20px 45px #0003; }
+.bj-status-row { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.bj-kicker { color:#c8a76b; font-size:9px; font-weight:800; letter-spacing:.18em; }
+#bj-status { margin:6px 0 0; color:#f2eadc; font-size:14px; line-height:1.5; font-weight:600; }
+.bj-round-stake { text-align:right; flex-shrink:0; }
+.bj-round-stake span { display:block; color:#968c7d; font-size:8px; letter-spacing:.13em; }
+.bj-round-stake strong { display:block; color:#e4c68b; font-size:20px; margin-top:5px; }
+.bj-hands { display:flex; gap:10px; margin-top:15px; }
+.bj-hand-summary { flex:1; min-width:0; border:1px solid #ffffff12; border-radius:10px; padding:10px 12px; background:#0c111280; }
+.bj-hand-summary.active { border-color:#e3c17c; box-shadow:0 0 12px #d3b57512; }
+.bj-hand-summary header { display:flex; justify-content:space-between; align-items:center; gap:6px; color:#cfc3ad; font-size:10px; margin-bottom:7px; }
+.bj-hand-summary header strong { color:#f4d899; font-size:13px; }
+.bj-mini-cards { display:flex; flex-wrap:wrap; gap:4px; }
+.bj-mini-card { display:inline-block; background:#f5f0e7; color:#202326; min-width:28px; text-align:center; padding:5px 4px; border-radius:3px; font-family:Georgia,serif; font-size:13px; font-weight:700; box-shadow:0 2px 4px #0004; }
+.bj-mini-card.red { color:#b62c33; }
+.bj-mini-card.back { color:#d9c898; background:repeating-linear-gradient(45deg,#642833 0 2px,#853543 2px 4px); border:1px solid #d9c89880; }
+.bj-dealer-access { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-top:10px; color:#a9a191; font-size:10px; }
+.bj-dealer-access > span:first-child { margin-right:6px; }
+.bj-controls { display:grid; grid-template-columns:220px 1fr; gap:28px; align-items:end; margin-top:18px; padding-top:18px; border-top:1px solid #ffffff0b; }
+.bj-betting > label { color:#a49a86; font-size:8px; letter-spacing:.18em; font-weight:800; }
+.bj-wager-row { display:flex; align-items:center; gap:7px; margin-top:7px; }
+.bj-step { width:31px; height:32px; background:#ffffff06; color:#cab992; border:1px solid #ffffff1c; border-radius:5px; cursor:pointer; }
+#bj-wager { min-width:0; width:100%; height:34px; padding:4px 8px; border:1px solid #c7a56a35; border-radius:5px; background:#0b1113; color:#ecd5aa; font-weight:800; text-align:center; user-select:text; }
+.bj-chips { display:flex; gap:9px; margin-top:12px; padding:0 4px 4px; }
+.bj-chips button { width:34px; height:34px; background:linear-gradient(150deg,#2774b0,#173d63); color:white; border:3px dashed #e7ebef; outline:2px solid #19466b; border-radius:50%; font-size:9px; font-weight:800; box-shadow:0 3px 0 #10141b,0 5px 8px #0008; cursor:pointer; }
+.bj-chips button[data-bj-chip="50"] { background:linear-gradient(150deg,#bf4d51,#73272c); outline-color:#73272c; }
+.bj-chips button[data-bj-chip="100"] { background:linear-gradient(150deg,#48484b,#171a1c); outline-color:#48484b; }
+.bj-chips button[data-bj-chip="500"] { background:linear-gradient(150deg,#a16cba,#4b2b68); outline-color:#4b2b68; }
+.bj-deal { display:flex; align-items:center; justify-content:center; gap:25px; padding:13px; width:100%; border-radius:7px; border:1px solid #f8e2ad80; background:linear-gradient(160deg,#e3c18a,#b78d51); box-shadow:inset 0 1px 0 #fff5,0 3px 0 #6b5334; color:#2a241b; font-size:12px; font-weight:900; letter-spacing:.1em; cursor:pointer; }
+.bj-play-actions { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:11px; }
+.bj-play-actions button { background:#ffffff06; border:1px solid #d6bc8630; color:#e7dcc8; padding:11px 8px; border-radius:6px; cursor:pointer; font-size:10px; font-weight:800; }
+.bj-play-actions button:not(:disabled):hover { background:#c9a46b22; border-color:#c9a46b; }
+.bj-play-actions kbd { margin-left:5px; color:#938a7b; font-size:8px; font-family:inherit; }
+#blackjack-view button:disabled { opacity:.35; cursor:not-allowed; }
+.bj-rules { margin-top:18px; color:#938c7d; font-size:10px; line-height:1.8; }
+.bj-rules summary { cursor:pointer; color:#b6aa92; }
+.bj-rules p { margin:10px 0 0; }
+@media(max-width:800px) {
+    #blackjack-view { padding:18px 10px 28px; }
+    .bj-heading { flex-wrap:wrap; gap:12px; }
+    .bj-heading h2 { font-size:26px; }
+    .bj-heading-actions { margin-left:auto; }
+    .bj-stage { height:360px; }
+    .bj-shoe-label { display:none; }
+    .bj-console { padding:16px 13px; }
+    .bj-controls { grid-template-columns:1fr; gap:16px; }
+    .bj-betting { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; align-items:center; }
+    .bj-betting > label { grid-column:1 / -1; }
+    .bj-wager-row, .bj-chips { margin-top:0; }
+    .bj-chips { justify-content:flex-end; gap:7px; }
+    .bj-chips button { width:30px; height:30px; }
+    #bj-status { font-size:12px; }
+    .bj-play-actions kbd { display:none; }
+    .bj-play-actions button { padding:13px 6px; }
+    .bj-hand-summary { padding:9px; }
+}
+@media(prefers-reduced-motion:reduce) { #blackjack-view * { scroll-behavior:auto; } }

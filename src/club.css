@@ -47,7 +47,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 #club-toast { z-index: 60; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px); border: 1px solid #e9c46a80; background: #201a2e; color: #fff1cb; border-radius: 12px; padding: 14px 20px; box-shadow: 0 10px 40px #0009; font-size: 12px; }
 #club-toast[data-error="true"] { border-color: #f8717180; color: #fecaca; }
 .club-storage { color: #d6bc7b; font-size: 11px; }
-@media (max-width: 760px) {
+@media (max-width: 900px) {
     #club-nav { padding: 9px 12px; gap: 8px; flex-wrap: wrap; }
     .club-wordmark { font-size: 11px; }
     .club-account { gap: 6px; }

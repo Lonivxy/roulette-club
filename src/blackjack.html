@@ -1,0 +1,22 @@
+<section id="blackjack-view" class="club-view" role="tabpanel" aria-labelledby="tab-blackjack" hidden>
+    <div class="bj-shell">
+        <header class="bj-heading"><div><div class="club-eyebrow">The Reserve · Six-deck classic</div><h2>BLACKJACK <span>21</span></h2></div><div class="bj-heading-actions"><button type="button" id="bj-camera" class="bj-small-btn">View: Player</button><button type="button" id="bj-sound" class="bj-small-btn" aria-pressed="false">Sound: On</button><button type="button" class="bj-small-btn" data-go-bank>Bank ↗</button></div></header>
+        <div class="bj-stage">
+            <div id="bj-scene" aria-hidden="true"></div>
+            <div class="bj-dealer-label"><span>DEALER</span><strong id="bj-dealer-total">Waiting for the deal</strong></div>
+            <div class="bj-shoe-label">6 DECKS · SHUFFLED SHOE</div>
+            <div class="bj-seat-label" id="bj-seat-name">YOUR SEAT</div>
+            <p id="bj-render-note" class="bj-render-note" hidden></p>
+        </div>
+        <div class="bj-console">
+            <div class="bj-status-row"><div><span class="bj-kicker" id="bj-turn">PLACE YOUR BET</span><p id="bj-status" role="status" aria-live="polite" aria-atomic="true">Choose your chips, then deal yourself in.</p></div><div class="bj-round-stake"><span>ON THE TABLE</span><strong id="bj-stake">0 ₵</strong></div></div>
+            <div class="bj-hands" id="bj-hands" aria-label="Your blackjack hands"></div>
+            <div class="bj-dealer-access" id="bj-dealer-access" aria-label="Dealer cards"></div>
+            <div class="bj-controls">
+                <div class="bj-betting"><label for="bj-wager">BET / CHIPS</label><div class="bj-wager-row"><button type="button" id="bj-bet-minus" class="bj-step" aria-label="Decrease wager by 10">−</button><input type="number" id="bj-wager" min="10" max="1000" step="10" inputmode="numeric" value="50" aria-label="Blackjack wager in chips"><button type="button" id="bj-bet-plus" class="bj-step" aria-label="Increase wager by 10">+</button></div><div class="bj-chips" aria-label="Add chips to your wager"><button type="button" data-bj-chip="10">10</button><button type="button" data-bj-chip="50">50</button><button type="button" data-bj-chip="100">100</button><button type="button" data-bj-chip="500">500</button></div></div>
+                <div class="bj-moves"><button type="button" id="bj-deal" class="bj-deal">DEAL CARDS <span>→</span></button><div class="bj-play-actions"><button type="button" id="bj-hit" disabled>HIT <kbd>H</kbd></button><button type="button" id="bj-stand" disabled>STAND <kbd>S</kbd></button><button type="button" id="bj-double" disabled>DOUBLE <kbd>D</kbd></button><button type="button" id="bj-split" disabled>SPLIT <kbd>P</kbd></button></div></div>
+            </div>
+            <details class="bj-rules"><summary>Table rules & payouts</summary><p>Blackjack pays 3:2. Other wins pay 1:1; ties return your stake. Dealer stands on all 17s, including soft 17, and checks for blackjack on the deal. Double on any first two cards, including after a split. Split equal-value cards once into two hands. Split aces receive one card each. A split-hand 21 pays 1:1. No insurance or surrender. Bets: 10–1,000 chips, in steps of 10.</p><p>Winnings are credited to your player wallet. Leave and return to resume an unfinished hand.</p></details>
+        </div>
+    </div>
+</section>

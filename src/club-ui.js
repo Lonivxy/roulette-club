@@ -8,11 +8,11 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky;
+    let view = 'roulette', toastTimer, lucky, blackjack;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
-    const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret;
+    const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret || Boolean(blackjack?.animating);
     function toast(message, error = false) {
         clearTimeout(toastTimer);
         $('club-toast').textContent = message;
@@ -65,25 +65,32 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('[data-idle-only]').forEach(el => { el.disabled = viewLocked(); });
         document.querySelectorAll('[data-view]').forEach(el => { el.disabled = viewLocked(); });
         lucky?.update(viewLocked());
+        blackjack?.update();
         document.querySelectorAll('[data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
     }
     function refresh() { engine.save(); render(); }
-    function setView(next) {
-        if (!['roulette', 'slots', 'bank'].includes(next)) return;
-        if (viewLocked()) { toast('Finish the current spin before changing tables.', true); return; }
-        view = next;
+    function paintView() {
         lucky.setVisible(view === 'slots');
         $('number-modal').classList.add('hidden'); $('number-modal').classList.remove('flex');
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
+        $('blackjack-view').hidden = view !== 'blackjack';
+        blackjack.setVisible(view === 'blackjack');
         document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === view)));
         document.querySelectorAll('.club-roulette-hud, #roulette-controls, #hint-pill, #status-banner, #canvas-container').forEach(el => {
             if (view === 'roulette') el.style.removeProperty('display'); else el.style.display = 'none';
         });
         render();
     }
+    function setView(next) {
+        if (!['roulette', 'slots', 'blackjack', 'bank'].includes(next)) return;
+        if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
+        view = next;
+        paintView();
+        try { window.history.replaceState(null, '', '#' + view); } catch { /* Local file previews still work. */ }
+    }
     function switchPlayer(id) {
         try {
-            if (viewLocked()) throw new Error('Finish the current spin before switching players.');
+            if (viewLocked()) throw new Error('Finish the current round before switching players.');
             engine.switchUser(id);
             updateBettingHUD(); renderHistoryRibbon(); renderNumberModalGrid(); hideBanner();
             lucky.resetPlayer();
@@ -92,12 +99,13 @@ function createCasinoClub(roulette) {
     }
     function transact(action, success) {
         try {
-            if (viewLocked()) throw new Error('Wait for the current spin to finish.');
+            if (viewLocked()) throw new Error('Wait for the current round to finish.');
             action(); updateBettingHUD(); toast(success);
             return true;
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
+        blackjack = createBlackjackTable(engine, { changed: () => updateBettingHUD(), notify: toast });
         lucky = createLucky777(engine, {
             locked: viewLocked,
             changed: () => updateBettingHUD(),
@@ -142,7 +150,10 @@ function createCasinoClub(roulette) {
             else return;
             e.preventDefault(); setView(tabs[i].dataset.view); tabs[i].focus();
         }));
-        render();
+        const requestedView = window.location.hash.slice(1);
+        if (blackjack.pending) view = 'blackjack';
+        else if (['roulette', 'slots', 'blackjack', 'bank'].includes(requestedView)) view = requestedView;
+        paintView();
     }
     return { engine, get view() { return view; }, busy, refresh, render, init, toast };
 }

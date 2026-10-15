@@ -8,13 +8,13 @@ function replace(from, to) {
     if (!html.includes(from)) throw new Error('Missing integration marker: ' + from.slice(0, 80));
     html = html.replace(from, to);
 }
-replace('<title>3D Low-Poly Roulette</title>', '<title>Roulette Club · 777 & Player Bank</title>\n    <meta name="description" content="Play 3D roulette and Lucky 777 with local player wallets, chip transfers, and a house bank.">');
+replace('<title>3D Low-Poly Roulette</title>', '<title>Roulette Club · Blackjack, 777 & Bank</title>\n    <meta name="description" content="Play 3D blackjack, roulette and Lucky 777 with local player wallets, chip transfers, and a house bank.">');
 replace('</head>', '<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">\n</head>');
-replace('    </style>', read('club.css') + lucky.css + read('lucky-layout.css') + '\n    </style>');
-replace('<body>', '<body>\n' + read('club.html').replace('<!-- LUCKY_777 -->', lucky.html));
+replace('    </style>', read('club.css') + lucky.css + read('lucky-layout.css') + read('blackjack.css') + '\n    </style>');
+replace('<body>', '<body>\n' + read('club.html').replace('<!-- LUCKY_777 -->', lucky.html).replace('<!-- BLACKJACK -->', read('blackjack.html')));
 replace('class="fixed top-0 left-0 right-0 z-20', 'class="club-roulette-hud fixed top-0 left-0 right-0 z-20');
 replace('<div class="fixed bottom-0', '<div id="roulette-controls" class="fixed bottom-0');
-replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + lucky.script + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
+replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + lucky.script + '\n' + read('blackjack-core.js') + '\n' + read('blackjack-scene.js') + '\n' + read('blackjack-ui.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
 replace('        // Helper to determine pocket color', '        const casino = createCasinoClub(state);\n        casino.init();\n        updateBettingHUD();\n        renderHistoryRibbon();\n\n        // Helper to determine pocket color');
 replace("            sfx.init();\n            hideBanner();", "            if (casino.busy() || casino.view !== 'roulette') return;\n            casino.engine.lock = 'roulette';\n            casino.engine.active.pendingRoulette = true;\n            casino.refresh();\n            sfx.init();\n            hideBanner();");
 replace('            state.balance += totalPayout;', "            state.balance += totalPayout;\n            casino.engine.lock = null;\n            casino.engine.active.pendingRoulette = false;\n            casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);");
@@ -27,6 +27,7 @@ replace("                state.isChargingSpin = true;", "                if (cas
 replace("num !== 0 && num !== 0 &&", "num !== 0 &&");
 // Preserve a correct sign for winning payouts smaller than the total wager.
 replace('NET +${net.toLocaleString()}', "NET ${net >= 0 ? '+' : '−'}${Math.abs(net).toLocaleString()}");
+replace('            updatePhysics(dt);\n            renderer.render(scene, camera);', "            if (casino.view === 'roulette') {\n                updatePhysics(dt);\n                renderer.render(scene, camera);\n            }");
 replace('            build3DScene();', "            if (!window.THREE) {\n                casino.toast('The 3D wheel needs an internet connection. Players, bank and 777 are available.', true);\n                return;\n            }\n            build3DScene();");
 html = html.replace('let raycaster = new THREE.Raycaster();', 'let raycaster = window.THREE ? new THREE.Raycaster() : null;')
     .replace('let mouseNDC = new THREE.Vector2(0, 0);', 'let mouseNDC = window.THREE ? new THREE.Vector2(0, 0) : null;')
