@@ -30,13 +30,13 @@ test('invalid transfers never mutate either wallet', () => {
     assert.equal(JSON.stringify(e.data), snapshot);
 });
 test('bank debt and repayments enforce credit and cash limits per player', () => {
-    const e = engine(); e.borrow(5000);
-    assert.equal(e.active.balance, 6000); assert.equal(e.active.debt, 5000);
-    assert.throws(() => e.borrow(1)); assert.throws(() => e.repay(5001));
-    e.repay(600); assert.equal(e.active.debt, 4400); assert.equal(e.availableCredit, 600);
-    e.borrow(600); assert.equal(e.active.debt, 5000);
-    e.transfer('jamie', 6000); assert.throws(() => e.repay(1));
-    e.switchUser('jamie'); assert.equal(e.active.debt, 0); assert.equal(e.availableCredit, 5000);
+    const e = engine(); e.borrow(100000);
+    assert.equal(e.active.balance, 101000); assert.equal(e.active.debt, 100000);
+    assert.throws(() => e.borrow(1)); assert.throws(() => e.repay(100001));
+    e.repay(600); assert.equal(e.active.debt, 99400); assert.equal(e.availableCredit, 600);
+    e.borrow(600); assert.equal(e.active.debt, 100000);
+    e.transfer('jamie', 101000); assert.throws(() => e.repay(1));
+    e.switchUser('jamie'); assert.equal(e.active.debt, 0); assert.equal(e.availableCredit, 100000);
 });
 test('players retain separate roulette stakes, history, and rebet snapshots', () => {
     const e = engine(); e.active.bets.RED = 100; e.active.balance -= 100;

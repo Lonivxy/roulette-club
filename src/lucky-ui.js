@@ -28,7 +28,7 @@ function createLucky777(engine, callbacks) {
     return {
         get dragging() { return machine?.dragging || false; },
         get displayBalance() { return machine?.displayBalance ?? null; },
-        update(locked) { machine?.update(locked); custom.update(locked); customToggle.disabled = locked; },
+        update(locked) { machine?.update(locked); custom.update(locked || !!engine.armedCard); customToggle.disabled = locked || !!engine.armedCard; },
         resetPlayer() { machine?.resetPlayer(); },
         setVisible(value) {
             visible = value;

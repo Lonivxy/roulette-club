@@ -8,7 +8,7 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -46,7 +46,7 @@ function createCasinoClub(roulette) {
             const data = document.createElement('div'); data.className = 'club-player-data';
             const name = document.createElement('div'); name.className = 'club-player-name'; name.textContent = p.name;
             const detail = document.createElement('div'); detail.className = 'club-player-detail';
-            detail.textContent = `${fmt(p.balance)} chips · ${fmt(p.debt)} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
+            detail.textContent = `${fmt(p.balance)} chips · ${fmt(p.debt + p.sharkDebt)} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
             data.append(name, detail);
             const button = document.createElement('button'); button.type = 'button'; button.className = 'club-action secondary';
             button.textContent = p.id === u.id ? 'Playing' : 'Switch';
@@ -67,12 +67,14 @@ function createCasinoClub(roulette) {
         lucky?.update(viewLocked());
         customRoulette?.update(viewLocked());
         blackjack?.update();
-        document.querySelectorAll('[data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
+        document.querySelectorAll('#roulette-controls [data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
+        economy?.render();
     }
     function refresh() { engine.save(); render(); }
     function paintView() {
         $('number-modal').classList.add('hidden'); $('number-modal').classList.remove('flex');
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
+        $('market-view').hidden = view !== 'market';
         lucky.setVisible(view === 'slots');
         $('blackjack-view').hidden = view !== 'blackjack';
         blackjack.setVisible(view === 'blackjack');
@@ -83,7 +85,7 @@ function createCasinoClub(roulette) {
         render();
     }
     function setView(next) {
-        if (!['roulette', 'slots', 'blackjack', 'bank'].includes(next)) return;
+        if (!['roulette', 'slots', 'blackjack', 'bank', 'market'].includes(next)) return;
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
         paintView();
@@ -106,6 +108,7 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
+        economy = createEconomyUI(engine, { locked: viewLocked, transact, playSlots: () => setView('slots') });
         customRoulette = bindCustomBet('roulette-custom', engine, {
             locked: viewLocked, notify: toast,
             apply(value) {
@@ -116,7 +119,7 @@ function createCasinoClub(roulette) {
             }
         });
         blackjack = createBlackjackTable(engine, { changed: () => updateBettingHUD(), notify: toast });
-        lucky = createLucky777(engine, {bank: () => setView('bank'),
+        lucky = createLucky777(engine, {bank: () => setView('bank'), market: () => setView('market'),
             locked: viewLocked,
             changed: () => updateBettingHUD(),
             notify: toast
@@ -162,7 +165,7 @@ function createCasinoClub(roulette) {
         }));
         const requestedView = window.location.hash.slice(1);
         if (blackjack.pending) view = 'blackjack';
-        else if (['roulette', 'slots', 'blackjack', 'bank'].includes(requestedView)) view = requestedView;
+        else if (['roulette', 'slots', 'blackjack', 'bank', 'market'].includes(requestedView)) view = requestedView;
         paintView();
     }
     return { engine, get view() { return view; }, busy, refresh, render, init, toast };

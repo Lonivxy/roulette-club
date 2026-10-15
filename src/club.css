@@ -1,5 +1,16 @@
 /* Club navigation and account surfaces */
 :root { color-scheme: dark; }
+.club-card[hidden], #shark-offer[hidden], #shark-repayment[hidden] { display: none !important; }
+.market-catalog { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 24px 0; }
+.market-product { background: linear-gradient(145deg, #211625, #12101a); border-color: #b985484d; }
+.market-symbols { font-size: clamp(22px, 3vw, 32px); letter-spacing: .12em; color: #f3cb7e; margin-bottom: 22px; }
+.market-price { color: #f3cb7e; font-size: 14px; font-weight: 700; }
+.market-terms { padding: 16px; border: 1px solid #b985484d; border-radius: 12px; color: #dec696; background: #251a22; font-size: 13px; line-height: 1.7; }
+.market-stake { max-width: 280px; }
+.market-card-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 15px 0; border-top: 1px solid #ffffff10; font-size: 14px; }
+.shark-panel { border-color: #c4505066; background: linear-gradient(145deg, #2b1421, #17121e); }
+#shark-panel h3 { color: #fda4af; font-size: 24px; margin-top: 8px; }
+@media(max-width: 700px) { .market-catalog { grid-template-columns: 1fr; } .club-tabs button { min-width: 0; } }
 .custom-bet-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #f7db8d; font-size: 12px; }
 .custom-bet-form label { font-weight: 700; }
 .custom-bet-form input { width: 125px; min-width: 0; padding: 9px 10px; border: 1px solid #d7b96570; border-radius: 8px; color: #fff4d3; background: #100d18; user-select: text; -webkit-user-select: text; }

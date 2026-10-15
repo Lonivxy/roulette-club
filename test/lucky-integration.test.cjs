@@ -75,7 +75,7 @@ test('WebGL failure leaves an explicit message and no misleading hidden controls
 function machineFixture() {
     const elements = new Map(), controls = [];
     const get = id => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); };
-    for (const action of ['QuickPullAndSpin()', 'forceJackpot777()', 'setBetMode(500)', "setBetMode('ALL_IN')"]) {
+    for (const action of ['QuickPullAndSpin()', 'openBlackMarket()', 'setBetMode(500)', "setBetMode('ALL_IN')"]) {
         const el = new Element(); el.dataset.machineAction = action; controls.push(el);
     }
     const host = get('slots-view'); host.querySelectorAll = () => controls;
@@ -113,7 +113,7 @@ test('machine saves one debit and payout, locks during spin, then reveals final 
     m.finish(); assert.equal(m.engine.lock, null); assert.equal(m.machine.displayBalance, null); assert.equal(m.get('uiWin').textContent, '5,000');
 });
 test('physical wager tiers and All In share accounting; an empty wallet gets no free refill', () => {
-    const m = machineFixture(); m.click('setBetMode(500)'); m.click('forceJackpot777()'); m.finish();
+    const m = machineFixture(); m.click('setBetMode(500)'); m.click('QuickPullAndSpin()'); m.finish();
     assert.equal(m.engine.active.balance, 25500);
     m.engine.active.balance = 15; m.machine.update(); m.click("setBetMode('ALL_IN')"); m.click('QuickPullAndSpin()'); m.finish();
     assert.equal(m.engine.active.balance, 750);
@@ -122,9 +122,19 @@ test('physical wager tiers and All In share accounting; an empty wallet gets no 
 });
 
 test('custom 777 amount remains exact and refuses a reduced wallet without debiting it', () => {
-    const m = machineFixture(); m.machine.setCustomBet(137); m.click('forceJackpot777()');
+    const m = machineFixture(); m.machine.setCustomBet(137); m.click('QuickPullAndSpin()');
     assert.equal(m.engine.active.balance, 7713); m.finish();
     m.engine.active.balance = 100; m.machine.update(); m.click('QuickPullAndSpin()');
     assert.equal(m.engine.active.balance, 100); assert.equal(m.engine.lock, null);
     assert.match(m.notices.at(-1), /enough chips/);
+});
+
+test('equipped merchant card overrides selected wager, drives real reel stops and is consumed once', () => {
+    const m=machineFixture();m.engine.active.balance=10000;
+    const card=m.engine.buyCard('diamonds',137);m.engine.armCard(card.id);m.machine.update();
+    m.click('setBetMode(500)');assert.match(m.notices.at(-1),/取消装备/);
+    m.click('QuickPullAndSpin()');assert.equal(m.machine.displayBalance,5753);
+    assert.equal(m.engine.active.balance,9178);assert.equal(m.engine.active.cards.length,0);
+    m.finish();assert.equal(m.get('uiWin').textContent,'3,425');
+    m.click('QuickPullAndSpin()');m.finish();assert.equal(m.get('uiWin').textContent,'5,000');
 });

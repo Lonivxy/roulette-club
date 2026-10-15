@@ -116,3 +116,10 @@ test('custom split and doubled wagers survive reload and keep exact stakes',()=>
     assert.deepEqual(game.round.hands.map(h=>h.bet),[274,137]);assert.equal(restored.lock,'blackjack');
     assert.equal(restored.active.balance,589);assert.equal(restored.storageWarning,'');
 });
+
+test('a settled blackjack hand charges due interest once and reload never charges it again',()=>{
+    const t=table([1,9,13,7]);t.engine.borrow(1000);t.engine.active.bankRounds=9;
+    t.game.start(10);assert.equal(t.engine.active.debt,1010);assert.equal(t.engine.active.bankRounds,0);
+    const restored=new Engine(t.saved);new Blackjack(restored);
+    assert.equal(restored.active.debt,1010);assert.equal(restored.active.bankRounds,0);
+});

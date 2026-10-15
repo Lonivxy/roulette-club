@@ -14,6 +14,7 @@ function createLuckyMachine(engine, callbacks, host) {
     let isMuted = false;
 
     function getActiveBetAmount() {
+      if (engine.armedCard) return engine.armedCard.stake;
       if (selectedBetMode === 'CUSTOM') return customBet;
       if (selectedBetMode === 'ALL_IN') return Math.max(0, credits);
       return Math.min(credits, selectedBetMode);
@@ -1274,11 +1275,11 @@ function createLuckyMachine(engine, callbacks, host) {
       }
     });
 
-    function QuickPullAndSpin(forcedStopIndices = null) {
+    function QuickPullAndSpin() {
       if (isSpinning || !visible || callbacks.locked()) return;
       armPullRatio = 1.0;
       syncArmVisuals(1.0);
-      executeReelSpin(forcedStopIndices);
+      executeReelSpin();
     }
 
     /* ============================================================================
@@ -1286,6 +1287,7 @@ function createLuckyMachine(engine, callbacks, host) {
        ============================================================================ */
     function setBetMode(mode) {
       if (isSpinning || !visible || callbacks.locked()) return;
+      if (engine.armedCard) { callbacks.notify('请先取消装备卡片，再更改绑定下注。', true); return; }
       selectedBetMode = mode;
 
       if (mode === 'ALL_IN') {
@@ -1317,12 +1319,12 @@ function createLuckyMachine(engine, callbacks, host) {
       document.querySelectorAll('.bet-btn').forEach(btn => {
         const val = btn.dataset.bet === 'ALL_IN' ? 'ALL_IN' : Number(btn.dataset.bet);
         btn.classList.toggle('active', val === selectedBetMode);
-        btn.disabled = isSpinning || callbacks.locked();
+        btn.disabled = isSpinning || callbacks.locked() || !!engine.armedCard;
       });
 
       // Sync 3D Physical Deck Buttons (depress active button & boost internal LED glow)
       deckButtons3D.forEach(b => {
-        const active = b.value === selectedBetMode;
+        const active = engine.armedCard ? b.value === activeBet : b.value === selectedBetMode;
         b.mesh.position.y = active ? 0.19 : 0.23;
         b.mat.emissiveIntensity = active ? 1.15 : 0.25;
       });
@@ -1331,17 +1333,16 @@ function createLuckyMachine(engine, callbacks, host) {
       update3DScoreboardTexture();
     }
 
-    function forceJackpot777() {
+    function openBlackMarket() {
       if (isSpinning || !visible || callbacks.locked()) return;
-      // Stops 0 and 6 on REEL_STRIP are both 'SEVEN'
-      QuickPullAndSpin([0, 6, 0]);
+      callbacks.market?.();
     }
 
-    function executeReelSpin(forcedStops = null) {
+    function executeReelSpin() {
       if (isSpinning || !visible || callbacks.locked()) return;
 
       const wager = getActiveBetAmount();
-      try { spinResult = engine.spinSlots(wager, forcedStops, { allIn: wager === engine.active.balance }); }
+      try { spinResult = engine.spinSlots(wager, null, { allIn: wager === engine.active.balance }); }
       catch (error) { callbacks.notify(error.message, true); return; }
       const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
       isSpinning = true;
@@ -1645,7 +1646,7 @@ function createLuckyMachine(engine, callbacks, host) {
     refreshAllUI();
     const actions = {
       'rebuyCredits()': rebuyCredits, 'toggleMute()': toggleMute,
-      'forceJackpot777()': forceJackpot777, 'QuickPullAndSpin()': () => QuickPullAndSpin(),
+      'openBlackMarket()': openBlackMarket, 'QuickPullAndSpin()': () => QuickPullAndSpin(),
       "setCameraView('play')": () => setCameraView('play'),
       "setCameraView('lever')": () => setCameraView('lever'),
       "setCameraView('front')": () => setCameraView('front')
@@ -1657,6 +1658,7 @@ function createLuckyMachine(engine, callbacks, host) {
     return {
       setCustomBet(value) {
         if (isSpinning || callbacks.locked()) return;
+        if (engine.armedCard) { callbacks.notify('请先取消装备卡片，再更改绑定下注。', true); return; }
         customBet = value; selectedBetMode = 'CUSTOM';
         setStatus('Custom bet: ' + value.toLocaleString() + ' chips. Pull the lever to spin.');
         refreshAllUI(); callbacks.changed();

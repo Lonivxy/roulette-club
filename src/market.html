@@ -1,0 +1,12 @@
+<section id="market-view" class="club-view" role="tabpanel" aria-labelledby="tab-market" hidden>
+    <div class="club-shell">
+        <div class="club-eyebrow">The back room · 黑市</div><h2 class="club-title">黑市商人</h2>
+        <p class="club-muted">花高价买确定的结果。每张卡只用一次，绑定购买时的下注金额；装备后，下一次 777 旋转自动使用。</p>
+        <div class="market-terms"><strong>卡价不包含下注。</strong> 使用时仍需支付绑定下注。价格高于保底派彩；购买时也须留足下注筹码。</div>
+        <label class="club-field" for="market-stake">卡片绑定下注 / 筹码</label>
+        <input id="market-stake" class="club-input market-stake" type="number" min="1" max="1000000" step="1" value="100" inputmode="numeric" aria-describedby="market-price-note">
+        <p id="market-price-note" class="club-muted">输入金额后查看卡价和派彩。例：绑定 100 筹码的 777 卡售价 6,000，保底返回 5,000，使用时另扣 100 下注。</p>
+        <div id="market-catalog" class="market-catalog" aria-label="出售中的保底卡"></div>
+        <div class="club-card market-inventory"><h3>我的卡包</h3><p class="club-muted">卡片归当前玩家所有，刷新后保留。未成功开局不会消耗卡片。</p><div id="market-inventory" aria-live="polite"></div></div>
+    </div>
+</section>

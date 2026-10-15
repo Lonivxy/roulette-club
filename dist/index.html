@@ -86,6 +86,17 @@
         }
 /* Club navigation and account surfaces */
 :root { color-scheme: dark; }
+.club-card[hidden], #shark-offer[hidden], #shark-repayment[hidden] { display: none !important; }
+.market-catalog { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 24px 0; }
+.market-product { background: linear-gradient(145deg, #211625, #12101a); border-color: #b985484d; }
+.market-symbols { font-size: clamp(22px, 3vw, 32px); letter-spacing: .12em; color: #f3cb7e; margin-bottom: 22px; }
+.market-price { color: #f3cb7e; font-size: 14px; font-weight: 700; }
+.market-terms { padding: 16px; border: 1px solid #b985484d; border-radius: 12px; color: #dec696; background: #251a22; font-size: 13px; line-height: 1.7; }
+.market-stake { max-width: 280px; }
+.market-card-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 15px 0; border-top: 1px solid #ffffff10; font-size: 14px; }
+.shark-panel { border-color: #c4505066; background: linear-gradient(145deg, #2b1421, #17121e); }
+#shark-panel h3 { color: #fda4af; font-size: 24px; margin-top: 8px; }
+@media(max-width: 700px) { .market-catalog { grid-template-columns: 1fr; } .club-tabs button { min-width: 0; } }
 .custom-bet-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #f7db8d; font-size: 12px; }
 .custom-bet-form label { font-weight: 700; }
 .custom-bet-form input { width: 125px; min-width: 0; padding: 9px 10px; border: 1px solid #d7b96570; border-radius: 8px; color: #fff4d3; background: #100d18; user-select: text; -webkit-user-select: text; }
@@ -286,6 +297,9 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       transition: height 0.03s linear;
     }
   #slots-view { padding: 0; overflow: hidden; }
+#slots-view #lucky-armed-card { position: absolute; z-index: 16; top: 66px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; width: max-content; max-width: calc(100% - 28px); padding: 10px 14px; border-radius: 12px; background: #1b1227ee; border: 1px solid #e5be63; color: #f9e8ad; font-size: 13px; }
+#slots-view #lucky-armed-card[hidden] { display: none; }
+#slots-view #lucky-card-cancel { color: #e7b7aa; text-decoration: underline; cursor: pointer; }
 #slots-view #lucky-custom-toggle { position: absolute; z-index: 16; top: 14px; right: 18px; padding: 10px 16px; border: 1px solid #c8a76280; border-radius: 24px; color: #f8df99; background: #100c18ef; cursor: pointer; font-size: 13px; }
 #slots-view #lucky-custom-panel { position: absolute; z-index: 17; top: 62px; right: 18px; width: min(340px, calc(100% - 36px)); padding: 18px; border: 1px solid #c8a76280; border-radius: 14px; background: #100c18f5; }
 #slots-view #lucky-custom-panel[hidden] { display: none; }
@@ -393,6 +407,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         <button id="tab-slots" type="button" role="tab" aria-controls="slots-view" aria-selected="false" data-view="slots">777 Slots</button>
         <button id="tab-blackjack" type="button" role="tab" aria-controls="blackjack-view" aria-selected="false" data-view="blackjack">Blackjack</button>
         <button id="tab-bank" type="button" role="tab" aria-controls="bank-view" aria-selected="false" data-view="bank">Players & Bank</button>
+        <button id="tab-market" type="button" role="tab" aria-controls="market-view" aria-selected="false" data-view="market">黑市商人</button>
     </div>
     <div class="club-account"><span class="club-wallet" id="club-wallet">1,000 ₵</span><label for="club-user" class="sr-only">Active player</label><select id="club-user" class="club-select" aria-label="Active player"></select></div>
 </nav>
@@ -437,9 +452,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
           <button id="camLever" data-machine-action="setCameraView('lever')" class="px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition">Joystick View</button>
           <button id="camFront" data-machine-action="setCameraView('front')" class="px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition">Front</button>
         </div>
-        <button data-machine-action="forceJackpot777()" class="px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-500 border border-yellow-300 text-xs font-bold text-yellow-100 shadow-lg transition">
-          ⚡ Force 777
-        </button>
+        <button type="button" data-machine-action="openBlackMarket()" class="px-3 py-1.5 rounded-full bg-red-950 border border-amber-400 text-xs text-amber-200">黑市商人</button>
         <button id="muteBtn" data-machine-action="toggleMute()" class="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 text-xs font-semibold transition">
           🔊 SFX
         </button>
@@ -488,7 +501,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 
   </div>
 
-  <button id="lucky-panel-toggle" type="button" aria-controls="lucky-panels" aria-expanded="false">Show controls</button><button id="lucky-custom-toggle" type="button" aria-controls="lucky-custom-panel" aria-expanded="false">Custom bet</button><div id="lucky-custom-panel" hidden><form id="lucky-custom-form" class="custom-bet-form" novalidate><label for="lucky-custom-amount">Custom bet · 1–1,000,000 chips</label><input id="lucky-custom-amount" type="number" min="1" max="1000000" step="1" inputmode="numeric" value="100" required><button id="lucky-custom-apply" type="submit">Use amount</button></form></div><p id="lucky-touch-hint">Tap a bet button · Pull the red lever</p><p id="lucky-accessible-result" class="lucky-sr-only" role="status" aria-live="polite"></p></section>
+  <button id="lucky-panel-toggle" type="button" aria-controls="lucky-panels" aria-expanded="false">Show controls</button><button id="lucky-custom-toggle" type="button" aria-controls="lucky-custom-panel" aria-expanded="false">Custom bet</button><div id="lucky-custom-panel" hidden><form id="lucky-custom-form" class="custom-bet-form" novalidate><label for="lucky-custom-amount">Custom bet · 1–1,000,000 chips</label><input id="lucky-custom-amount" type="number" min="1" max="1000000" step="1" inputmode="numeric" value="100" required><button id="lucky-custom-apply" type="submit">Use amount</button></form></div><div id="lucky-armed-card" hidden><span id="lucky-card-label"></span><button id="lucky-card-cancel" type="button">取消装备</button></div><p id="lucky-touch-hint">Tap a bet button · Pull the red lever</p><p id="lucky-accessible-result" class="lucky-sr-only" role="status" aria-live="polite"></p></section>
 <section id="blackjack-view" class="club-view" role="tabpanel" aria-labelledby="tab-blackjack" hidden>
     <div class="bj-shell">
         <header class="bj-heading"><div><div class="club-eyebrow">The Reserve · Six-deck classic</div><h2>BLACKJACK <span>21</span></h2></div><div class="bj-heading-actions"><button type="button" id="bj-camera" class="bj-small-btn">View: Player</button><button type="button" id="bj-sound" class="bj-small-btn" aria-pressed="false">Sound: On</button><button type="button" class="bj-small-btn" data-go-bank>Bank ↗</button></div></header>
@@ -512,22 +525,40 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </div>
 </section>
 
+<section id="market-view" class="club-view" role="tabpanel" aria-labelledby="tab-market" hidden>
+    <div class="club-shell">
+        <div class="club-eyebrow">The back room · 黑市</div><h2 class="club-title">黑市商人</h2>
+        <p class="club-muted">花高价买确定的结果。每张卡只用一次，绑定购买时的下注金额；装备后，下一次 777 旋转自动使用。</p>
+        <div class="market-terms"><strong>卡价不包含下注。</strong> 使用时仍需支付绑定下注。价格高于保底派彩；购买时也须留足下注筹码。</div>
+        <label class="club-field" for="market-stake">卡片绑定下注 / 筹码</label>
+        <input id="market-stake" class="club-input market-stake" type="number" min="1" max="1000000" step="1" value="100" inputmode="numeric" aria-describedby="market-price-note">
+        <p id="market-price-note" class="club-muted">输入金额后查看卡价和派彩。例：绑定 100 筹码的 777 卡售价 6,000，保底返回 5,000，使用时另扣 100 下注。</p>
+        <div id="market-catalog" class="market-catalog" aria-label="出售中的保底卡"></div>
+        <div class="club-card market-inventory"><h3>我的卡包</h3><p class="club-muted">卡片归当前玩家所有，刷新后保留。未成功开局不会消耗卡片。</p><div id="market-inventory" aria-live="polite"></div></div>
+    </div>
+</section>
+
 <section id="bank-view" class="club-view" role="tabpanel" aria-labelledby="tab-bank" hidden>
     <div class="club-shell">
         <div class="club-eyebrow">Players & Bank</div><h2 class="club-title" id="bank-greeting">Your chips, all in one place.</h2>
         <p class="club-muted">Switch between local players, send chips, or borrow from the house bank. Profiles and activity are saved in this browser on this device.</p>
         <p class="club-storage" id="club-storage-note" role="status"></p>
-        <dl class="club-stat-row"><div><dt>Wallet / chips</dt><dd id="bank-wallet">1,000</dd></div><div><dt>Bank debt</dt><dd id="bank-debt">0</dd></div><div><dt>Available credit</dt><dd id="bank-credit">5,000</dd></div></dl>
+        <dl class="club-stat-row"><div><dt>Wallet / chips</dt><dd id="bank-wallet">1,000</dd></div><div><dt>Bank debt</dt><dd id="bank-debt">0</dd></div><div><dt>Available credit</dt><dd id="bank-credit">100,000</dd></div></dl>
+        <p class="club-muted">总欠款（银行 + 高利贷）：<strong id="bank-total-debt">0</strong> 筹码。利息计入欠款，离线不计息；计息后总欠款可超过借款上限。</p>
         <div class="club-grid">
             <form id="transfer-form" class="club-card"><h3>Send chips to a player</h3><p class="club-muted">Transfers move chips directly between the two wallets.</p>
                 <label class="club-field" for="transfer-user">Send to</label><select id="transfer-user" class="club-select" required></select>
                 <label class="club-field" for="transfer-amount">Amount / chips</label><input id="transfer-amount" class="club-input" type="number" inputmode="numeric" min="1" max="1000000" step="1" placeholder="e.g. 100" required>
                 <div class="club-actions"><button type="submit" class="club-action" data-idle-only>Transfer chips →</button></div>
             </form>
-            <form id="bank-form" class="club-card"><h3>Borrow & repay</h3><p class="club-muted">Each player can owe up to 5,000 chips. No interest. Repay to restore your available credit.</p>
+            <form id="bank-form" class="club-card"><h3>银行 · 借款与还款</h3><p class="club-muted">银行额度 100,000 筹码。每完成 10 局下注，当前未还欠款加 1% 利息。利息向上取整并计入下期欠款；还款后恢复额度。</p><p id="bank-interest-progress" class="club-muted"></p>
                 <label class="club-field" for="bank-amount">Amount / chips</label><input id="bank-amount" class="club-input" type="number" inputmode="numeric" min="1" max="1000000" step="1" placeholder="e.g. 500" required>
-                <div class="club-actions"><button type="submit" class="club-action" value="borrow" data-idle-only>Borrow from bank</button><button type="submit" class="club-action secondary" value="repay" data-idle-only>Repay debt</button></div>
+                <div class="club-actions"><button id="bank-borrow" type="submit" class="club-action" value="borrow" data-idle-only>Borrow from bank</button><button type="submit" class="club-action secondary" value="repay" data-idle-only>Repay debt</button></div>
             </form>
+            <div id="shark-panel" class="club-card shark-panel club-wide" hidden><div class="club-eyebrow">最后的筹码</div><h3>高利贷</h3><p class="club-muted">最高借款 1,500,000。只有银行可借额度为 0、钱包 ≤ 0 且没有未结算下注时才开放借款。已有欠款可在此偿还。</p><p>高利贷欠款：<strong id="shark-debt">0</strong> · 剩余额度：<strong id="shark-credit">1,500,000</strong></p><p id="shark-progress" class="club-muted"></p>
+                <div id="shark-offer" hidden><form id="shark-borrow-form"><label for="shark-borrow-amount" class="club-field">借入金额</label><input id="shark-borrow-amount" class="club-input" type="number" min="1" max="1500000" step="1" inputmode="numeric" required placeholder="最多 1,500,000"><div class="club-actions"><button type="submit" class="club-action" data-idle-only>借入高利贷 · 每 10 局加息 10%</button></div></form></div>
+                <div id="shark-repayment" hidden><form id="shark-repay-form"><label for="shark-repay-amount" class="club-field">偿还高利贷</label><input id="shark-repay-amount" class="club-input" type="number" min="1" max="1000000000" step="1" inputmode="numeric" required placeholder="还款金额"><div class="club-actions"><button type="submit" class="club-action secondary" data-idle-only>偿还高利贷</button></div></form></div>
+            </div>
             <div class="club-card"><h3>Players at your table</h3><p class="club-muted">Each player starts with 1,000 chips and has a separate wallet, debt, and roulette bets.</p><div class="club-account-list" id="club-player-list"></div>
                 <form id="player-form"><label class="club-field" for="player-name">Add a player / up to 12 players</label><input id="player-name" type="text" class="club-input" maxlength="24" placeholder="Player name" required><div class="club-actions"><button type="submit" class="club-action secondary" data-idle-only>Add player</button></div></form>
             </div>
@@ -759,7 +790,9 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 (function (root) {
     'use strict';
     const KEY = 'roulette-club-v1';
-    const LIMIT = 5000;
+    const LIMIT = 100000;
+    const SHARK_LIMIT = 1500000;
+    const INTEREST_ROUNDS = 10;
     const MAX = 1000000000;
     const symbols = ['7', '💎', 'BAR', '🔔', '🍀', '🍒'];
     const triples = [50, 25, 20, 15, 10, 5];
@@ -768,6 +801,20 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     const sumBets = bets => ['RED', 'BLACK', 'GREEN', 'ODD', 'EVEN'].reduce((s, k) => s + bets[k], 0)
         + Object.values(bets.numbers).reduce((s, v) => s + v, 0);
     const integer = (n, max = MAX) => Number.isSafeInteger(n) && n >= 0 && n <= max;
+    const cards = Object.freeze({
+        seven: Object.freeze({ name: '保底 777', factor: 60, multiplier: 50, reels: [0, 6, 0], symbol: '7 7 7' }),
+        diamonds: Object.freeze({ name: '保底三钻石', factor: 30, multiplier: 25, reels: [3, 11, 3], symbol: '💎 💎 💎' }),
+        bars: Object.freeze({ name: '保底三 BAR', factor: 24, multiplier: 20, reels: [5, 5, 5], symbol: 'BAR BAR BAR' })
+    });
+    const economyDefaults = () => ({ sharkDebt: 0, bankRounds: 0, sharkRounds: 0, cards: [], armedCardId: null });
+    function validEconomy(user) {
+        return integer(user.sharkDebt) && integer(user.bankRounds, 9) && integer(user.sharkRounds, 9)
+            && Array.isArray(user.cards) && user.cards.length <= 50
+            && user.cards.every(card => card && typeof card.id === 'string' && Object.hasOwn(cards, card.type)
+                && integer(card.stake, 1000000) && card.stake > 0)
+            && new Set(user.cards.map(card => card.id)).size === user.cards.length
+            && (user.armedCardId === null || user.cards.some(card => card.id === user.armedCardId));
+    }
     function validateBets(bets) {
         return bets && ['RED', 'BLACK', 'GREEN', 'ODD', 'EVEN'].every(k => integer(bets[k]))
             && bets.numbers && typeof bets.numbers === 'object' && !Array.isArray(bets.numbers)
@@ -775,7 +822,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             && integer(sumBets(bets));
     }
     function profile(id, name) {
-        return { id, name, balance: 1000, debt: 0, bets: emptyBets(), lastBets: null, history: [], pendingRoulette: false };
+        return { id, name, balance: 1000, debt: 0, bets: emptyBets(), lastBets: null, history: [], pendingRoulette: false, ...economyDefaults() };
     }
     class CasinoEngine {
         constructor(storage, random) {
@@ -792,12 +839,13 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
                 const raw = storage && storage.getItem(KEY);
                 if (raw) {
                     const saved = JSON.parse(raw);
+                    if (Array.isArray(saved.users)) saved.users = saved.users.map(user => ({ ...economyDefaults(), ...user }));
                     if (saved.version !== 1 || !Array.isArray(saved.users) || saved.users.length < 1 || saved.users.length > 12
                         || !Array.isArray(saved.ledger) || !saved.users.some(u => u.id === saved.activeId)
                         || new Set(saved.users.map(u => u.id)).size !== saved.users.length
                         || !saved.users.every(u => typeof u.id === 'string' && typeof u.name === 'string'
-                            && u.name.trim().length > 0 && u.name.length <= 24 && integer(u.balance)
-                            && integer(u.debt, LIMIT) && validateBets(u.bets)
+                            && u.name.trim().length > 0 && u.name.length <= 24 && Number.isSafeInteger(u.balance) && Math.abs(u.balance) <= MAX
+                            && integer(u.debt) && validEconomy(u) && validateBets(u.bets)
                             && (u.lastBets === null || validateBets(u.lastBets)) && Array.isArray(u.history))) {
                         throw new Error('Invalid saved profiles');
                     }
@@ -818,12 +866,15 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             }
         }
         get active() { return this.data.users.find(u => u.id === this.data.activeId); }
-        get availableCredit() { return LIMIT - this.active.debt; }
+        get availableCredit() { return Math.max(0, LIMIT - this.active.debt); }
+        get availableSharkCredit() { return Math.max(0, SHARK_LIMIT - this.active.sharkDebt); }
+        get canBorrowShark() { return !this.lock && this.availableCredit === 0 && this.active.balance <= 0 && sumBets(this.active.bets) === 0 && this.availableSharkCredit > 0; }
+        get armedCard() { return this.active.cards.find(card => card.id === this.active.armedCardId) || null; }
         ensureIdle() {
             if (this.lock) throw new Error('Wait for the current spin to finish.');
         }
-        amount(value) {
-            if (!Number.isSafeInteger(value) || value <= 0 || value > 1000000) throw new Error('Enter a whole number from 1 to 1,000,000.');
+        amount(value, maximum = 1000000) {
+            if (!Number.isSafeInteger(value) || value <= 0 || value > maximum) throw new Error('Enter a whole number from 1 to ' + maximum.toLocaleString() + '.');
             return value;
         }
         save() {
@@ -877,12 +928,64 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         }
         repay(value) {
             this.ensureIdle();
-            const n = this.amount(value), u = this.active;
+            const n = this.amount(value, MAX), u = this.active;
             if (n > u.debt) throw new Error('That amount is greater than your outstanding debt.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips to repay that amount.');
             u.balance -= n;
             u.debt -= n;
+            if (u.debt === 0) u.bankRounds = 0;
             this.record(`${u.name} → Bank: repaid ${n.toLocaleString()} chips.`);
+            this.save();
+        }
+        borrowShark(value) {
+            this.ensureIdle();
+            const n = this.amount(value, SHARK_LIMIT), user = this.active;
+            if (!this.canBorrowShark) throw new Error('高利贷仅在银行额度耗尽、钱包 ≤ 0 且没有未结算下注时开放。');
+            if (n > this.availableSharkCredit) throw new Error('高利贷剩余额度不足。');
+            user.balance += n; user.sharkDebt += n;
+            this.record(`高利贷 → ${user.name}: 借入 ${n.toLocaleString()}；每 10 局计息 10%。`);
+            this.save();
+        }
+        repayShark(value) {
+            this.ensureIdle();
+            const n = this.amount(value, MAX), user = this.active;
+            if (n > user.sharkDebt) throw new Error('还款不能超过高利贷欠款。');
+            if (n > user.balance) throw new Error('钱包余额不足以还款。');
+            user.balance -= n; user.sharkDebt -= n;
+            if (user.sharkDebt === 0) user.sharkRounds = 0;
+            this.record(`${user.name} → 高利贷: 偿还 ${n.toLocaleString()}。`);
+            this.save();
+        }
+        completeRound() {
+            const user = this.active;
+            for (const [debt, rounds, rate, label] of [['debt', 'bankRounds', .01, '银行'], ['sharkDebt', 'sharkRounds', .10, '高利贷']]) {
+                if (user[debt] <= 0) { user[rounds] = 0; continue; }
+                user[rounds]++;
+                if (user[rounds] < INTEREST_ROUNDS) continue;
+                user[rounds] = 0;
+                const interest = Math.min(MAX - user[debt], Math.ceil(user[debt] * rate));
+                user[debt] += interest;
+                this.record(`${user.name} · ${label}利息 +${interest.toLocaleString()}；欠款 ${user[debt].toLocaleString()}。`);
+            }
+        }
+        buyCard(type, value) {
+            this.ensureIdle();
+            const item = Object.hasOwn(cards, type) ? cards[type] : null;
+            if (!item) throw new Error('请选择有效的黑市卡。');
+            const stake = this.amount(value), price = stake * item.factor, user = this.active;
+            if (user.cards.length >= 50) throw new Error('最多持有 50 张卡，请先使用已有卡。');
+            if (price + stake > user.balance) throw new Error('余额不足：需支付卡价，并留足一次绑定下注的筹码。');
+            const card = { id: root.crypto.randomUUID(), type, stake };
+            user.balance -= price; user.cards.push(card);
+            this.record(`${user.name} · 黑市购买${item.name}，价格 ${price.toLocaleString()}，绑定下注 ${stake.toLocaleString()}。`);
+            this.save(); return card;
+        }
+        armCard(id) {
+            this.ensureIdle();
+            const card = this.active.cards.find(item => item.id === id);
+            if (id !== null && !card) throw new Error('你没有这张卡。');
+            if (card && card.stake > this.active.balance) throw new Error('余额不足以支付该卡绑定的下注。');
+            this.active.armedCardId = id;
             this.save();
         }
         slotResult(reels, wager) {
@@ -897,17 +1000,25 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         spinSlots(value, forcedIndices = null, { allIn = false } = {}) {
             this.ensureIdle();
             const n = this.amount(value), u = this.active;
+            const card = this.armedCard;
+            if (card && n !== card.stake) throw new Error('已装备卡绑定下注 ' + card.stake.toLocaleString() + '，请取消装备后更改。');
             if (allIn && n !== u.balance) throw new Error('All In must wager your whole wallet.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips for this spin.');
             if (u.balance + n * 49 > MAX) throw new Error('Your wallet is too close to its chip limit.');
-            const reels = forcedIndices === null ? Array.from({ length: 3 }, () => {
+            const reels = card ? cards[card.type].reels : forcedIndices === null ? Array.from({ length: 3 }, () => {
                 const roll = this.random();
                 if (!(roll >= 0 && roll < 1)) throw new Error('Could not generate a valid spin. Try again.');
                 return Math.floor(roll * reelStrip.length);
             }) : forcedIndices;
             const result = this.slotResult(reels, n);
             u.balance += result.net;
+            if (card) {
+                u.cards = u.cards.filter(item => item.id !== card.id); u.armedCardId = null;
+                result.cardName = cards[card.type].name;
+                this.record(`${u.name} · 已消耗${result.cardName}，绑定下注 ${n.toLocaleString()}。`);
+            }
             this.record(`${u.name} · 777${forcedIndices === null ? '' : ' (forced jackpot)'}: wager ${n.toLocaleString()}, payout ${result.payout.toLocaleString()} (${result.symbols.map(i => symbols[i]).join(' / ')}).`);
+            this.completeRound();
             this.lock = 'slots';
             this.save();
             return result;
@@ -917,6 +1028,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     CasinoEngine.triples = triples;
     CasinoEngine.reelStrip = reelStrip;
     CasinoEngine.creditLimit = LIMIT;
+    CasinoEngine.sharkLimit = SHARK_LIMIT;
+    CasinoEngine.cards = cards;
     CasinoEngine.emptyBets = emptyBets;
     CasinoEngine.sumBets = sumBets;
     CasinoEngine.storageKey = KEY;
@@ -1004,6 +1117,7 @@ function createLuckyMachine(engine, callbacks, host) {
     let isMuted = false;
 
     function getActiveBetAmount() {
+      if (engine.armedCard) return engine.armedCard.stake;
       if (selectedBetMode === 'CUSTOM') return customBet;
       if (selectedBetMode === 'ALL_IN') return Math.max(0, credits);
       return Math.min(credits, selectedBetMode);
@@ -2264,11 +2378,11 @@ function createLuckyMachine(engine, callbacks, host) {
       }
     });
 
-    function QuickPullAndSpin(forcedStopIndices = null) {
+    function QuickPullAndSpin() {
       if (isSpinning || !visible || callbacks.locked()) return;
       armPullRatio = 1.0;
       syncArmVisuals(1.0);
-      executeReelSpin(forcedStopIndices);
+      executeReelSpin();
     }
 
     /* ============================================================================
@@ -2276,6 +2390,7 @@ function createLuckyMachine(engine, callbacks, host) {
        ============================================================================ */
     function setBetMode(mode) {
       if (isSpinning || !visible || callbacks.locked()) return;
+      if (engine.armedCard) { callbacks.notify('请先取消装备卡片，再更改绑定下注。', true); return; }
       selectedBetMode = mode;
 
       if (mode === 'ALL_IN') {
@@ -2307,12 +2422,12 @@ function createLuckyMachine(engine, callbacks, host) {
       document.querySelectorAll('.bet-btn').forEach(btn => {
         const val = btn.dataset.bet === 'ALL_IN' ? 'ALL_IN' : Number(btn.dataset.bet);
         btn.classList.toggle('active', val === selectedBetMode);
-        btn.disabled = isSpinning || callbacks.locked();
+        btn.disabled = isSpinning || callbacks.locked() || !!engine.armedCard;
       });
 
       // Sync 3D Physical Deck Buttons (depress active button & boost internal LED glow)
       deckButtons3D.forEach(b => {
-        const active = b.value === selectedBetMode;
+        const active = engine.armedCard ? b.value === activeBet : b.value === selectedBetMode;
         b.mesh.position.y = active ? 0.19 : 0.23;
         b.mat.emissiveIntensity = active ? 1.15 : 0.25;
       });
@@ -2321,17 +2436,16 @@ function createLuckyMachine(engine, callbacks, host) {
       update3DScoreboardTexture();
     }
 
-    function forceJackpot777() {
+    function openBlackMarket() {
       if (isSpinning || !visible || callbacks.locked()) return;
-      // Stops 0 and 6 on REEL_STRIP are both 'SEVEN'
-      QuickPullAndSpin([0, 6, 0]);
+      callbacks.market?.();
     }
 
-    function executeReelSpin(forcedStops = null) {
+    function executeReelSpin() {
       if (isSpinning || !visible || callbacks.locked()) return;
 
       const wager = getActiveBetAmount();
-      try { spinResult = engine.spinSlots(wager, forcedStops, { allIn: wager === engine.active.balance }); }
+      try { spinResult = engine.spinSlots(wager, null, { allIn: wager === engine.active.balance }); }
       catch (error) { callbacks.notify(error.message, true); return; }
       const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
       isSpinning = true;
@@ -2635,7 +2749,7 @@ function createLuckyMachine(engine, callbacks, host) {
     refreshAllUI();
     const actions = {
       'rebuyCredits()': rebuyCredits, 'toggleMute()': toggleMute,
-      'forceJackpot777()': forceJackpot777, 'QuickPullAndSpin()': () => QuickPullAndSpin(),
+      'openBlackMarket()': openBlackMarket, 'QuickPullAndSpin()': () => QuickPullAndSpin(),
       "setCameraView('play')": () => setCameraView('play'),
       "setCameraView('lever')": () => setCameraView('lever'),
       "setCameraView('front')": () => setCameraView('front')
@@ -2647,6 +2761,7 @@ function createLuckyMachine(engine, callbacks, host) {
     return {
       setCustomBet(value) {
         if (isSpinning || callbacks.locked()) return;
+        if (engine.armedCard) { callbacks.notify('请先取消装备卡片，再更改绑定下注。', true); return; }
         customBet = value; selectedBetMode = 'CUSTOM';
         setStatus('Custom bet: ' + value.toLocaleString() + ' chips. Pull the lever to spin.');
         refreshAllUI(); callbacks.changed();
@@ -2706,7 +2821,7 @@ function createLucky777(engine, callbacks) {
     return {
         get dragging() { return machine?.dragging || false; },
         get displayBalance() { return machine?.displayBalance ?? null; },
-        update(locked) { machine?.update(locked); custom.update(locked); customToggle.disabled = locked; },
+        update(locked) { machine?.update(locked); custom.update(locked || !!engine.armedCard); customToggle.disabled = locked || !!engine.armedCard; },
         resetPlayer() { machine?.resetPlayer(); },
         setVisible(value) {
             visible = value;
@@ -2888,6 +3003,7 @@ function createLucky777(engine, callbacks) {
             this.engine.active.balance += payout;
             this.engine.lock = null;
             this.engine.record(`${this.engine.active.name} · Blackjack: wager ${wager.toLocaleString()}, payout ${payout.toLocaleString()} (${hands.map(h => h.label).join(' / ')}).`);
+            this.engine.completeRound();
             this._save(); return r;
         }
     }
@@ -3217,6 +3333,69 @@ function createBlackjackTable(engine, callbacks) {
     };
 }
 
+function createEconomyUI(engine, callbacks) {
+    const $ = id => document.getElementById(id), fmt = n => n.toLocaleString();
+    function element(tag, text, className) {
+        const node = document.createElement(tag); node.textContent = text;
+        if (className) node.className = className;
+        return node;
+    }
+    function validStake() {
+        const n = Number($('market-stake').value);
+        return Number.isSafeInteger(n) && n > 0 && n <= 1000000 ? n : null;
+    }
+    function render() {
+        const user = engine.active, locked = callbacks.locked(), stake = validStake();
+        $('bank-borrow').disabled = locked || engine.availableCredit === 0;
+        $('bank-interest-progress').textContent = user.debt > 0 ? `再完成 ${10 - user.bankRounds} 局计息：当前欠款的 1%，向上取整。` : '无欠款，不计息。';
+        $('shark-panel').hidden = !engine.canBorrowShark && user.sharkDebt === 0;
+        $('shark-offer').hidden = !engine.canBorrowShark;
+        $('shark-repayment').hidden = user.sharkDebt === 0;
+        $('shark-debt').textContent = fmt(user.sharkDebt);
+        $('shark-credit').textContent = fmt(engine.availableSharkCredit);
+        $('shark-progress').textContent = user.sharkDebt > 0 ? `再完成 ${10 - user.sharkRounds} 局，未还欠款加 10%（向上取整）。` : '每完成 10 局，未还欠款加 10%。';
+        $('bank-total-debt').textContent = fmt(user.debt + user.sharkDebt);
+        $('market-stake').disabled = locked;
+        $('market-stake').setAttribute('aria-invalid', String(stake === null));
+        $('market-catalog').replaceChildren(...Object.entries(CasinoEngine.cards).map(([type, item]) => {
+            const card = element('article', '', 'club-card market-product');
+            card.append(element('div', item.symbol, 'market-symbols'), element('h3', item.name));
+            card.append(element('p', stake === null ? '请输入 1–1,000,000 的整数下注。' : `卡价 ${fmt(stake * item.factor)} · 使用时另扣 ${fmt(stake)}`, 'market-price'));
+            card.append(element('p', stake === null ? '' : `保底返回 ${fmt(stake * item.multiplier)}（${item.multiplier}×，含下注）`, 'club-muted'));
+            const button = element('button', '购买此卡', 'club-action'); button.type = 'button';
+            button.disabled = locked || stake === null || user.cards.length >= 50 || (stake !== null && stake * (item.factor + 1) > user.balance);
+            button.addEventListener('click', () => callbacks.transact(() => engine.buyCard(type, validStake()), '卡片已放入当前玩家的卡包。'));
+            card.append(button); return card;
+        }));
+        const rows = user.cards.map(card => {
+            const row = element('div', '', 'market-card-row'), armed = user.armedCardId === card.id;
+            row.append(element('span', `${CasinoEngine.cards[card.type].name} · 绑定 ${fmt(card.stake)}${armed ? ' · 已装备' : ''}`));
+            const button = element('button', armed ? '取消装备' : '装备并前往 777', 'club-action secondary');
+            button.type = 'button'; button.disabled = locked || (!armed && card.stake > user.balance);
+            button.addEventListener('click', () => {
+                if (callbacks.transact(() => engine.armCard(armed ? null : card.id), armed ? '已取消装备。' : '已装备，下一次 777 旋转使用此卡。') && !armed) callbacks.playSlots();
+            });
+            row.append(button); return row;
+        });
+        $('market-inventory').replaceChildren(...(rows.length ? rows : [element('p', '卡包还是空的。', 'club-muted')]));
+        const armed = engine.armedCard;
+        $('lucky-armed-card').hidden = !armed;
+        $('lucky-card-label').textContent = armed ? `${CasinoEngine.cards[armed.type].name} · 下一次下注 ${fmt(armed.stake)}` : '';
+        $('lucky-card-cancel').disabled = locked;
+    }
+    $('market-stake').addEventListener('input', render);
+    $('shark-borrow-form').addEventListener('submit', event => {
+        event.preventDefault();
+        if (callbacks.transact(() => engine.borrowShark(Number($('shark-borrow-amount').value)), '高利贷已到账，欠款及计息进度已保存。')) $('shark-borrow-form').reset();
+    });
+    $('shark-repay-form').addEventListener('submit', event => {
+        event.preventDefault();
+        if (callbacks.transact(() => engine.repayShark(Number($('shark-repay-amount').value)), '高利贷还款已入账。')) $('shark-repay-form').reset();
+    });
+    $('lucky-card-cancel').addEventListener('click', () => callbacks.transact(() => engine.armCard(null), '已取消装备。'));
+    return { render };
+}
+
 function createCasinoClub(roulette) {
     'use strict';
     let browserStorage;
@@ -3227,7 +3406,7 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -3265,7 +3444,7 @@ function createCasinoClub(roulette) {
             const data = document.createElement('div'); data.className = 'club-player-data';
             const name = document.createElement('div'); name.className = 'club-player-name'; name.textContent = p.name;
             const detail = document.createElement('div'); detail.className = 'club-player-detail';
-            detail.textContent = `${fmt(p.balance)} chips · ${fmt(p.debt)} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
+            detail.textContent = `${fmt(p.balance)} chips · ${fmt(p.debt + p.sharkDebt)} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
             data.append(name, detail);
             const button = document.createElement('button'); button.type = 'button'; button.className = 'club-action secondary';
             button.textContent = p.id === u.id ? 'Playing' : 'Switch';
@@ -3286,12 +3465,14 @@ function createCasinoClub(roulette) {
         lucky?.update(viewLocked());
         customRoulette?.update(viewLocked());
         blackjack?.update();
-        document.querySelectorAll('[data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
+        document.querySelectorAll('#roulette-controls [data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
+        economy?.render();
     }
     function refresh() { engine.save(); render(); }
     function paintView() {
         $('number-modal').classList.add('hidden'); $('number-modal').classList.remove('flex');
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
+        $('market-view').hidden = view !== 'market';
         lucky.setVisible(view === 'slots');
         $('blackjack-view').hidden = view !== 'blackjack';
         blackjack.setVisible(view === 'blackjack');
@@ -3302,7 +3483,7 @@ function createCasinoClub(roulette) {
         render();
     }
     function setView(next) {
-        if (!['roulette', 'slots', 'blackjack', 'bank'].includes(next)) return;
+        if (!['roulette', 'slots', 'blackjack', 'bank', 'market'].includes(next)) return;
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
         paintView();
@@ -3325,6 +3506,7 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
+        economy = createEconomyUI(engine, { locked: viewLocked, transact, playSlots: () => setView('slots') });
         customRoulette = bindCustomBet('roulette-custom', engine, {
             locked: viewLocked, notify: toast,
             apply(value) {
@@ -3335,7 +3517,7 @@ function createCasinoClub(roulette) {
             }
         });
         blackjack = createBlackjackTable(engine, { changed: () => updateBettingHUD(), notify: toast });
-        lucky = createLucky777(engine, {bank: () => setView('bank'),
+        lucky = createLucky777(engine, {bank: () => setView('bank'), market: () => setView('market'),
             locked: viewLocked,
             changed: () => updateBettingHUD(),
             notify: toast
@@ -3381,7 +3563,7 @@ function createCasinoClub(roulette) {
         }));
         const requestedView = window.location.hash.slice(1);
         if (blackjack.pending) view = 'blackjack';
-        else if (['roulette', 'slots', 'blackjack', 'bank'].includes(requestedView)) view = requestedView;
+        else if (['roulette', 'slots', 'blackjack', 'bank', 'market'].includes(requestedView)) view = requestedView;
         paintView();
     }
     return { engine, get view() { return view; }, busy, refresh, render, init, toast };
@@ -4471,6 +4653,7 @@ function createCasinoClub(roulette) {
             state.balance += totalPayout;
             casino.engine.lock = null;
             casino.engine.active.pendingRoulette = false;
+            if (totalWagered > 0) casino.engine.completeRound();
             casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);
 
             // Record in history ribbon

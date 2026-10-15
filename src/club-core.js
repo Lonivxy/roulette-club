@@ -2,7 +2,9 @@
 (function (root) {
     'use strict';
     const KEY = 'roulette-club-v1';
-    const LIMIT = 5000;
+    const LIMIT = 100000;
+    const SHARK_LIMIT = 1500000;
+    const INTEREST_ROUNDS = 10;
     const MAX = 1000000000;
     const symbols = ['7', '💎', 'BAR', '🔔', '🍀', '🍒'];
     const triples = [50, 25, 20, 15, 10, 5];
@@ -11,6 +13,20 @@
     const sumBets = bets => ['RED', 'BLACK', 'GREEN', 'ODD', 'EVEN'].reduce((s, k) => s + bets[k], 0)
         + Object.values(bets.numbers).reduce((s, v) => s + v, 0);
     const integer = (n, max = MAX) => Number.isSafeInteger(n) && n >= 0 && n <= max;
+    const cards = Object.freeze({
+        seven: Object.freeze({ name: '保底 777', factor: 60, multiplier: 50, reels: [0, 6, 0], symbol: '7 7 7' }),
+        diamonds: Object.freeze({ name: '保底三钻石', factor: 30, multiplier: 25, reels: [3, 11, 3], symbol: '💎 💎 💎' }),
+        bars: Object.freeze({ name: '保底三 BAR', factor: 24, multiplier: 20, reels: [5, 5, 5], symbol: 'BAR BAR BAR' })
+    });
+    const economyDefaults = () => ({ sharkDebt: 0, bankRounds: 0, sharkRounds: 0, cards: [], armedCardId: null });
+    function validEconomy(user) {
+        return integer(user.sharkDebt) && integer(user.bankRounds, 9) && integer(user.sharkRounds, 9)
+            && Array.isArray(user.cards) && user.cards.length <= 50
+            && user.cards.every(card => card && typeof card.id === 'string' && Object.hasOwn(cards, card.type)
+                && integer(card.stake, 1000000) && card.stake > 0)
+            && new Set(user.cards.map(card => card.id)).size === user.cards.length
+            && (user.armedCardId === null || user.cards.some(card => card.id === user.armedCardId));
+    }
     function validateBets(bets) {
         return bets && ['RED', 'BLACK', 'GREEN', 'ODD', 'EVEN'].every(k => integer(bets[k]))
             && bets.numbers && typeof bets.numbers === 'object' && !Array.isArray(bets.numbers)
@@ -18,7 +34,7 @@
             && integer(sumBets(bets));
     }
     function profile(id, name) {
-        return { id, name, balance: 1000, debt: 0, bets: emptyBets(), lastBets: null, history: [], pendingRoulette: false };
+        return { id, name, balance: 1000, debt: 0, bets: emptyBets(), lastBets: null, history: [], pendingRoulette: false, ...economyDefaults() };
     }
     class CasinoEngine {
         constructor(storage, random) {
@@ -35,12 +51,13 @@
                 const raw = storage && storage.getItem(KEY);
                 if (raw) {
                     const saved = JSON.parse(raw);
+                    if (Array.isArray(saved.users)) saved.users = saved.users.map(user => ({ ...economyDefaults(), ...user }));
                     if (saved.version !== 1 || !Array.isArray(saved.users) || saved.users.length < 1 || saved.users.length > 12
                         || !Array.isArray(saved.ledger) || !saved.users.some(u => u.id === saved.activeId)
                         || new Set(saved.users.map(u => u.id)).size !== saved.users.length
                         || !saved.users.every(u => typeof u.id === 'string' && typeof u.name === 'string'
-                            && u.name.trim().length > 0 && u.name.length <= 24 && integer(u.balance)
-                            && integer(u.debt, LIMIT) && validateBets(u.bets)
+                            && u.name.trim().length > 0 && u.name.length <= 24 && Number.isSafeInteger(u.balance) && Math.abs(u.balance) <= MAX
+                            && integer(u.debt) && validEconomy(u) && validateBets(u.bets)
                             && (u.lastBets === null || validateBets(u.lastBets)) && Array.isArray(u.history))) {
                         throw new Error('Invalid saved profiles');
                     }
@@ -61,12 +78,15 @@
             }
         }
         get active() { return this.data.users.find(u => u.id === this.data.activeId); }
-        get availableCredit() { return LIMIT - this.active.debt; }
+        get availableCredit() { return Math.max(0, LIMIT - this.active.debt); }
+        get availableSharkCredit() { return Math.max(0, SHARK_LIMIT - this.active.sharkDebt); }
+        get canBorrowShark() { return !this.lock && this.availableCredit === 0 && this.active.balance <= 0 && sumBets(this.active.bets) === 0 && this.availableSharkCredit > 0; }
+        get armedCard() { return this.active.cards.find(card => card.id === this.active.armedCardId) || null; }
         ensureIdle() {
             if (this.lock) throw new Error('Wait for the current spin to finish.');
         }
-        amount(value) {
-            if (!Number.isSafeInteger(value) || value <= 0 || value > 1000000) throw new Error('Enter a whole number from 1 to 1,000,000.');
+        amount(value, maximum = 1000000) {
+            if (!Number.isSafeInteger(value) || value <= 0 || value > maximum) throw new Error('Enter a whole number from 1 to ' + maximum.toLocaleString() + '.');
             return value;
         }
         save() {
@@ -120,12 +140,64 @@
         }
         repay(value) {
             this.ensureIdle();
-            const n = this.amount(value), u = this.active;
+            const n = this.amount(value, MAX), u = this.active;
             if (n > u.debt) throw new Error('That amount is greater than your outstanding debt.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips to repay that amount.');
             u.balance -= n;
             u.debt -= n;
+            if (u.debt === 0) u.bankRounds = 0;
             this.record(`${u.name} → Bank: repaid ${n.toLocaleString()} chips.`);
+            this.save();
+        }
+        borrowShark(value) {
+            this.ensureIdle();
+            const n = this.amount(value, SHARK_LIMIT), user = this.active;
+            if (!this.canBorrowShark) throw new Error('高利贷仅在银行额度耗尽、钱包 ≤ 0 且没有未结算下注时开放。');
+            if (n > this.availableSharkCredit) throw new Error('高利贷剩余额度不足。');
+            user.balance += n; user.sharkDebt += n;
+            this.record(`高利贷 → ${user.name}: 借入 ${n.toLocaleString()}；每 10 局计息 10%。`);
+            this.save();
+        }
+        repayShark(value) {
+            this.ensureIdle();
+            const n = this.amount(value, MAX), user = this.active;
+            if (n > user.sharkDebt) throw new Error('还款不能超过高利贷欠款。');
+            if (n > user.balance) throw new Error('钱包余额不足以还款。');
+            user.balance -= n; user.sharkDebt -= n;
+            if (user.sharkDebt === 0) user.sharkRounds = 0;
+            this.record(`${user.name} → 高利贷: 偿还 ${n.toLocaleString()}。`);
+            this.save();
+        }
+        completeRound() {
+            const user = this.active;
+            for (const [debt, rounds, rate, label] of [['debt', 'bankRounds', .01, '银行'], ['sharkDebt', 'sharkRounds', .10, '高利贷']]) {
+                if (user[debt] <= 0) { user[rounds] = 0; continue; }
+                user[rounds]++;
+                if (user[rounds] < INTEREST_ROUNDS) continue;
+                user[rounds] = 0;
+                const interest = Math.min(MAX - user[debt], Math.ceil(user[debt] * rate));
+                user[debt] += interest;
+                this.record(`${user.name} · ${label}利息 +${interest.toLocaleString()}；欠款 ${user[debt].toLocaleString()}。`);
+            }
+        }
+        buyCard(type, value) {
+            this.ensureIdle();
+            const item = Object.hasOwn(cards, type) ? cards[type] : null;
+            if (!item) throw new Error('请选择有效的黑市卡。');
+            const stake = this.amount(value), price = stake * item.factor, user = this.active;
+            if (user.cards.length >= 50) throw new Error('最多持有 50 张卡，请先使用已有卡。');
+            if (price + stake > user.balance) throw new Error('余额不足：需支付卡价，并留足一次绑定下注的筹码。');
+            const card = { id: root.crypto.randomUUID(), type, stake };
+            user.balance -= price; user.cards.push(card);
+            this.record(`${user.name} · 黑市购买${item.name}，价格 ${price.toLocaleString()}，绑定下注 ${stake.toLocaleString()}。`);
+            this.save(); return card;
+        }
+        armCard(id) {
+            this.ensureIdle();
+            const card = this.active.cards.find(item => item.id === id);
+            if (id !== null && !card) throw new Error('你没有这张卡。');
+            if (card && card.stake > this.active.balance) throw new Error('余额不足以支付该卡绑定的下注。');
+            this.active.armedCardId = id;
             this.save();
         }
         slotResult(reels, wager) {
@@ -140,17 +212,25 @@
         spinSlots(value, forcedIndices = null, { allIn = false } = {}) {
             this.ensureIdle();
             const n = this.amount(value), u = this.active;
+            const card = this.armedCard;
+            if (card && n !== card.stake) throw new Error('已装备卡绑定下注 ' + card.stake.toLocaleString() + '，请取消装备后更改。');
             if (allIn && n !== u.balance) throw new Error('All In must wager your whole wallet.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips for this spin.');
             if (u.balance + n * 49 > MAX) throw new Error('Your wallet is too close to its chip limit.');
-            const reels = forcedIndices === null ? Array.from({ length: 3 }, () => {
+            const reels = card ? cards[card.type].reels : forcedIndices === null ? Array.from({ length: 3 }, () => {
                 const roll = this.random();
                 if (!(roll >= 0 && roll < 1)) throw new Error('Could not generate a valid spin. Try again.');
                 return Math.floor(roll * reelStrip.length);
             }) : forcedIndices;
             const result = this.slotResult(reels, n);
             u.balance += result.net;
+            if (card) {
+                u.cards = u.cards.filter(item => item.id !== card.id); u.armedCardId = null;
+                result.cardName = cards[card.type].name;
+                this.record(`${u.name} · 已消耗${result.cardName}，绑定下注 ${n.toLocaleString()}。`);
+            }
             this.record(`${u.name} · 777${forcedIndices === null ? '' : ' (forced jackpot)'}: wager ${n.toLocaleString()}, payout ${result.payout.toLocaleString()} (${result.symbols.map(i => symbols[i]).join(' / ')}).`);
+            this.completeRound();
             this.lock = 'slots';
             this.save();
             return result;
@@ -160,6 +240,8 @@
     CasinoEngine.triples = triples;
     CasinoEngine.reelStrip = reelStrip;
     CasinoEngine.creditLimit = LIMIT;
+    CasinoEngine.sharkLimit = SHARK_LIMIT;
+    CasinoEngine.cards = cards;
     CasinoEngine.emptyBets = emptyBets;
     CasinoEngine.sumBets = sumBets;
     CasinoEngine.storageKey = KEY;
