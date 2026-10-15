@@ -1,0 +1,31 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+require('../src/club-core.js');
+test('custom amount form accepts exact whole chips and rejects invalid, unaffordable or locked changes', () => {
+    const elements = new Map(), notices = [], applied = []; let locked = false, submit;
+    for (const suffix of ['form','amount','apply']) elements.set('bet-'+suffix, { value: '', addEventListener(type, fn) { submit=fn; } });
+    const context = { document: { getElementById: id => elements.get(id) } };
+    vm.createContext(context); vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/custom-bet.js'),'utf8'),context);
+    const engine = new CasinoEngine(null,()=>0);
+    const control = context.bindCustomBet('bet',engine,{ locked:()=>locked, apply:n=>applied.push(n), notify:text=>notices.push(text) });
+    const send = value => { elements.get('bet-amount').value=value; submit({preventDefault(){}}); };
+    send('137'); assert.deepEqual(applied,[137]); assert.equal(engine.active.balance,1000);
+    for (const value of ['', '0','-5','3.5','NaN','Infinity','1000001','1001']) send(value);
+    assert.deepEqual(applied,[137]); assert.equal(notices.length,8);
+    locked=true; send('20'); control.update(true); assert.equal(elements.get('bet-amount').disabled,true);assert.equal(elements.get('bet-apply').disabled,true);
+    assert.equal(applied.length,1); assert.match(notices.at(-1),/Finish the current round/);
+});
+test('roulette places the exact custom chip on categories and numbers, without clipping low funds', () => {
+    const html=fs.readFileSync(path.join(__dirname,'../dist/index.html'),'utf8');
+    const code=html.slice(html.indexOf('        function getChipIncrement()'), html.indexOf('        function clearAllBets()'));
+    const engine=new CasinoEngine(null,()=>0), state={ selectedChip:137,customBet:true,phase:'IDLE',...engine.active }, notices=[];
+    const context={ state,casino:{engine,busy:()=>!!engine.lock,toast:text=>notices.push(text)},sfx:{playChipSound(){}},updateBettingHUD(){},renderNumberModalGrid(){} };
+    vm.createContext(context);vm.runInContext(code,context);
+    context.placeCategoryBet('RED');assert.equal(state.balance,863);assert.equal(state.bets.RED,137);
+    context.placeNumberBet(7);assert.equal(state.balance,726);assert.equal(state.bets.numbers[7],137);
+    state.balance=100;context.placeCategoryBet('BLACK');assert.equal(state.balance,100);assert.equal(state.bets.BLACK,0);assert.match(notices.at(-1),/Not enough chips/);
+    engine.lock='slots';state.balance=500;context.placeNumberBet(8);assert.equal(state.balance,500);assert.equal(state.bets.numbers[8],undefined);
+});

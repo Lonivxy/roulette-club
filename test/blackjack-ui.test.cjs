@@ -52,3 +52,13 @@ test('replacement UI resumes a pending dealer turn and does not pay twice',()=>{
     const restored=ui(new CasinoEngine(storage,()=>.5));assert.equal(restored.engine.lock,'blackjack');restored.flush();assert.equal(restored.engine.active.balance,1050);
     const next=new CasinoEngine(storage);new CasinoBlackjack(next);assert.equal(next.active.balance,1050);assert.equal(next.data.ledger.length,1);
 });
+
+test('typing a custom wager updates the deal button and debits the exact amount',()=>{
+    const t=ui();t.dealSequence([10,9,8,7,10]);
+    const input=t.elements.get('bj-wager');input.value='137';input.fire('input');
+    assert.equal(t.elements.get('bj-deal').disabled,false);t.click('deal');
+    assert.equal(t.engine.active.balance,863);assert.equal(input.disabled,true);
+    t.flush();t.click('stand');t.flush();assert.equal(t.engine.active.balance,1137);
+    input.value='1.5';input.fire('input');assert.equal(t.elements.get('bj-deal').disabled,true);
+    input.value='2000';input.fire('input');assert.equal(t.elements.get('bj-deal').disabled,true);
+});

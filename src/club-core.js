@@ -140,7 +140,7 @@
         spinSlots(value, forcedIndices = null, { allIn = false } = {}) {
             this.ensureIdle();
             const n = this.amount(value), u = this.active;
-            if (allIn ? n !== u.balance : (n < 10 || n > 1000 || n % 10 !== 0)) throw new Error('Choose a wager from 10 to 1,000 in steps of 10, or your whole wallet for All In.');
+            if (allIn && n !== u.balance) throw new Error('All In must wager your whole wallet.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips for this spin.');
             if (u.balance + n * 49 > MAX) throw new Error('Your wallet is too close to its chip limit.');
             const reels = forcedIndices === null ? Array.from({ length: 3 }, () => {

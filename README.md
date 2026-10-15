@@ -15,6 +15,8 @@ These are local profiles in the current browser, without sign-in or synchronizat
 
 ## Develop
 
+All three games accept custom whole-chip wagers from 1 to 1,000,000, subject to wallet balance and payout limits. Roulette's Custom bet form selects the exact chip amount for the next category or number placement. The 777 Custom bet button stays available when panels are hidden; applying an amount arms that exact wager for the lever. Blackjack's wager field accepts direct entry, including odd amounts; natural 3:2 payouts round half chips down so saved wallets remain whole numbers. Custom amounts never silently shrink to the available balance. Financial and wager controls lock during active rounds.
+
 No dependency installation is needed. `npm run build` assembles the source into `dist/index.html` and the sibling `roulette.html`. `npm test` runs accounting, persistence, reel payout, and compiled-script checks with Node's built-in test runner.
 
 The supplied pages are retained in `src/roulette.html` and `src/lucky-reference.html`. The build applies focused integration changes, scopes the cabinet's CSS to the slots view, wraps its script to avoid roulette name collisions, and embeds the club account controls into the downloadable page. `.openai/hosting.json` retains this site's private hosting identity.

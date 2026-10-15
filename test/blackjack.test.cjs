@@ -95,7 +95,24 @@ test('a reload during dealer play resumes the remaining draws and settles once',
 });
 test('invalid wagers fail before debit and old saved casino profiles still load',()=>{
     const t=table([10,9,8,7]);const before=JSON.stringify(t.engine.data);
-    for(const bet of [0,-10,15,1001,Infinity,NaN,10000]) assert.throws(()=>t.game.start(bet));
+    for(const bet of [0,-10,1.5,1000001,Infinity,NaN,10000]) assert.throws(()=>t.game.start(bet));
     assert.equal(JSON.stringify(t.engine.data),before);t.engine.borrow(100);t.engine.save();
     const fresh=new Engine(t.saved), game=new Blackjack(fresh);assert.equal(game.round,null);assert.equal(fresh.active.balance,1100);assert.equal(fresh.active.debt,100);
+});
+
+test('odd custom blackjack rounds half chips down and reloads the saved wallet safely',()=>{
+    const t=table([1,9,13,7]);t.game.start(137);
+    assert.equal(t.game.round.phase,'settled');assert.equal(t.game.round.result.payout,342);
+    assert.equal(t.engine.active.balance,1205);
+    const restored=new Engine(t.saved),game=new Blackjack(restored);
+    assert.equal(restored.active.balance,1205);assert.equal(game.round.result.payout,342);
+    assert.equal(game.pending,false);assert.equal(restored.storageWarning,'');
+});
+
+test('custom split and doubled wagers survive reload and keep exact stakes',()=>{
+    const t=table([8,10,8,7,2,3,10]);t.game.start(137);t.game.split();t.game.double();
+    assert.equal(t.engine.active.balance,589);
+    const restored=new Engine(t.saved),game=new Blackjack(restored);
+    assert.deepEqual(game.round.hands.map(h=>h.bet),[274,137]);assert.equal(restored.lock,'blackjack');
+    assert.equal(restored.active.balance,589);assert.equal(restored.storageWarning,'');
 });

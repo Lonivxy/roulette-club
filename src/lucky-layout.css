@@ -1,4 +1,8 @@
 #slots-view { padding: 0; overflow: hidden; }
+#slots-view #lucky-custom-toggle { position: absolute; z-index: 16; top: 14px; right: 18px; padding: 10px 16px; border: 1px solid #c8a76280; border-radius: 24px; color: #f8df99; background: #100c18ef; cursor: pointer; font-size: 13px; }
+#slots-view #lucky-custom-panel { position: absolute; z-index: 17; top: 62px; right: 18px; width: min(340px, calc(100% - 36px)); padding: 18px; border: 1px solid #c8a76280; border-radius: 14px; background: #100c18f5; }
+#slots-view #lucky-custom-panel[hidden] { display: none; }
+#slots-view #lucky-custom-panel label { flex-basis: 100%; }
 #slots-view #webgl-mount, #slots-view .hud-overlay { position: absolute; inset: 0; }
 #slots-view canvas { display: block; touch-action: none; }
 #slots-view .hud-overlay { padding: 60px 18px 18px; overflow-y: auto; gap: 24px; }

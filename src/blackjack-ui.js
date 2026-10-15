@@ -29,7 +29,9 @@ function createBlackjackTable(engine, callbacks) {
         const playing = r && r.phase !== 'settled', locked = Boolean(engine.lock) || animating;
         $('bj-seat-name').textContent = engine.active.name.toUpperCase() + ' · YOUR SEAT';
         $('bj-stake').textContent = (r ? r.hands.reduce((sum,h)=>sum+h.bet,0) : 0).toLocaleString() + ' ₵';
-        $('bj-deal').disabled = locked;
+        const validBet = Number.isSafeInteger(wager()) && wager() >= 1 && wager() <= 1000000;
+        $('bj-deal').disabled = locked || !validBet || wager() > engine.active.balance;
+        $('bj-wager').setAttribute('aria-invalid', String(!validBet));
         $('bj-deal').firstChild.textContent = r?.phase === 'settled' ? 'DEAL AGAIN ' : 'DEAL CARDS ';
         $('bj-wager').disabled = locked;
         host.querySelectorAll('[data-bj-chip], .bj-step').forEach(button => {button.disabled=locked;});
@@ -99,11 +101,12 @@ function createBlackjackTable(engine, callbacks) {
     $('bj-deal').addEventListener('click',()=>act('deal'));
     function changeWager(delta) {
         if(engine.lock||animating) return;
-        $('bj-wager').value=String(Math.max(10,Math.min(1000,(Number.isFinite(wager())?wager():50)+delta)));tone(360,.04);update();
+        $('bj-wager').value=String(Math.max(1,Math.min(1000000,(Number.isFinite(wager())?wager():50)+delta)));tone(360,.04);update();
     }
     $('bj-bet-minus').addEventListener('click',()=>changeWager(-10));$('bj-bet-plus').addEventListener('click',()=>changeWager(10));
     host.querySelectorAll('[data-bj-chip]').forEach(button=>button.addEventListener('click',()=>changeWager(Number(button.dataset.bjChip))));
     $('bj-wager').addEventListener('change',update);
+    $('bj-wager').addEventListener('input',update);
     $('bj-camera').addEventListener('click',()=>{overhead=!overhead;scene?.setOverhead(overhead);$('bj-camera').textContent=overhead?'View: Overhead':'View: Player';});
     $('bj-sound').addEventListener('click',()=>{muted=!muted;$('bj-sound').textContent=muted?'Sound: Off':'Sound: On';$('bj-sound').setAttribute('aria-pressed',String(muted));});
     window.addEventListener('keydown',event=>{

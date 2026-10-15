@@ -26,7 +26,7 @@
             || !Array.isArray(r.hands) || r.hands.length < 1 || r.hands.length > 2
             || !Number.isInteger(r.activeHand) || r.activeHand < 0 || r.activeHand > r.hands.length) return false;
         if (!r.hands.every(h => Array.isArray(h.cards) && h.cards.length >= 2 && h.cards.length <= 32 && h.cards.every(validCard)
-            && Number.isInteger(h.bet) && h.bet >= 10 && h.bet <= 2000 && h.bet % 10 === 0
+            && Number.isSafeInteger(h.bet) && h.bet >= 1 && h.bet <= 2000000
             && typeof h.split === 'boolean' && ['playing', 'stood', 'bust'].includes(h.status))) return false;
         if (r.phase === 'player' && r.hands[r.activeHand]?.status !== 'playing') return false;
         const counts = new Map();
@@ -77,7 +77,6 @@
         start(value) {
             this.engine.ensureIdle();
             const bet = this.engine.amount(value), user = this.engine.active;
-            if (bet < 10 || bet > 1000 || bet % 10 !== 0) throw new Error('Choose 10–1,000 chips in steps of 10.');
             if (bet > user.balance) throw new Error('Not enough chips. Lower your bet or visit the bank.');
             if (user.balance + bet * 4 > 1000000000) throw new Error('Your wallet is too close to its chip limit.');
             const previous = this.round;
@@ -148,7 +147,8 @@
                 else if (natural) { multiplier = 2.5; label = 'Blackjack · 3:2'; }
                 else if (dealer.bust || value.total > dealer.total) { multiplier = 2; label = dealer.bust ? 'Dealer busts · You win' : 'You win'; }
                 else if (value.total === dealer.total) { multiplier = 1; label = 'Push'; }
-                return { label, total: value.total, bet: hand.bet, payout: hand.bet * multiplier };
+                // Wallets store whole chips; odd natural wagers round the half chip down.
+                return { label, total: value.total, bet: hand.bet, payout: Math.floor(hand.bet * multiplier) };
             });
             const wager = r.hands.reduce((sum, h) => sum + h.bet, 0), payout = hands.reduce((sum, h) => sum + h.payout, 0);
             r.result = { hands, wager, payout, net: payout - wager, dealer: dealer.total };

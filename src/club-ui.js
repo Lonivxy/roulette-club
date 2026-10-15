@@ -8,7 +8,7 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -65,6 +65,7 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('[data-idle-only]').forEach(el => { el.disabled = viewLocked(); });
         document.querySelectorAll('[data-view]').forEach(el => { el.disabled = viewLocked(); });
         lucky?.update(viewLocked());
+        customRoulette?.update(viewLocked());
         blackjack?.update();
         document.querySelectorAll('[data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
     }
@@ -105,6 +106,15 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
+        customRoulette = bindCustomBet('roulette-custom', engine, {
+            locked: viewLocked, notify: toast,
+            apply(value) {
+                roulette.selectedChip = value; roulette.customBet = true;
+                document.querySelectorAll('.chip-btn').forEach(button => button.classList.remove('active'));
+                $('roulette-custom-selected').textContent = 'Selected: ' + fmt(value) + ' chips per bet';
+                toast('Custom chip set to ' + fmt(value) + '. Choose a category or number to place it.');
+            }
+        });
         blackjack = createBlackjackTable(engine, { changed: () => updateBettingHUD(), notify: toast });
         lucky = createLucky777(engine, {bank: () => setView('bank'),
             locked: viewLocked,

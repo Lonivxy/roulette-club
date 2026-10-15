@@ -3,6 +3,17 @@ function createLucky777(engine, callbacks) {
     const panels = document.getElementById('lucky-panels');
     const toggle = document.getElementById('lucky-panel-toggle');
     let machine = null, failed = false, visible = false;
+    const customPanel = document.getElementById('lucky-custom-panel');
+    const customToggle = document.getElementById('lucky-custom-toggle');
+    const custom = bindCustomBet('lucky-custom', engine, {
+        locked: () => !machine || callbacks.locked(), notify: callbacks.notify,
+        apply(value) { machine.setCustomBet(value); customPanel.hidden = true; customToggle.setAttribute('aria-expanded', 'false'); }
+    });
+    customToggle.addEventListener('click', () => {
+        customPanel.hidden = !customPanel.hidden;
+        customToggle.setAttribute('aria-expanded', String(!customPanel.hidden));
+        if (!customPanel.hidden) document.getElementById('lucky-custom-amount').focus();
+    });
     window.addEventListener('keydown', event => {
         if (!visible || !machine || event.repeat || event.code !== 'Space' || event.ctrlKey || event.metaKey || event.altKey || event.target.closest('input, select, textarea, button, [contenteditable]')) return;
         event.preventDefault();
@@ -17,7 +28,7 @@ function createLucky777(engine, callbacks) {
     return {
         get dragging() { return machine?.dragging || false; },
         get displayBalance() { return machine?.displayBalance ?? null; },
-        update(locked) { machine?.update(locked); },
+        update(locked) { machine?.update(locked); custom.update(locked); customToggle.disabled = locked; },
         resetPlayer() { machine?.resetPlayer(); },
         setVisible(value) {
             visible = value;
@@ -31,6 +42,8 @@ function createLucky777(engine, callbacks) {
                     message.textContent = 'The 3D machine could not load. Reload with an internet connection and WebGL enabled. Your chips are safe; Players & Bank is still available.';
                     host.appendChild(message);
                     toggle.hidden = true;
+                    customToggle.hidden = true;
+                    customPanel.hidden = true;
                     document.getElementById('lucky-touch-hint').hidden = true;
                 }
             }

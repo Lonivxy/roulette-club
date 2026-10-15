@@ -14,7 +14,7 @@ replace('    </style>', read('club.css') + lucky.css + read('lucky-layout.css') 
 replace('<body>', '<body>\n' + read('club.html').replace('<!-- LUCKY_777 -->', lucky.html).replace('<!-- BLACKJACK -->', read('blackjack.html')));
 replace('class="fixed top-0 left-0 right-0 z-20', 'class="club-roulette-hud fixed top-0 left-0 right-0 z-20');
 replace('<div class="fixed bottom-0', '<div id="roulette-controls" class="fixed bottom-0');
-replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + read('lucky-input.js') + '\n' + lucky.script + '\n' + read('blackjack-core.js') + '\n' + read('blackjack-scene.js') + '\n' + read('blackjack-ui.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
+replace('    <script>\n', '    <script>\n' + read('club-core.js') + '\n' + read('custom-bet.js') + '\n' + read('lucky-input.js') + '\n' + lucky.script + '\n' + read('blackjack-core.js') + '\n' + read('blackjack-scene.js') + '\n' + read('blackjack-ui.js') + '\n' + read('club-ui.js') + '\n    </script>\n    <script>\n');
 replace('        // Helper to determine pocket color', '        const casino = createCasinoClub(state);\n        casino.init();\n        updateBettingHUD();\n        renderHistoryRibbon();\n\n        // Helper to determine pocket color');
 replace("            sfx.init();\n            hideBanner();", "            if (casino.busy() || casino.view !== 'roulette') return;\n            casino.engine.lock = 'roulette';\n            casino.engine.active.pendingRoulette = true;\n            casino.refresh();\n            sfx.init();\n            hideBanner();");
 replace('            state.balance += totalPayout;', "            state.balance += totalPayout;\n            casino.engine.lock = null;\n            casino.engine.active.pendingRoulette = false;\n            casino.engine.record(`${casino.engine.active.name} · Roulette ${num}: wager ${totalWagered.toLocaleString()}, payout ${totalPayout.toLocaleString()}.`);");
@@ -32,6 +32,26 @@ replace('            build3DScene();', "            if (!window.THREE) {\n      
 html = html.replace('let raycaster = new THREE.Raycaster();', 'let raycaster = window.THREE ? new THREE.Raycaster() : null;')
     .replace('let mouseNDC = new THREE.Vector2(0, 0);', 'let mouseNDC = window.THREE ? new THREE.Vector2(0, 0) : null;')
     .replace('let interactivePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.8);', 'let interactivePlane = window.THREE ? new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.8) : null;');
+// Custom roulette chips use an exact amount and never silently spend a smaller balance.
+replace("document.querySelectorAll('[data-bet]').forEach(btn => {", "document.querySelectorAll('#roulette-controls [data-bet]').forEach(btn => {");
+replace('                <!-- Clear / Rebet -->', `                <form id="roulette-custom-form" class="custom-bet-form" novalidate>
+                    <label for="roulette-custom-amount">Custom bet</label>
+                    <input id="roulette-custom-amount" type="number" min="1" max="1000000" step="1" inputmode="numeric" placeholder="Amount" required aria-describedby="roulette-custom-selected">
+                    <button id="roulette-custom-apply" type="submit">Use amount</button>
+                    <span id="roulette-custom-selected">1–1,000,000 chips per bet</span>
+                </form>
+                <!-- Clear / Rebet -->`);
+replace("            if (state.selectedChip === 'ALL') return state.balance;", `            if (state.customBet) {
+                try {
+                    const amount = casino.engine.amount(Number(state.selectedChip));
+                    if (amount > state.balance) throw new Error('Not enough chips for your custom bet. Lower it or visit the bank.');
+                    return amount;
+                } catch (error) { casino.toast(error.message, true); return 0; }
+            }
+            if (state.selectedChip === 'ALL') return state.balance;`);
+replace("                    state.selectedChip = val === 'ALL' ? 'ALL' : Number(val);", `                    state.selectedChip = val === 'ALL' ? 'ALL' : Number(val);
+                    state.customBet = false;
+                    document.getElementById('roulette-custom-selected').textContent = 'Selected: ' + (val === 'ALL' ? 'All In' : Number(val).toLocaleString()) + ' chips per bet';`);
 fs.mkdirSync(path.join(base, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(base, 'dist', 'index.html'), html);
 fs.writeFileSync(path.join(base, '..', 'roulette.html'), html);

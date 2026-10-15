@@ -43,7 +43,7 @@ test('short pull, pointer cancellation, blur and secondary touches never spin', 
 function uiFixture(fail = false) {
     const elements = new Map(); const get = id => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); };
     const window = new Element(); let created = 0, spins = 0;
-    const context = { window, document: { getElementById: get, createElement: () => new Element() }, createLuckyMachine() {
+    const context = { window, bindCustomBet: () => ({ update() {} }), document: { getElementById: get, createElement: () => new Element() }, createLuckyMachine() {
         created++; if (fail) throw new Error('No WebGL'); return { setVisible() {}, update() {}, spin() { spins++; } };
     } };
     vm.createContext(context); vm.runInContext(read('lucky-ui.js'), context);
@@ -119,4 +119,12 @@ test('physical wager tiers and All In share accounting; an empty wallet gets no 
     assert.equal(m.engine.active.balance, 750);
     m.engine.active.balance = 0; m.machine.update(); m.click('QuickPullAndSpin()');
     assert.equal(m.engine.active.balance, 0); assert.equal(m.engine.lock, null); assert.equal(m.notices.length, 1);
+});
+
+test('custom 777 amount remains exact and refuses a reduced wallet without debiting it', () => {
+    const m = machineFixture(); m.machine.setCustomBet(137); m.click('forceJackpot777()');
+    assert.equal(m.engine.active.balance, 7713); m.finish();
+    m.engine.active.balance = 100; m.machine.update(); m.click('QuickPullAndSpin()');
+    assert.equal(m.engine.active.balance, 100); assert.equal(m.engine.lock, null);
+    assert.match(m.notices.at(-1), /enough chips/);
 });

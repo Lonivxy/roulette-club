@@ -8,11 +8,13 @@ function createLuckyMachine(engine, callbacks, host) {
     let visible = false, visualBalance = null, spinResult = null, frame = null;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let selectedBetMode = 100;
+    let customBet = 100;
     let lastWinAmount = 0;
     let isSpinning = false;
     let isMuted = false;
 
     function getActiveBetAmount() {
+      if (selectedBetMode === 'CUSTOM') return customBet;
       if (selectedBetMode === 'ALL_IN') return Math.max(0, credits);
       return Math.min(credits, selectedBetMode);
     }
@@ -1300,6 +1302,7 @@ function createLuckyMachine(engine, callbacks, host) {
 
     function refreshAllUI() {
       const activeBet = getActiveBetAmount();
+      document.getElementById('lucky-custom-toggle').textContent = selectedBetMode === 'CUSTOM' ? 'Bet: ' + customBet.toLocaleString() + ' · Edit' : 'Custom bet';
       document.getElementById('uiCredits').textContent = credits.toLocaleString();
       document.getElementById('uiBet').textContent =
         selectedBetMode === 'ALL_IN'
@@ -1652,6 +1655,12 @@ function createLuckyMachine(engine, callbacks, host) {
       button.addEventListener('click', actions[button.dataset.machineAction]);
     });
     return {
+      setCustomBet(value) {
+        if (isSpinning || callbacks.locked()) return;
+        customBet = value; selectedBetMode = 'CUSTOM';
+        setStatus('Custom bet: ' + value.toLocaleString() + ' chips. Pull the lever to spin.');
+        refreshAllUI(); callbacks.changed();
+      },
       spin: () => QuickPullAndSpin(),
       get dragging() { return isDraggingArm; },
       get displayBalance() { return visualBalance; },

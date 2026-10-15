@@ -86,6 +86,12 @@
         }
 /* Club navigation and account surfaces */
 :root { color-scheme: dark; }
+.custom-bet-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #f7db8d; font-size: 12px; }
+.custom-bet-form label { font-weight: 700; }
+.custom-bet-form input { width: 125px; min-width: 0; padding: 9px 10px; border: 1px solid #d7b96570; border-radius: 8px; color: #fff4d3; background: #100d18; user-select: text; -webkit-user-select: text; }
+.custom-bet-form button { padding: 9px 12px; border-radius: 8px; background: #e9c46a; color: #241900; font-weight: 800; cursor: pointer; }
+.custom-bet-form :disabled { opacity: .45; cursor: not-allowed; }
+.custom-bet-form span { font-size: 11px; color: #c7b991; }
 button, select, input { font: inherit; }
 button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #fde68a; outline-offset: 4px; }
 #club-nav { position: fixed; z-index: 40; top: 0; left: 0; right: 0; min-height: 66px; background: #12101deF; border-bottom: 1px solid #d5b96938; display: flex; align-items: center; gap: 18px; padding: 10px 24px; backdrop-filter: blur(20px); }
@@ -280,6 +286,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
       transition: height 0.03s linear;
     }
   #slots-view { padding: 0; overflow: hidden; }
+#slots-view #lucky-custom-toggle { position: absolute; z-index: 16; top: 14px; right: 18px; padding: 10px 16px; border: 1px solid #c8a76280; border-radius: 24px; color: #f8df99; background: #100c18ef; cursor: pointer; font-size: 13px; }
+#slots-view #lucky-custom-panel { position: absolute; z-index: 17; top: 62px; right: 18px; width: min(340px, calc(100% - 36px)); padding: 18px; border: 1px solid #c8a76280; border-radius: 14px; background: #100c18f5; }
+#slots-view #lucky-custom-panel[hidden] { display: none; }
+#slots-view #lucky-custom-panel label { flex-basis: 100%; }
 #slots-view #webgl-mount, #slots-view .hud-overlay { position: absolute; inset: 0; }
 #slots-view canvas { display: block; touch-action: none; }
 #slots-view .hud-overlay { padding: 60px 18px 18px; overflow-y: auto; gap: 24px; }
@@ -478,7 +488,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 
   </div>
 
-  <button id="lucky-panel-toggle" type="button" aria-controls="lucky-panels" aria-expanded="false">Show controls</button><p id="lucky-touch-hint">Tap a bet button · Pull the red lever</p><p id="lucky-accessible-result" class="lucky-sr-only" role="status" aria-live="polite"></p></section>
+  <button id="lucky-panel-toggle" type="button" aria-controls="lucky-panels" aria-expanded="false">Show controls</button><button id="lucky-custom-toggle" type="button" aria-controls="lucky-custom-panel" aria-expanded="false">Custom bet</button><div id="lucky-custom-panel" hidden><form id="lucky-custom-form" class="custom-bet-form" novalidate><label for="lucky-custom-amount">Custom bet · 1–1,000,000 chips</label><input id="lucky-custom-amount" type="number" min="1" max="1000000" step="1" inputmode="numeric" value="100" required><button id="lucky-custom-apply" type="submit">Use amount</button></form></div><p id="lucky-touch-hint">Tap a bet button · Pull the red lever</p><p id="lucky-accessible-result" class="lucky-sr-only" role="status" aria-live="polite"></p></section>
 <section id="blackjack-view" class="club-view" role="tabpanel" aria-labelledby="tab-blackjack" hidden>
     <div class="bj-shell">
         <header class="bj-heading"><div><div class="club-eyebrow">The Reserve · Six-deck classic</div><h2>BLACKJACK <span>21</span></h2></div><div class="bj-heading-actions"><button type="button" id="bj-camera" class="bj-small-btn">View: Player</button><button type="button" id="bj-sound" class="bj-small-btn" aria-pressed="false">Sound: On</button><button type="button" class="bj-small-btn" data-go-bank>Bank ↗</button></div></header>
@@ -494,10 +504,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             <div class="bj-hands" id="bj-hands" aria-label="Your blackjack hands"></div>
             <div class="bj-dealer-access" id="bj-dealer-access" aria-label="Dealer cards"></div>
             <div class="bj-controls">
-                <div class="bj-betting"><label for="bj-wager">BET / CHIPS</label><div class="bj-wager-row"><button type="button" id="bj-bet-minus" class="bj-step" aria-label="Decrease wager by 10">−</button><input type="number" id="bj-wager" min="10" max="1000" step="10" inputmode="numeric" value="50" aria-label="Blackjack wager in chips"><button type="button" id="bj-bet-plus" class="bj-step" aria-label="Increase wager by 10">+</button></div><div class="bj-chips" aria-label="Add chips to your wager"><button type="button" data-bj-chip="10">10</button><button type="button" data-bj-chip="50">50</button><button type="button" data-bj-chip="100">100</button><button type="button" data-bj-chip="500">500</button></div></div>
+                <div class="bj-betting"><label for="bj-wager">CUSTOM BET / CHIPS</label><div class="bj-wager-row"><button type="button" id="bj-bet-minus" class="bj-step" aria-label="Decrease wager by 10">−</button><input type="number" id="bj-wager" min="1" max="1000000" step="1" inputmode="numeric" value="50" aria-label="Blackjack wager in chips"><button type="button" id="bj-bet-plus" class="bj-step" aria-label="Increase wager by 10">+</button></div><p class="club-muted">Enter any whole amount · 1–1,000,000 chips</p><div class="bj-chips" aria-label="Add chips to your wager"><button type="button" data-bj-chip="10">10</button><button type="button" data-bj-chip="50">50</button><button type="button" data-bj-chip="100">100</button><button type="button" data-bj-chip="500">500</button></div></div>
                 <div class="bj-moves"><button type="button" id="bj-deal" class="bj-deal">DEAL CARDS <span>→</span></button><div class="bj-play-actions"><button type="button" id="bj-hit" disabled>HIT <kbd>H</kbd></button><button type="button" id="bj-stand" disabled>STAND <kbd>S</kbd></button><button type="button" id="bj-double" disabled>DOUBLE <kbd>D</kbd></button><button type="button" id="bj-split" disabled>SPLIT <kbd>P</kbd></button></div></div>
             </div>
-            <details class="bj-rules"><summary>Table rules & payouts</summary><p>Blackjack pays 3:2. Other wins pay 1:1; ties return your stake. Dealer stands on all 17s, including soft 17, and checks for blackjack on the deal. Double on any first two cards, including after a split. Split equal-value cards once into two hands. Split aces receive one card each. A split-hand 21 pays 1:1. No insurance or surrender. Bets: 10–1,000 chips, in steps of 10.</p><p>Winnings are credited to your player wallet. Leave and return to resume an unfinished hand.</p></details>
+            <details class="bj-rules"><summary>Table rules & payouts</summary><p>Blackjack pays 3:2. Other wins pay 1:1; ties return your stake. Dealer stands on all 17s, including soft 17, and checks for blackjack on the deal. Double on any first two cards, including after a split. Split equal-value cards once into two hands. Split aces receive one card each. A split-hand 21 pays 1:1. No insurance or surrender. Custom bets: 1–1,000,000 whole chips. Odd blackjack wagers round half-chip payouts down.</p><p>Winnings are credited to your player wallet. Leave and return to resume an unfinished hand.</p></details>
         </div>
     </div>
 </section>
@@ -653,6 +663,12 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
                     <button data-chip="ALL" class="chip-btn px-2.5 h-8 sm:h-9 rounded-full bg-gradient-to-b from-amber-400 to-amber-600 border-2 border-white text-[10px] font-black text-slate-950 shadow flex items-center justify-center">ALL IN</button>
                 </div>
 
+                <form id="roulette-custom-form" class="custom-bet-form" novalidate>
+                    <label for="roulette-custom-amount">Custom bet</label>
+                    <input id="roulette-custom-amount" type="number" min="1" max="1000000" step="1" inputmode="numeric" placeholder="Amount" required aria-describedby="roulette-custom-selected">
+                    <button id="roulette-custom-apply" type="submit">Use amount</button>
+                    <span id="roulette-custom-selected">1–1,000,000 chips per bet</span>
+                </form>
                 <!-- Clear / Rebet -->
                 <div class="flex items-center gap-1.5">
                     <button id="rebet-btn" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-white/10 text-xs font-bold text-slate-200 transition">
@@ -881,7 +897,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         spinSlots(value, forcedIndices = null, { allIn = false } = {}) {
             this.ensureIdle();
             const n = this.amount(value), u = this.active;
-            if (allIn ? n !== u.balance : (n < 10 || n > 1000 || n % 10 !== 0)) throw new Error('Choose a wager from 10 to 1,000 in steps of 10, or your whole wallet for All In.');
+            if (allIn && n !== u.balance) throw new Error('All In must wager your whole wallet.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips for this spin.');
             if (u.balance + n * 49 > MAX) throw new Error('Your wallet is too close to its chip limit.');
             const reels = forcedIndices === null ? Array.from({ length: 3 }, () => {
@@ -906,6 +922,22 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     CasinoEngine.storageKey = KEY;
     root.CasinoEngine = CasinoEngine;
 })(globalThis);
+
+function bindCustomBet(prefix, engine, options) {
+    const form = document.getElementById(prefix + '-form');
+    const input = document.getElementById(prefix + '-amount');
+    const button = document.getElementById(prefix + '-apply');
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        try {
+            if (options.locked()) throw new Error('Finish the current round before changing your bet.');
+            const value = engine.amount(input.value.trim() === '' ? NaN : Number(input.value));
+            if (value > engine.active.balance) throw new Error('Not enough chips. Lower your bet or visit the bank.');
+            options.apply(value);
+        } catch (error) { options.notify(error.message, true); }
+    });
+    return { update(locked) { input.disabled = locked; button.disabled = locked; } };
+}
 
 function createLuckyInput(canvas, actions) {
     let pointer = null, startY = 0, started = 0, ratio = 0;
@@ -966,11 +998,13 @@ function createLuckyMachine(engine, callbacks, host) {
     let visible = false, visualBalance = null, spinResult = null, frame = null;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let selectedBetMode = 100;
+    let customBet = 100;
     let lastWinAmount = 0;
     let isSpinning = false;
     let isMuted = false;
 
     function getActiveBetAmount() {
+      if (selectedBetMode === 'CUSTOM') return customBet;
       if (selectedBetMode === 'ALL_IN') return Math.max(0, credits);
       return Math.min(credits, selectedBetMode);
     }
@@ -2258,6 +2292,7 @@ function createLuckyMachine(engine, callbacks, host) {
 
     function refreshAllUI() {
       const activeBet = getActiveBetAmount();
+      document.getElementById('lucky-custom-toggle').textContent = selectedBetMode === 'CUSTOM' ? 'Bet: ' + customBet.toLocaleString() + ' · Edit' : 'Custom bet';
       document.getElementById('uiCredits').textContent = credits.toLocaleString();
       document.getElementById('uiBet').textContent =
         selectedBetMode === 'ALL_IN'
@@ -2610,6 +2645,12 @@ function createLuckyMachine(engine, callbacks, host) {
       button.addEventListener('click', actions[button.dataset.machineAction]);
     });
     return {
+      setCustomBet(value) {
+        if (isSpinning || callbacks.locked()) return;
+        customBet = value; selectedBetMode = 'CUSTOM';
+        setStatus('Custom bet: ' + value.toLocaleString() + ' chips. Pull the lever to spin.');
+        refreshAllUI(); callbacks.changed();
+      },
       spin: () => QuickPullAndSpin(),
       get dragging() { return isDraggingArm; },
       get displayBalance() { return visualBalance; },
@@ -2640,6 +2681,17 @@ function createLucky777(engine, callbacks) {
     const panels = document.getElementById('lucky-panels');
     const toggle = document.getElementById('lucky-panel-toggle');
     let machine = null, failed = false, visible = false;
+    const customPanel = document.getElementById('lucky-custom-panel');
+    const customToggle = document.getElementById('lucky-custom-toggle');
+    const custom = bindCustomBet('lucky-custom', engine, {
+        locked: () => !machine || callbacks.locked(), notify: callbacks.notify,
+        apply(value) { machine.setCustomBet(value); customPanel.hidden = true; customToggle.setAttribute('aria-expanded', 'false'); }
+    });
+    customToggle.addEventListener('click', () => {
+        customPanel.hidden = !customPanel.hidden;
+        customToggle.setAttribute('aria-expanded', String(!customPanel.hidden));
+        if (!customPanel.hidden) document.getElementById('lucky-custom-amount').focus();
+    });
     window.addEventListener('keydown', event => {
         if (!visible || !machine || event.repeat || event.code !== 'Space' || event.ctrlKey || event.metaKey || event.altKey || event.target.closest('input, select, textarea, button, [contenteditable]')) return;
         event.preventDefault();
@@ -2654,7 +2706,7 @@ function createLucky777(engine, callbacks) {
     return {
         get dragging() { return machine?.dragging || false; },
         get displayBalance() { return machine?.displayBalance ?? null; },
-        update(locked) { machine?.update(locked); },
+        update(locked) { machine?.update(locked); custom.update(locked); customToggle.disabled = locked; },
         resetPlayer() { machine?.resetPlayer(); },
         setVisible(value) {
             visible = value;
@@ -2668,6 +2720,8 @@ function createLucky777(engine, callbacks) {
                     message.textContent = 'The 3D machine could not load. Reload with an internet connection and WebGL enabled. Your chips are safe; Players & Bank is still available.';
                     host.appendChild(message);
                     toggle.hidden = true;
+                    customToggle.hidden = true;
+                    customPanel.hidden = true;
                     document.getElementById('lucky-touch-hint').hidden = true;
                 }
             }
@@ -2704,7 +2758,7 @@ function createLucky777(engine, callbacks) {
             || !Array.isArray(r.hands) || r.hands.length < 1 || r.hands.length > 2
             || !Number.isInteger(r.activeHand) || r.activeHand < 0 || r.activeHand > r.hands.length) return false;
         if (!r.hands.every(h => Array.isArray(h.cards) && h.cards.length >= 2 && h.cards.length <= 32 && h.cards.every(validCard)
-            && Number.isInteger(h.bet) && h.bet >= 10 && h.bet <= 2000 && h.bet % 10 === 0
+            && Number.isSafeInteger(h.bet) && h.bet >= 1 && h.bet <= 2000000
             && typeof h.split === 'boolean' && ['playing', 'stood', 'bust'].includes(h.status))) return false;
         if (r.phase === 'player' && r.hands[r.activeHand]?.status !== 'playing') return false;
         const counts = new Map();
@@ -2755,7 +2809,6 @@ function createLucky777(engine, callbacks) {
         start(value) {
             this.engine.ensureIdle();
             const bet = this.engine.amount(value), user = this.engine.active;
-            if (bet < 10 || bet > 1000 || bet % 10 !== 0) throw new Error('Choose 10–1,000 chips in steps of 10.');
             if (bet > user.balance) throw new Error('Not enough chips. Lower your bet or visit the bank.');
             if (user.balance + bet * 4 > 1000000000) throw new Error('Your wallet is too close to its chip limit.');
             const previous = this.round;
@@ -2826,7 +2879,8 @@ function createLucky777(engine, callbacks) {
                 else if (natural) { multiplier = 2.5; label = 'Blackjack · 3:2'; }
                 else if (dealer.bust || value.total > dealer.total) { multiplier = 2; label = dealer.bust ? 'Dealer busts · You win' : 'You win'; }
                 else if (value.total === dealer.total) { multiplier = 1; label = 'Push'; }
-                return { label, total: value.total, bet: hand.bet, payout: hand.bet * multiplier };
+                // Wallets store whole chips; odd natural wagers round the half chip down.
+                return { label, total: value.total, bet: hand.bet, payout: Math.floor(hand.bet * multiplier) };
             });
             const wager = r.hands.reduce((sum, h) => sum + h.bet, 0), payout = hands.reduce((sum, h) => sum + h.payout, 0);
             r.result = { hands, wager, payout, net: payout - wager, dealer: dealer.total };
@@ -3064,7 +3118,9 @@ function createBlackjackTable(engine, callbacks) {
         const playing = r && r.phase !== 'settled', locked = Boolean(engine.lock) || animating;
         $('bj-seat-name').textContent = engine.active.name.toUpperCase() + ' · YOUR SEAT';
         $('bj-stake').textContent = (r ? r.hands.reduce((sum,h)=>sum+h.bet,0) : 0).toLocaleString() + ' ₵';
-        $('bj-deal').disabled = locked;
+        const validBet = Number.isSafeInteger(wager()) && wager() >= 1 && wager() <= 1000000;
+        $('bj-deal').disabled = locked || !validBet || wager() > engine.active.balance;
+        $('bj-wager').setAttribute('aria-invalid', String(!validBet));
         $('bj-deal').firstChild.textContent = r?.phase === 'settled' ? 'DEAL AGAIN ' : 'DEAL CARDS ';
         $('bj-wager').disabled = locked;
         host.querySelectorAll('[data-bj-chip], .bj-step').forEach(button => {button.disabled=locked;});
@@ -3134,11 +3190,12 @@ function createBlackjackTable(engine, callbacks) {
     $('bj-deal').addEventListener('click',()=>act('deal'));
     function changeWager(delta) {
         if(engine.lock||animating) return;
-        $('bj-wager').value=String(Math.max(10,Math.min(1000,(Number.isFinite(wager())?wager():50)+delta)));tone(360,.04);update();
+        $('bj-wager').value=String(Math.max(1,Math.min(1000000,(Number.isFinite(wager())?wager():50)+delta)));tone(360,.04);update();
     }
     $('bj-bet-minus').addEventListener('click',()=>changeWager(-10));$('bj-bet-plus').addEventListener('click',()=>changeWager(10));
     host.querySelectorAll('[data-bj-chip]').forEach(button=>button.addEventListener('click',()=>changeWager(Number(button.dataset.bjChip))));
     $('bj-wager').addEventListener('change',update);
+    $('bj-wager').addEventListener('input',update);
     $('bj-camera').addEventListener('click',()=>{overhead=!overhead;scene?.setOverhead(overhead);$('bj-camera').textContent=overhead?'View: Overhead':'View: Player';});
     $('bj-sound').addEventListener('click',()=>{muted=!muted;$('bj-sound').textContent=muted?'Sound: Off':'Sound: On';$('bj-sound').setAttribute('aria-pressed',String(muted));});
     window.addEventListener('keydown',event=>{
@@ -3170,7 +3227,7 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -3227,6 +3284,7 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('[data-idle-only]').forEach(el => { el.disabled = viewLocked(); });
         document.querySelectorAll('[data-view]').forEach(el => { el.disabled = viewLocked(); });
         lucky?.update(viewLocked());
+        customRoulette?.update(viewLocked());
         blackjack?.update();
         document.querySelectorAll('[data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
     }
@@ -3267,6 +3325,15 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
+        customRoulette = bindCustomBet('roulette-custom', engine, {
+            locked: viewLocked, notify: toast,
+            apply(value) {
+                roulette.selectedChip = value; roulette.customBet = true;
+                document.querySelectorAll('.chip-btn').forEach(button => button.classList.remove('active'));
+                $('roulette-custom-selected').textContent = 'Selected: ' + fmt(value) + ' chips per bet';
+                toast('Custom chip set to ' + fmt(value) + '. Choose a category or number to place it.');
+            }
+        });
         blackjack = createBlackjackTable(engine, { changed: () => updateBettingHUD(), notify: toast });
         lucky = createLucky777(engine, {bank: () => setView('bank'),
             locked: viewLocked,
@@ -4287,6 +4354,13 @@ function createCasinoClub(roulette) {
         }
 
         function getChipIncrement() {
+            if (state.customBet) {
+                try {
+                    const amount = casino.engine.amount(Number(state.selectedChip));
+                    if (amount > state.balance) throw new Error('Not enough chips for your custom bet. Lower it or visit the bank.');
+                    return amount;
+                } catch (error) { casino.toast(error.message, true); return 0; }
+            }
             if (state.selectedChip === 'ALL') return state.balance;
             return Math.min(state.balance, Number(state.selectedChip));
         }
@@ -4676,12 +4750,14 @@ function createCasinoClub(roulette) {
                     btn.classList.add('active');
                     const val = btn.getAttribute('data-chip');
                     state.selectedChip = val === 'ALL' ? 'ALL' : Number(val);
+                    state.customBet = false;
+                    document.getElementById('roulette-custom-selected').textContent = 'Selected: ' + (val === 'ALL' ? 'All In' : Number(val).toLocaleString()) + ' chips per bet';
                     sfx.playChipSound();
                 });
             });
 
             // Category Bet Buttons
-            document.querySelectorAll('[data-bet]').forEach(btn => {
+            document.querySelectorAll('#roulette-controls [data-bet]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const cat = btn.getAttribute('data-bet');
                     placeCategoryBet(cat);
