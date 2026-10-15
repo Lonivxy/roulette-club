@@ -1,0 +1,1678 @@
+function createLuckyMachine(engine, callbacks, host) {
+
+    /* ============================================================================
+       1. GAME STATE, BETTING TIERS & WEB AUDIO SYNTHESIZER
+       ============================================================================ */
+    const BET_TIERS = [10, 50, 100, 500, 1000, 'ALL_IN'];
+    let credits = engine.active.balance;
+    let visible = false, visualBalance = null, spinResult = null, frame = null;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let selectedBetMode = 100;
+    let lastWinAmount = 0;
+    let isSpinning = false;
+    let isMuted = false;
+
+    function getActiveBetAmount() {
+      if (selectedBetMode === 'ALL_IN') return Math.max(0, credits);
+      return Math.min(credits, selectedBetMode);
+    }
+
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playSynthTone(freq, type = 'triangle', duration = 0.08, gainVal = 0.12) {
+      if (isMuted || !visible) return;
+      try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playSynthChord(freqs, type = 'triangle', duration = 0.18, gainVal = 0.11) {
+      freqs.forEach((f, idx) => {
+        setTimeout(() => playSynthTone(f, type, duration, gainVal), idx * 42);
+      });
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      document.getElementById('muteBtn').textContent = isMuted ? '🔇 Muted' : '🔊 SFX';
+    }
+
+    function setStatus(text) {
+      document.getElementById('statusTicker').textContent = text;
+    }
+
+    /* ============================================================================
+       2. THREE.JS RENDERER & PROCEDURAL STUDIO HDRI ENVIRONMENT (PMREMGenerator)
+       ============================================================================ */
+    const mount = document.getElementById('webgl-mount');
+    const scene = new THREE.Scene();
+
+    // Crisp, close-up perspective camera so reels, buttons, and joystick are crystal clear
+    const camera = new THREE.PerspectiveCamera(35, Math.max(1, host.clientWidth) / Math.max(1, host.clientHeight), 0.1, 100);
+    const fitDistance = () => Math.max(11.5, 3.6 / (Math.tan(Math.PI * 35 / 360) * camera.aspect) + 2.5);
+    const camTargetPos = new THREE.Vector3(0.68, 0.75, fitDistance());
+    const camLookTarget = new THREE.Vector3(0.24, 0.08, 0.15);
+    camera.position.copy(camTargetPos);
+    camera.lookAt(camLookTarget);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(Math.max(1, host.clientWidth), Math.max(1, host.clientHeight));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.95;
+    mount.appendChild(renderer.domElement);
+
+    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+
+    // Build a procedural Studio HDRI Reflection Environment via PMREMGenerator
+    // with balanced contrast so gold and gunmetal look rich without washing out
+    function buildStudioEnvironment() {
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      pmremGenerator.compileCubemapShader();
+
+      const envScene = new THREE.Scene();
+      envScene.background = new THREE.Color(0x06040a);
+
+      // Overhead studio softbox
+      const topBox = new THREE.Mesh(
+        new THREE.PlaneGeometry(20, 20),
+        new THREE.MeshBasicMaterial({ color: 0xffe8b3, side: THREE.DoubleSide })
+      );
+      topBox.position.set(0, 12, 0);
+      topBox.rotation.x = Math.PI / 2;
+      envScene.add(topBox);
+
+      // Warm Las Vegas Gold Left Strip
+      const leftStrip = new THREE.Mesh(
+        new THREE.PlaneGeometry(16, 10),
+        new THREE.MeshBasicMaterial({ color: 0xd4af37, side: THREE.DoubleSide })
+      );
+      leftStrip.position.set(-12, 3, 4);
+      leftStrip.rotation.y = Math.PI / 2;
+      envScene.add(leftStrip);
+
+      // Warm Amber Right Strip
+      const rightStrip = new THREE.Mesh(
+        new THREE.PlaneGeometry(16, 10),
+        new THREE.MeshBasicMaterial({ color: 0xb45309, side: THREE.DoubleSide })
+      );
+      rightStrip.position.set(12, 3, 4);
+      rightStrip.rotation.y = -Math.PI / 2;
+      envScene.add(rightStrip);
+
+      // Subtle Cool Rim Accent
+      const backStrip = new THREE.Mesh(
+        new THREE.PlaneGeometry(18, 8),
+        new THREE.MeshBasicMaterial({ color: 0x1e293b, side: THREE.DoubleSide })
+      );
+      backStrip.position.set(0, 6, -12);
+      envScene.add(backStrip);
+
+      const envRT = pmremGenerator.fromScene(envScene, 0.04);
+      scene.environment = envRT.texture;
+      pmremGenerator.dispose();
+    }
+    buildStudioEnvironment();
+
+    // Direct Scene Lights — balanced for deep casino contrast with zero reel glare hotspot
+    const ambientLight = new THREE.AmbientLight(0xfff5e4, 0.42);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffe8bf, 1.25);
+    keyLight.position.set(5, 9, 6);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.35);
+    fillLight.position.set(-6, 3, 4);
+    scene.add(fillLight);
+
+    const cabinetGlowLight = new THREE.PointLight(0xf59e0b, 0.9, 10);
+    cabinetGlowLight.position.set(0, 2.5, 2.2);
+    scene.add(cabinetGlowLight);
+
+    const leverHighlightLight = new THREE.PointLight(0xff3344, 1.1, 6);
+    leverHighlightLight.position.set(3.0, 1.2, 2.2);
+    scene.add(leverHighlightLight);
+
+    /* ============================================================================
+       3. HIGH-CONTRAST CASINO PBR MATERIALS (DARK CHROME, 24K GOLD, OBSIDIAN-CRIMSON)
+       ============================================================================ */
+    const mirrorChromeMat = new THREE.MeshStandardMaterial({
+      color: 0x3f3f46,
+      metalness: 0.85,
+      roughness: 0.2,
+      envMapIntensity: 1.0
+    });
+
+    const gold24kMat = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      metalness: 0.88,
+      roughness: 0.22,
+      envMapIntensity: 1.1
+    });
+
+    const brushedObsidianMat = new THREE.MeshStandardMaterial({
+      color: 0x0d0b14,
+      metalness: 0.7,
+      roughness: 0.35,
+      envMapIntensity: 0.8
+    });
+
+    const crimsonLacquerMat = new THREE.MeshStandardMaterial({
+      color: 0x1a0509,
+      metalness: 0.65,
+      roughness: 0.35,
+      envMapIntensity: 0.75
+    });
+
+    const gunmetalDrumMat = new THREE.MeshStandardMaterial({
+      color: 0x11131a,
+      metalness: 0.8,
+      roughness: 0.35,
+      envMapIntensity: 0.6
+    });
+
+    const rubberBootMat = new THREE.MeshStandardMaterial({
+      color: 0x121216,
+      metalness: 0.1,
+      roughness: 0.75
+    });
+
+    /* ============================================================================
+       4. HIGH-DPI UPRIGHT VECTOR CASINO SYMBOL ARTWORK GENERATOR (512x340)
+       ============================================================================ */
+    const SYMBOL_DEFS = [
+      { id: 'SEVEN',   name: 'LUCKY 777', mult: 50 },
+      { id: 'DIAMOND', name: 'DIAMOND',   mult: 25 },
+      { id: 'BAR',     name: 'TRIPLE BAR',mult: 20 },
+      { id: 'BELL',    name: 'GOLD BELL', mult: 15 },
+      { id: 'CLOVER',  name: 'CLOVER',    mult: 10 },
+      { id: 'CHERRY',  name: 'CHERRIES',  mult: 5  }
+    ];
+    const SYM_BY_ID = {};
+    SYMBOL_DEFS.forEach(s => { SYM_BY_ID[s.id] = s; });
+
+    // 12 stops per cylindrical drum
+    const REEL_STRIP = [
+      'SEVEN', 'CHERRY', 'BELL', 'DIAMOND',
+      'CLOVER', 'BAR', 'SEVEN', 'CHERRY',
+      'CLOVER', 'BELL', 'CHERRY', 'DIAMOND'
+    ];
+    const STOP_COUNT = REEL_STRIP.length; // 12
+    const STOP_ANGLE = (Math.PI * 2) / STOP_COUNT;
+
+    const symbolTextureCache = {};
+
+    function drawStarSparkle(ctx, cx, cy, outerR, innerR, points = 4, color = '#ffffff') {
+      ctx.save();
+      ctx.beginPath();
+      for (let i = 0; i < points * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const a = (i * Math.PI) / points;
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function createHighDPISymbolTexture(symId) {
+      if (symbolTextureCache[symId]) return symbolTextureCache[symId];
+
+      const W = 512;
+      const H = 340;
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const ctx = c.getContext('2d');
+
+      // Rich warm ivory/gold radial casino card background (#fffbeb to #fde68a)
+      const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 18, W / 2, H / 2, 285);
+      bgGrad.addColorStop(0, '#fffbeb');
+      bgGrad.addColorStop(0.7, '#fde68a');
+      bgGrad.addColorStop(1, '#f59e0b');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Subtle warm sunburst rays
+      ctx.save();
+      ctx.translate(W / 2, H / 2 - 12);
+      ctx.fillStyle = 'rgba(217, 119, 6, 0.08)';
+      for (let i = 0; i < 16; i++) {
+        ctx.rotate((Math.PI * 2) / 16);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(320, -18);
+        ctx.lineTo(320, 18);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Crisp inner & outer borders (#b45309)
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(5, 5, W - 10, H - 10);
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(14, 14, W - 28, H - 28);
+
+      // Upright Vector Artwork per Symbol
+      if (symId === 'SEVEN') {
+        const drawVegasSeven = (cx, cy, scale, angle) => {
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(angle);
+          ctx.scale(scale, scale);
+
+          const define7Path = () => {
+            ctx.beginPath();
+            ctx.moveTo(-85, -95);
+            ctx.lineTo(90, -95);
+            ctx.lineTo(90, -48);
+            ctx.bezierCurveTo(42, 0, 12, 55, -2, 105);
+            ctx.lineTo(-58, 105);
+            ctx.bezierCurveTo(-40, 45, -5, -12, 34, -52);
+            ctx.lineTo(-85, -52);
+            ctx.closePath();
+          };
+
+          // 3D Extrusion Shadow
+          ctx.save();
+          ctx.translate(8, 12);
+          define7Path();
+          ctx.fillStyle = '#2a0404';
+          ctx.fill();
+          ctx.restore();
+
+          // Gold Metallic Outer Bevel
+          define7Path();
+          ctx.lineWidth = 18;
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = '#d97706';
+          ctx.stroke();
+
+          // Crimson Candy Gradient Fill
+          const redGrad = ctx.createLinearGradient(0, -95, 0, 105);
+          redGrad.addColorStop(0, '#ff3b3b');
+          redGrad.addColorStop(0.45, '#dc2626');
+          redGrad.addColorStop(1, '#7f1d1d');
+          ctx.fillStyle = redGrad;
+          ctx.fill();
+
+          // Inner Gold Rim
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#fef08a';
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        drawVegasSeven(145, 142, 0.68, -0.14);
+        drawVegasSeven(367, 142, 0.68, 0.14);
+        drawVegasSeven(256, 134, 0.96, 0);
+
+        drawStarSparkle(ctx, 180, 56, 22, 5, 4, '#ffffff');
+        drawStarSparkle(ctx, 340, 68, 18, 4, 4, '#ffffff');
+
+        // Bottom Jackpot Ribbon
+        ctx.fillStyle = '#450a0a';
+        ctx.fillRect(96, 262, 320, 46);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(96, 262, 320, 46);
+        ctx.font = '900 28px Orbitron, sans-serif';
+        ctx.fillStyle = '#fef08a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('JACKPOT 50×', 256, 286);
+      }
+
+      else if (symId === 'DIAMOND') {
+        const cx = 256, cy = 136;
+        ctx.save();
+        ctx.fillStyle = 'rgba(3, 105, 161, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(cx - 78, cy - 68);
+        ctx.lineTo(cx + 78, cy - 68);
+        ctx.lineTo(cx + 118, cy - 18);
+        ctx.lineTo(cx, cy + 104);
+        ctx.lineTo(cx - 118, cy - 18);
+        ctx.closePath();
+        ctx.fill();
+
+        const dGrad = ctx.createLinearGradient(cx - 110, cy - 75, cx + 110, cy + 95);
+        dGrad.addColorStop(0, '#38bdf8');
+        dGrad.addColorStop(0.5, '#0284c7');
+        dGrad.addColorStop(1, '#1e3a8a');
+        ctx.fillStyle = dGrad;
+        ctx.beginPath();
+        ctx.moveTo(cx - 76, cy - 74);
+        ctx.lineTo(cx + 76, cy - 74);
+        ctx.lineTo(cx + 116, cy - 22);
+        ctx.lineTo(cx, cy + 96);
+        ctx.lineTo(cx - 116, cy - 22);
+        ctx.closePath();
+        ctx.fill();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#0c4a6e';
+        ctx.stroke();
+
+        // Top Table Facet
+        ctx.fillStyle = '#bae6fd';
+        ctx.beginPath();
+        ctx.moveTo(cx - 52, cy - 74);
+        ctx.lineTo(cx + 52, cy - 74);
+        ctx.lineTo(cx + 64, cy - 22);
+        ctx.lineTo(cx - 64, cy - 22);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bright Left Crown Facet
+        ctx.fillStyle = '#e0f2fe';
+        ctx.beginPath();
+        ctx.moveTo(cx - 76, cy - 74);
+        ctx.lineTo(cx - 52, cy - 74);
+        ctx.lineTo(cx - 64, cy - 22);
+        ctx.lineTo(cx - 116, cy - 22);
+        ctx.closePath();
+        ctx.fill();
+
+        // Center Lower Pavilion Facet
+        ctx.fillStyle = '#0ea5e9';
+        ctx.beginPath();
+        ctx.moveTo(cx - 64, cy - 22);
+        ctx.lineTo(cx + 64, cy - 22);
+        ctx.lineTo(cx, cy + 96);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#e0f2fe';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx - 116, cy - 22);
+        ctx.lineTo(cx + 116, cy - 22);
+        ctx.moveTo(cx - 52, cy - 74);
+        ctx.lineTo(cx - 64, cy - 22);
+        ctx.lineTo(cx, cy + 96);
+        ctx.lineTo(cx + 64, cy - 22);
+        ctx.lineTo(cx + 52, cy - 74);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.font = '900 28px Orbitron, sans-serif';
+        ctx.fillStyle = '#0c4a6e';
+        ctx.textAlign = 'center';
+        ctx.fillText('DIAMOND 25×', 256, 294);
+      }
+
+      else if (symId === 'BAR') {
+        const barYPositions = [36, 112, 188];
+        barYPositions.forEach((by) => {
+          ctx.fillStyle = 'rgba(0,0,0,0.45)';
+          ctx.fillRect(78, by + 6, 364, 60);
+
+          const rimG = ctx.createLinearGradient(74, by, 74, by + 60);
+          rimG.addColorStop(0, '#fef08a');
+          rimG.addColorStop(0.5, '#d97706');
+          rimG.addColorStop(1, '#78350f');
+          ctx.fillStyle = rimG;
+          ctx.fillRect(74, by, 364, 60);
+
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(82, by + 6, 348, 48);
+
+          ctx.font = '900 42px Orbitron, sans-serif';
+          ctx.fillStyle = '#fef08a';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('B A R', 256, by + 32);
+
+          [96, 416].forEach(rx => {
+            ctx.beginPath();
+            ctx.arc(rx, by + 30, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#facc15';
+            ctx.fill();
+          });
+        });
+
+        ctx.font = '900 26px Orbitron, sans-serif';
+        ctx.fillStyle = '#451a03';
+        ctx.textAlign = 'center';
+        ctx.fillText('TRIPLE BAR 20×', 256, 296);
+      }
+
+      else if (symId === 'BELL') {
+        const cx = 256, cy = 142;
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy + 78, 22, 0, Math.PI * 2);
+        ctx.fillStyle = '#78350f';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#b45309';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy - 82, 22, Math.PI, 0);
+        ctx.lineWidth = 12;
+        ctx.strokeStyle = '#92400e';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - 52, cy - 72);
+        ctx.quadraticCurveTo(cx, cy - 88, cx + 52, cy - 72);
+        ctx.bezierCurveTo(cx + 68, cy - 10, cx + 95, cy + 45, cx + 114, cy + 68);
+        ctx.lineTo(cx - 114, cy + 68);
+        ctx.bezierCurveTo(cx - 95, cy + 45, cx - 68, cy - 10, cx - 52, cy - 72);
+        ctx.closePath();
+
+        const bellGrad = ctx.createLinearGradient(cx - 100, cy, cx + 100, cy);
+        bellGrad.addColorStop(0, '#92400e');
+        bellGrad.addColorStop(0.3, '#fde047');
+        bellGrad.addColorStop(0.55, '#d97706');
+        bellGrad.addColorStop(0.82, '#fef08a');
+        bellGrad.addColorStop(1, '#78350f');
+        ctx.fillStyle = bellGrad;
+        ctx.fill();
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#78350f';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - 26, cy - 62);
+        ctx.quadraticCurveTo(cx - 38, cy, cx - 62, cy + 54);
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.font = '900 28px Orbitron, sans-serif';
+        ctx.fillStyle = '#78350f';
+        ctx.textAlign = 'center';
+        ctx.fillText('GOLD BELL 15×', 256, 294);
+      }
+
+      else if (symId === 'CLOVER') {
+        const cx = 256, cy = 134;
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + 10);
+        ctx.quadraticCurveTo(cx + 12, cy + 68, cx + 38, cy + 98);
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#14532d';
+        ctx.stroke();
+
+        for (let i = 0; i < 4; i++) {
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate((i * Math.PI) / 2 + Math.PI / 4);
+
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.bezierCurveTo(-55, -25, -65, -92, -18, -98);
+          ctx.bezierCurveTo(0, -100, 0, -78, 0, -78);
+          ctx.bezierCurveTo(0, -78, 0, -100, 18, -98);
+          ctx.bezierCurveTo(65, -92, 55, -25, 0, 0);
+          ctx.closePath();
+
+          const leafG = ctx.createRadialGradient(0, -52, 5, 0, -52, 65);
+          leafG.addColorStop(0, '#4ade80');
+          leafG.addColorStop(0.55, '#15803d');
+          leafG.addColorStop(1, '#052e16');
+          ctx.fillStyle = leafG;
+          ctx.fill();
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = '#b45309';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(0, -10);
+          ctx.lineTo(0, -68);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#bbf7d0';
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fill();
+        ctx.restore();
+
+        ctx.font = '900 28px Orbitron, sans-serif';
+        ctx.fillStyle = '#14532d';
+        ctx.textAlign = 'center';
+        ctx.fillText('LUCKY CLOVER 10×', 256, 294);
+      }
+
+      else if (symId === 'CHERRY') {
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.moveTo(188, 174);
+        ctx.quadraticCurveTo(215, 75, 268, 44);
+        ctx.quadraticCurveTo(295, 95, 326, 180);
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#15803d';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(268, 44);
+        ctx.quadraticCurveTo(325, 22, 352, 64);
+        ctx.quadraticCurveTo(305, 84, 268, 44);
+        ctx.fillStyle = '#16a34a';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#14532d';
+        ctx.stroke();
+
+        const drawCherryBall = (x, y, r) => {
+          ctx.beginPath();
+          ctx.arc(x + 5, y + 8, r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,0,0,0.32)';
+          ctx.fill();
+
+          const cg = ctx.createRadialGradient(x - r * 0.32, y - r * 0.32, 6, x, y, r);
+          cg.addColorStop(0, '#fb7185');
+          cg.addColorStop(0.3, '#e11d48');
+          cg.addColorStop(0.78, '#9f1239');
+          cg.addColorStop(1, '#4c0519');
+
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fillStyle = cg;
+          ctx.fill();
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#4c0519';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.22, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.fill();
+        };
+
+        drawCherryBall(184, 184, 54);
+        drawCherryBall(324, 188, 54);
+        ctx.restore();
+
+        ctx.font = '900 26px Orbitron, sans-serif';
+        ctx.fillStyle = '#881337';
+        ctx.textAlign = 'center';
+        ctx.fillText('CHERRY 5× / 2× / 1×', 256, 294);
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = maxAnisotropy;
+      tex.needsUpdate = true;
+      symbolTextureCache[symId] = tex;
+      return tex;
+    }
+
+    /* ============================================================================
+       5. LAS VEGAS 3D CABINET CHASSIS, CHASING BULBS & 3D DIGITAL SCOREBOARD
+       ============================================================================ */
+    const cabinetGroup = new THREE.Group();
+    scene.add(cabinetGroup);
+
+    // Reflective Dark Marble Casino Floor
+    const floorMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(45, 45),
+      new THREE.MeshStandardMaterial({ color: 0x08060e, metalness: 0.7, roughness: 0.2 })
+    );
+    floorMesh.rotation.x = -Math.PI / 2;
+    floorMesh.position.y = -2.65;
+    floorMesh.receiveShadow = true;
+    scene.add(floorMesh);
+
+    // 1. Lower Cabinet Pedestal & Recessed Stainless-Steel Coin Tray
+    const pedestalMesh = new THREE.Mesh(new THREE.BoxGeometry(4.6, 1.35, 2.7), brushedObsidianMat);
+    pedestalMesh.position.set(0, -1.95, 0);
+    pedestalMesh.castShadow = true;
+    pedestalMesh.receiveShadow = true;
+    cabinetGroup.add(pedestalMesh);
+
+    // Chrome Coin Tray Basin at bottom front
+    const trayOuter = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.32, 0.95), mirrorChromeMat);
+    trayOuter.position.set(0, -2.35, 1.48);
+    trayOuter.castShadow = true;
+    cabinetGroup.add(trayOuter);
+
+    const trayInner = new THREE.Mesh(
+      new THREE.BoxGeometry(3.26, 0.22, 0.76),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.25 })
+    );
+    trayInner.position.set(0, -2.28, 1.52);
+    cabinetGroup.add(trayInner);
+
+    // Coin Chute Dispenser Slot
+    const chuteSlot = new THREE.Mesh(
+      new THREE.BoxGeometry(0.95, 0.22, 0.2),
+      new THREE.MeshStandardMaterial({ color: 0x030305, roughness: 0.9 })
+    );
+    chuteSlot.position.set(0, -1.82, 1.34);
+    cabinetGroup.add(chuteSlot);
+
+    // 2. Main Upper Cabinet Body
+    const upperCabinet = new THREE.Mesh(new THREE.BoxGeometry(4.45, 3.1, 2.35), crimsonLacquerMat);
+    upperCabinet.position.set(0, 0.25, -0.1);
+    upperCabinet.castShadow = true;
+    upperCabinet.receiveShadow = true;
+    cabinetGroup.add(upperCabinet);
+
+    // Stepped Mirror-Chrome & 24K Gold Vertical Side Rails
+    [-2.24, 2.24].forEach(xSide => {
+      const chromeRail = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 3.2, 24), mirrorChromeMat);
+      chromeRail.position.set(xSide, 0.25, 1.06);
+      chromeRail.castShadow = true;
+      cabinetGroup.add(chromeRail);
+
+      const goldAccentRail = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.15, 16), gold24kMat);
+      goldAccentRail.position.set(xSide * 0.94, 0.25, 1.15);
+      cabinetGroup.add(goldAccentRail);
+    });
+
+    // Top & Bottom Heavy 24K Gold Moldings framing the Reel Window
+    [-0.78, 1.18].forEach(yBar => {
+      const molding = new THREE.Mesh(new THREE.BoxGeometry(4.52, 0.16, 0.36), gold24kMat);
+      molding.position.set(0, yBar, 1.08);
+      molding.castShadow = true;
+      cabinetGroup.add(molding);
+    });
+
+    // Deep Matte Obsidian Reel Bay Cavity (zero pink reflection behind the reels)
+    const reelBayCavity = new THREE.Mesh(
+      new THREE.BoxGeometry(4.12, 1.92, 1.45),
+      new THREE.MeshStandardMaterial({ color: 0x050508, roughness: 0.9, metalness: 0.05 })
+    );
+    reelBayCavity.position.set(0, 0.2, 0.15);
+    cabinetGroup.add(reelBayCavity);
+
+    // Chrome Internal Dividers between the 3 Reels
+    [-0.66, 0.66].forEach(divX => {
+      const dividerRing = new THREE.Mesh(
+        new THREE.TorusGeometry(1.06, 0.025, 16, 48, Math.PI * 0.85),
+        mirrorChromeMat
+      );
+      dividerRing.rotation.y = Math.PI / 2;
+      dividerRing.rotation.z = -Math.PI * 0.425;
+      dividerRing.position.set(divX, 0.2, 0.12);
+      cabinetGroup.add(dividerRing);
+    });
+
+    // Center Neon Payline Guide Bars & Left/Right Illuminated Payline Arrows
+    const paylineLaserMat = new THREE.MeshStandardMaterial({
+      color: 0xff2a2a,
+      emissive: 0xff2222,
+      emissiveIntensity: 1.8,
+      roughness: 0.15
+    });
+
+    // Thin top & bottom laser rails bracketing the center winning row so symbols aren't covered
+    [-0.25, 0.65].forEach(py => {
+      const laserLine = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 4.08, 12), paylineLaserMat);
+      laserLine.rotation.z = Math.PI / 2;
+      laserLine.position.set(0, py, 1.18);
+      cabinetGroup.add(laserLine);
+    });
+
+    // Left & Right 3D Payline Pointer Triangles
+    [-2.02, 2.02].forEach((px, idx) => {
+      const arrowGeo = new THREE.ConeGeometry(0.13, 0.24, 3);
+      arrowGeo.rotateZ(idx === 0 ? -Math.PI / 2 : Math.PI / 2);
+      const arrowMesh = new THREE.Mesh(arrowGeo, paylineLaserMat);
+      arrowMesh.position.set(px, 0.2, 1.22);
+      cabinetGroup.add(arrowMesh);
+    });
+
+    // 3. Top Marquee Crown with 18 Animated 3D Chasing Light Bulbs
+    function createVegasMarqueeTexture() {
+      const c = document.createElement('canvas');
+      c.width = 1024;
+      c.height = 256;
+      const ctx = c.getContext('2d');
+
+      const g = ctx.createLinearGradient(0, 0, 0, 256);
+      g.addColorStop(0, '#3b0707');
+      g.addColorStop(0.5, '#991b1b');
+      g.addColorStop(1, '#260404');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 1024, 256);
+
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(10, 10, 1004, 236);
+
+      ctx.font = '800 28px Orbitron, sans-serif';
+      ctx.fillStyle = '#fde68a';
+      ctx.textAlign = 'center';
+      ctx.fillText('★ LAS VEGAS CASINO DELUXE ★', 512, 54);
+
+      ctx.font = '900 122px Orbitron, sans-serif';
+      ctx.shadowColor = '#facc15';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = '#fef08a';
+      ctx.fillText('LUCKY 777', 512, 165);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = maxAnisotropy;
+      return tex;
+    }
+
+    const marqueeBox = new THREE.Mesh(new THREE.BoxGeometry(4.35, 0.92, 1.35), gold24kMat);
+    marqueeBox.position.set(0, 2.22, 0.25);
+    marqueeBox.castShadow = true;
+    cabinetGroup.add(marqueeBox);
+
+    const marqueeTex = createVegasMarqueeTexture();
+    const marqueePanel = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.05, 0.72),
+      new THREE.MeshStandardMaterial({
+        map: marqueeTex,
+        emissive: 0xffffff,
+        emissiveMap: marqueeTex,
+        emissiveIntensity: 0.85,
+        roughness: 0.2
+      })
+    );
+    marqueePanel.position.set(0, 2.22, 0.935);
+    cabinetGroup.add(marqueePanel);
+
+    // 18 Chasing 3D Light Bulbs around the Marquee Bezel
+    const marqueeBulbs = [];
+    const bulbGeo = new THREE.SphereGeometry(0.052, 12, 12);
+    for (let i = 0; i < 18; i++) {
+      const bx = -1.95 + (i / 17) * 3.9;
+      const bMat = new THREE.MeshStandardMaterial({
+        color: 0xfef08a,
+        emissive: i % 2 === 0 ? 0xfacc15 : 0xef4444,
+        emissiveIntensity: 1.5,
+        roughness: 0.1
+      });
+      const bulbTop = new THREE.Mesh(bulbGeo, bMat);
+      bulbTop.position.set(bx, 2.63, 0.94);
+      cabinetGroup.add(bulbTop);
+      marqueeBulbs.push({ mat: bMat, idx: i });
+    }
+
+    // 4. Integrated 3D Digital LED Scoreboard on the Cabinet Face
+    const ledCanvas = document.createElement('canvas');
+    ledCanvas.width = 1024;
+    ledCanvas.height = 160;
+    const ledCtx = ledCanvas.getContext('2d');
+    const ledTexture = new THREE.CanvasTexture(ledCanvas);
+    ledTexture.encoding = THREE.sRGBEncoding;
+    ledTexture.anisotropy = maxAnisotropy;
+
+    function update3DScoreboardTexture() {
+      ledCtx.fillStyle = '#05060b';
+      ledCtx.fillRect(0, 0, 1024, 160);
+
+      ledCtx.strokeStyle = '#f59e0b';
+      ledCtx.lineWidth = 6;
+      ledCtx.strokeRect(4, 4, 1016, 152);
+
+      // Divider lines
+      ledCtx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+      ledCtx.beginPath();
+      ledCtx.moveTo(340, 14);
+      ledCtx.lineTo(340, 146);
+      ledCtx.moveTo(682, 14);
+      ledCtx.lineTo(682, 146);
+      ledCtx.stroke();
+
+      ledCtx.textAlign = 'center';
+      ledCtx.font = '700 22px Orbitron, sans-serif';
+      ledCtx.fillStyle = '#fbbf24';
+      ledCtx.fillText('CREDITS', 170, 40);
+      ledCtx.fillText('ACTIVE BET', 512, 40);
+      ledCtx.fillText('LAST WIN', 852, 40);
+
+      ledCtx.font = '900 54px Orbitron, sans-serif';
+      // Credits Value
+      ledCtx.fillStyle = '#4ade80';
+      ledCtx.fillText(credits.toLocaleString(), 170, 110);
+
+      // Bet Value
+      const betVal = getActiveBetAmount();
+      ledCtx.fillStyle = selectedBetMode === 'ALL_IN' ? '#f87171' : '#fde047';
+      ledCtx.fillText(
+        selectedBetMode === 'ALL_IN' ? `ALL (${betVal})` : betVal.toLocaleString(),
+        512,
+        110
+      );
+
+      // Last Win Value
+      ledCtx.fillStyle = '#38bdf8';
+      ledCtx.fillText(lastWinAmount.toLocaleString(), 852, 110);
+
+      ledTexture.needsUpdate = true;
+    }
+
+    const scoreboardBezel = new THREE.Mesh(new THREE.BoxGeometry(4.1, 0.44, 0.16), mirrorChromeMat);
+    scoreboardBezel.position.set(0, -0.52, 1.15);
+    cabinetGroup.add(scoreboardBezel);
+
+    const scoreboardScreen = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.96, 0.36),
+      new THREE.MeshStandardMaterial({
+        map: ledTexture,
+        emissive: 0xffffff,
+        emissiveMap: ledTexture,
+        emissiveIntensity: 0.92,
+        roughness: 0.15
+      })
+    );
+    scoreboardScreen.position.set(0, -0.52, 1.235);
+    cabinetGroup.add(scoreboardScreen);
+
+    /* ============================================================================
+       6. UPRIGHT 3D CURVED CYLINDRICAL REEL DRUMS (CUSTOM BENT PLANE GEOMETRY)
+       ============================================================================ */
+    const reels = [];
+    const REEL_X_COORDS = [-1.28, 0, 1.28];
+    const REEL_RADIUS = 1.05;
+    const REEL_WIDTH = 1.18;
+
+    // Create a single reusable curved tile geometry bent around the X-axis
+    // so PlaneGeometry's standard UVs stay 100% UPRIGHT (never rotated 90 degrees!)
+    function createCurvedReelTileGeometry() {
+      const arcHeight = 2 * REEL_RADIUS * Math.sin(STOP_ANGLE / 2) * 0.98;
+      const geo = new THREE.PlaneGeometry(REEL_WIDTH * 0.94, arcHeight, 1, 16);
+      const pos = geo.attributes.position;
+      const norm = geo.attributes.normal;
+
+      for (let i = 0; i < pos.count; i++) {
+        const vx = pos.getX(i);
+        const vy = pos.getY(i);
+        const localTheta = (vy / (arcHeight / 2)) * (STOP_ANGLE / 2);
+        pos.setXYZ(
+          i,
+          vx,
+          Math.sin(localTheta) * REEL_RADIUS,
+          Math.cos(localTheta) * REEL_RADIUS
+        );
+        norm.setXYZ(i, 0, Math.sin(localTheta), Math.cos(localTheta));
+      }
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    const sharedCurvedTileGeo = createCurvedReelTileGeometry();
+
+    REEL_X_COORDS.forEach((rx) => {
+      const drumPivot = new THREE.Group();
+      drumPivot.position.set(rx, 0.2, 0.12);
+      cabinetGroup.add(drumPivot);
+
+      // Dark Gunmetal Inner Drum Core so no gaps ever appear between curved tiles
+      const innerDrumCore = new THREE.Mesh(
+        new THREE.CylinderGeometry(REEL_RADIUS * 0.98, REEL_RADIUS * 0.98, REEL_WIDTH, 48),
+        gunmetalDrumMat
+      );
+      innerDrumCore.rotation.z = Math.PI / 2;
+      drumPivot.add(innerDrumCore);
+
+      // Left & Right Brushed 24K Gold Outer Flange Rings
+      [-REEL_WIDTH / 2 - 0.02, REEL_WIDTH / 2 + 0.02].forEach(sideX => {
+        const flange = new THREE.Mesh(
+          new THREE.CylinderGeometry(REEL_RADIUS * 1.015, REEL_RADIUS * 1.015, 0.04, 48),
+          gold24kMat
+        );
+        flange.rotation.z = Math.PI / 2;
+        flange.position.x = sideX;
+        drumPivot.add(flange);
+      });
+
+      // Mount 12 upright curved symbol segments around the drum circumference
+      const segmentMeshes = [];
+      REEL_STRIP.forEach((symId, idx) => {
+        const tex = createHighDPISymbolTexture(symId);
+        // Glare-free satin material so there is zero white specular hotspot on the reels
+        const segMat = new THREE.MeshStandardMaterial({
+          map: tex,
+          roughness: 0.65,
+          metalness: 0.05,
+          envMapIntensity: 0.15,
+          emissive: 0xffffff,
+          emissiveMap: tex,
+          emissiveIntensity: 0.28
+        });
+
+        const segMesh = new THREE.Mesh(sharedCurvedTileGeo, segMat);
+        // Position each stop at its angle around X-axis so idx=0 faces +Z upright
+        segMesh.rotation.x = -idx * STOP_ANGLE;
+        drumPivot.add(segMesh);
+        segmentMeshes.push({ mesh: segMesh, mat: segMat, symId });
+      });
+
+      reels.push({
+        group: drumPivot,
+        segments: segmentMeshes,
+        angle: 0,
+        targetStop: 0
+      });
+    });
+
+    /* ============================================================================
+       7. SLANTED CHROME CONTROL DECK WITH 6 BACKLIT 3D BET BUTTONS + 3D SPIN BUTTON
+       ============================================================================ */
+    const deckGroup = new THREE.Group();
+    deckGroup.position.set(0, -1.06, 1.48);
+    deckGroup.rotation.x = 0.34;
+    cabinetGroup.add(deckGroup);
+
+    // Chrome Deck Base & Gold Front Wrist Rest
+    const deckBody = new THREE.Mesh(new THREE.BoxGeometry(4.56, 0.32, 1.08), brushedObsidianMat);
+    deckBody.castShadow = true;
+    deckGroup.add(deckBody);
+
+    const wristRail = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.58, 24), mirrorChromeMat);
+    wristRail.rotation.z = Math.PI / 2;
+    wristRail.position.set(0, 0.14, 0.54);
+    deckGroup.add(wristRail);
+
+    const interactiveMeshes = [];
+    const deckButtons3D = [];
+
+    function createAcrylicButtonTexture(text, bgHex, borderHex) {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 144;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = bgHex;
+      ctx.fillRect(0, 0, 256, 144);
+      ctx.strokeStyle = borderHex;
+      ctx.lineWidth = 10;
+      ctx.strokeRect(6, 6, 244, 132);
+
+      ctx.font = text.length > 4 ? '900 42px Orbitron, sans-serif' : '900 52px Orbitron, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 74);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = maxAnisotropy;
+      return tex;
+    }
+
+    // 6 Physical Bet Buttons (10, 50, 100, 500, 1000, ALL IN)
+    BET_TIERS.forEach((tier, idx) => {
+      const bx = -1.88 + idx * 0.61;
+      const isAllIn = tier === 'ALL_IN';
+      const label = isAllIn ? 'ALL IN' : String(tier);
+      const tex = createAcrylicButtonTexture(
+        label,
+        isAllIn ? '#b91c1c' : '#d97706',
+        '#fef08a'
+      );
+
+      // Chrome Bezel Housing
+      const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.14, 0.48), mirrorChromeMat);
+      bezel.position.set(bx, 0.16, 0.02);
+      deckGroup.add(bezel);
+
+      const capMat = new THREE.MeshStandardMaterial({
+        map: tex,
+        emissive: isAllIn ? 0xff2222 : 0xfacc15,
+        emissiveMap: tex,
+        emissiveIntensity: tier === 100 ? 0.95 : 0.25,
+        roughness: 0.15
+      });
+
+      const capMesh = new THREE.Mesh(new THREE.BoxGeometry(0.49, 0.14, 0.41), capMat);
+      capMesh.position.set(bx, 0.23, 0.02);
+      capMesh.userData = { action: 'BET', value: tier };
+      deckGroup.add(capMesh);
+
+      deckButtons3D.push({ mesh: capMesh, mat: capMat, value: tier });
+      interactiveMeshes.push(capMesh);
+    });
+
+    // Large Glowing 3D SPIN Push-Button on the right of the Deck
+    const spinBezel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.16, 28), gold24kMat);
+    spinBezel.position.set(1.78, 0.17, 0.02);
+    deckGroup.add(spinBezel);
+
+    const spinTex = createAcrylicButtonTexture('SPIN', '#16a34a', '#dcfce7');
+    const spinCapMat = new THREE.MeshStandardMaterial({
+      map: spinTex,
+      emissive: 0x4ade80,
+      emissiveMap: spinTex,
+      emissiveIntensity: 0.85,
+      roughness: 0.12
+    });
+    const spinCapMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.15, 28), spinCapMat);
+    spinCapMesh.rotation.y = Math.PI / 2;
+    spinCapMesh.position.set(1.78, 0.24, 0.02);
+    spinCapMesh.userData = { action: 'SPIN_BUTTON' };
+    deckGroup.add(spinCapMesh);
+    interactiveMeshes.push(spinCapMesh);
+
+    /* ============================================================================
+       8. HYPER-REALISTIC PULLABLE 3D MECHANICAL JOYSTICK / SLOT ARM
+       ============================================================================ */
+    const gearboxGroup = new THREE.Group();
+    gearboxGroup.position.set(2.35, -0.08, 0.22);
+    cabinetGroup.add(gearboxGroup);
+
+    // 1. Cast-Gold & Brushed-Chrome Rotary Ratchet Gearbox Housing bolted to cabinet
+    const gearboxFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.22, 32), gold24kMat);
+    gearboxFlange.rotation.z = Math.PI / 2;
+    gearboxFlange.castShadow = true;
+    gearboxGroup.add(gearboxFlange);
+
+    const gearboxDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.42, 32), mirrorChromeMat);
+    gearboxDrum.rotation.z = Math.PI / 2;
+    gearboxDrum.position.x = 0.18;
+    gearboxGroup.add(gearboxDrum);
+
+    // 6 Hex Bolts around Gearbox Flange
+    for (let b = 0; b < 6; b++) {
+      const ba = (b * Math.PI) / 3;
+      const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.26, 6), mirrorChromeMat);
+      bolt.rotation.z = Math.PI / 2;
+      bolt.position.set(0.02, Math.sin(ba) * 0.36, Math.cos(ba) * 0.36);
+      gearboxGroup.add(bolt);
+    }
+
+    // 2. 3D Curved LED Pull-Force Arc mounted right on the Gearbox side
+    const pullArcLEDs = [];
+    const arcLedGeo = new THREE.BoxGeometry(0.06, 0.045, 0.09);
+    for (let i = 0; i < 10; i++) {
+      // Arc from top (-20 deg) down to front (+75 deg)
+      const angle = -0.2 + (i / 9) * 1.35;
+      const ledColor = i < 4 ? 0x22c55e : i < 7 ? 0xfacc15 : 0xef4444;
+      const ledMat = new THREE.MeshStandardMaterial({
+        color: 0x1f2937,
+        emissive: ledColor,
+        emissiveIntensity: 0.08,
+        roughness: 0.2
+      });
+      const ledMesh = new THREE.Mesh(arcLedGeo, ledMat);
+      ledMesh.position.set(
+        0.14,
+        Math.cos(angle) * 0.54,
+        Math.sin(angle) * 0.54
+      );
+      ledMesh.rotation.x = angle;
+      gearboxGroup.add(ledMesh);
+      pullArcLEDs.push({ mat: ledMat, threshold: (i + 1) / 10 });
+    }
+
+    // 3. Rotating Lever Arm Pivot Group
+    const leverPivot = new THREE.Group();
+    leverPivot.position.set(0.36, 0, 0);
+    gearboxGroup.add(leverPivot);
+
+    // Ribbed Black Rubber Accordion Dust Boot (5 stacked torus rings)
+    const bootRings = [];
+    for (let r = 0; r < 5; r++) {
+      const ringRadius = 0.19 - r * 0.015;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, 0.036, 14, 28), rubberBootMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.08 + r * 0.052;
+      leverPivot.add(ring);
+      bootRings.push(ring);
+    }
+
+    // Tapered Mirror-Chrome Cylindrical Arm Shaft
+    const armShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.105, 1.95, 28), mirrorChromeMat);
+    armShaft.position.set(0, 1.05, 0);
+    armShaft.castShadow = true;
+    armShaft.userData = { action: 'JOYSTICK' };
+    leverPivot.add(armShaft);
+    interactiveMeshes.push(armShaft);
+
+    // Knurled 24K Gold Middle Collar & Upper Neck Collar
+    [0.52, 1.82].forEach(cy => {
+      const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.12, 24), gold24kMat);
+      collar.position.set(0, cy, 0);
+      collar.userData = { action: 'JOYSTICK' };
+      leverPivot.add(collar);
+      interactiveMeshes.push(collar);
+    });
+
+    // 4. Glossy Candy-Apple Red Clearcoat Ball-Top Handle with Inlaid Gold "777" Cap
+    const ballHandleMat = new THREE.MeshPhysicalMaterial({
+      color: 0xdc2626,
+      emissive: 0x7f1d1d,
+      emissiveIntensity: 0.32,
+      roughness: 0.05,
+      metalness: 0.15,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.03,
+      envMapIntensity: 1.8
+    });
+
+    const ballHandle = new THREE.Mesh(new THREE.SphereGeometry(0.36, 40, 40), ballHandleMat);
+    ballHandle.position.set(0, 2.15, 0);
+    ballHandle.castShadow = true;
+    ballHandle.userData = { action: 'JOYSTICK' };
+    leverPivot.add(ballHandle);
+    interactiveMeshes.push(ballHandle);
+
+    // Equator 24K Gold Ring around the Joystick Ball
+    const ballGoldBelt = new THREE.Mesh(new THREE.TorusGeometry(0.362, 0.024, 16, 40), gold24kMat);
+    ballGoldBelt.rotation.x = Math.PI / 2;
+    ballHandle.add(ballGoldBelt);
+
+    // Top Inlaid "777" Medallion Cap on the Ball Handle
+    const capMedallion = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.04, 28), gold24kMat);
+    capMedallion.position.set(0, 0.34, 0);
+    ballHandle.add(capMedallion);
+
+    // Pulsing 3D Golden Grab-Halo Ring around Joystick Ball when idle
+    const grabHaloMat = new THREE.MeshBasicMaterial({
+      color: 0xfde047,
+      transparent: true,
+      opacity: 0.55,
+      side: THREE.DoubleSide
+    });
+    const grabHaloRing = new THREE.Mesh(new THREE.RingGeometry(0.43, 0.48, 36), grabHaloMat);
+    grabHaloRing.position.set(0, 2.15, 0);
+    leverPivot.add(grabHaloRing);
+
+    /* ============================================================================
+       9. JOYSTICK DRAG PHYSICS, SPRING RETURN & RAYCAST INTERACTION
+       ============================================================================ */
+    const ARM_REST_ANGLE = -0.14;       // Slight backward rest angle
+    const ARM_MAX_PULL_ANGLE = 1.28;    // Full forward/downward pull (~80 degrees)
+
+    let isDraggingArm = false;
+    let armPullRatio = 0;               // 0.0 to 1.0
+    let armSpringVelocity = 0;
+    let lastRatchetTooth = 0;
+
+    leverPivot.rotation.x = ARM_REST_ANGLE;
+
+    function syncArmVisuals(ratio) {
+      const clamped = Math.max(0, Math.min(1, ratio));
+      leverPivot.rotation.x = ARM_REST_ANGLE + clamped * (ARM_MAX_PULL_ANGLE - ARM_REST_ANGLE);
+
+      // Compress rubber dust boot slightly as arm bends forward
+      bootRings.forEach((ring, idx) => {
+        ring.position.z = clamped * idx * 0.014;
+      });
+
+      // Light up the 3D LED Pull-Force Arc on the gearbox
+      pullArcLEDs.forEach(led => {
+        led.mat.emissiveIntensity = clamped >= led.threshold - 0.05 ? 1.8 : 0.08;
+      });
+
+      // Update HTML Right-Side Tension Gauge
+      const pct = Math.round(clamped * 100);
+      document.getElementById('tensionFill').style.height = `${pct}%`;
+      document.getElementById('tensionPct').textContent = `${pct}%`;
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const pointerNDC = new THREE.Vector2();
+    const input = createLuckyInput(renderer.domElement, {
+      canAct: () => visible && !isSpinning && !callbacks.locked(),
+      hitTest(x, y) {
+        pointerNDC.set(x, y);
+        scene.updateMatrixWorld(true);
+        raycaster.setFromCamera(pointerNDC, camera);
+        const hits = raycaster.intersectObjects(interactiveMeshes, false);
+        return hits[0]?.object.userData;
+      },
+      bet: setBetMode,
+      spin: () => QuickPullAndSpin(),
+      dragging(value) { isDraggingArm = value; callbacks.changed(); },
+      pull(ratio) {
+        armPullRatio = ratio;
+        armSpringVelocity = 0;
+        syncArmVisuals(ratio);
+        const tooth = Math.floor(ratio * 12);
+        if (tooth !== lastRatchetTooth) {
+          lastRatchetTooth = tooth;
+          playSynthTone(170 + tooth * 28, 'sawtooth', 0.032, 0.12);
+        }
+      }
+    });
+
+    function QuickPullAndSpin(forcedStopIndices = null) {
+      if (isSpinning || !visible || callbacks.locked()) return;
+      armPullRatio = 1.0;
+      syncArmVisuals(1.0);
+      executeReelSpin(forcedStopIndices);
+    }
+
+    /* ============================================================================
+       10. BETTING LOGIC, REEL SPIN PHYSICS & PAYOUT EVALUATION
+       ============================================================================ */
+    function setBetMode(mode) {
+      if (isSpinning || !visible || callbacks.locked()) return;
+      selectedBetMode = mode;
+
+      if (mode === 'ALL_IN') {
+        playSynthChord([220, 330, 440, 660], 'sawtooth', 0.2, 0.13);
+        setStatus('🔥 ALL IN ARMED! Every single credit is on the payline — pull the 3D joystick!');
+      } else {
+        playSynthTone(520, 'triangle', 0.06, 0.1);
+        setStatus(`Bet set to ${mode.toLocaleString()} credits. Pull the 3D joystick or click SPIN!`);
+      }
+      refreshAllUI();
+    }
+
+    function rebuyCredits() { if (!isSpinning && !isDraggingArm) callbacks.bank(); }
+
+    function refreshAllUI() {
+      const activeBet = getActiveBetAmount();
+      document.getElementById('uiCredits').textContent = credits.toLocaleString();
+      document.getElementById('uiBet').textContent =
+        selectedBetMode === 'ALL_IN'
+          ? `ALL IN (${activeBet.toLocaleString()})`
+          : activeBet.toLocaleString();
+      document.getElementById('uiWin').textContent = lastWinAmount.toLocaleString();
+
+      document.getElementById('rebuyBtn').classList.toggle('hidden', credits > 0);
+      document.getElementById('uiSpinBtn').disabled = isSpinning || callbacks.locked() || credits <= 0;
+
+      // Sync HTML bet buttons
+      document.querySelectorAll('.bet-btn').forEach(btn => {
+        const val = btn.dataset.bet === 'ALL_IN' ? 'ALL_IN' : Number(btn.dataset.bet);
+        btn.classList.toggle('active', val === selectedBetMode);
+        btn.disabled = isSpinning || callbacks.locked();
+      });
+
+      // Sync 3D Physical Deck Buttons (depress active button & boost internal LED glow)
+      deckButtons3D.forEach(b => {
+        const active = b.value === selectedBetMode;
+        b.mesh.position.y = active ? 0.19 : 0.23;
+        b.mat.emissiveIntensity = active ? 1.15 : 0.25;
+      });
+
+      // Update 3D Digital LED Scoreboard on the Cabinet
+      update3DScoreboardTexture();
+    }
+
+    function forceJackpot777() {
+      if (isSpinning || !visible || callbacks.locked()) return;
+      // Stops 0 and 6 on REEL_STRIP are both 'SEVEN'
+      QuickPullAndSpin([0, 6, 0]);
+    }
+
+    function executeReelSpin(forcedStops = null) {
+      if (isSpinning || !visible || callbacks.locked()) return;
+
+      const wager = getActiveBetAmount();
+      try { spinResult = engine.spinSlots(wager, forcedStops, { allIn: wager === engine.active.balance }); }
+      catch (error) { callbacks.notify(error.message, true); return; }
+      const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
+      isSpinning = true;
+      visualBalance = engine.active.balance - spinResult.payout;
+      credits = visualBalance;
+      lastWinAmount = 0;
+      callbacks.changed();
+
+      // Reset payline laser & segment emissive levels
+      paylineLaserMat.color.setHex(0xff2a2a);
+      paylineLaserMat.emissive.setHex(0xff2222);
+      reels.forEach(r => r.segments.forEach(s => { s.mat.emissiveIntensity = 0.28; }));
+
+      // Depress 3D Spin button momentarily
+      spinCapMesh.position.y = 0.19;
+      setTimeout(() => { spinCapMesh.position.y = 0.24; }, 220);
+
+      refreshAllUI();
+
+      // Heavy mechanical latch clunk
+      playSynthChord([135, 92, 280], 'sawtooth', 0.12, 0.18);
+      setStatus(
+        isAllInSpin
+          ? `🔥 ALL IN (${wager.toLocaleString()} CREDITS)! Reels rolling...`
+          : `🎰 Spinning for ${wager.toLocaleString()} credits...`
+      );
+
+      const chosenStops = spinResult.reels;
+      const spinTimes = reducedMotion ? [0, 0, 0] : [1500, 2100, 2750];
+      const extraTurns = [6, 8, 11];
+
+      reels.forEach((reel, rIdx) => {
+        const stopIdx = chosenStops[rIdx];
+        reel.targetStop = stopIdx;
+
+        const startRot = reel.angle;
+        const baseFullTurns = Math.ceil(startRot / (Math.PI * 2)) * (Math.PI * 2);
+        const targetRot = baseFullTurns + extraTurns[rIdx] * (Math.PI * 2) + stopIdx * STOP_ANGLE;
+
+        const duration = spinTimes[rIdx];
+        const tStart = performance.now();
+        let lastClickStep = Math.floor(startRot / STOP_ANGLE);
+
+        function updateReelSpin(now) {
+          const elapsed = now - tStart;
+          const t = duration === 0 ? 1 : Math.min(1, elapsed / duration);
+
+          // Authentic wind-up + mechanical overshoot bounce when locking into place
+          let eased;
+          if (t < 0.065) {
+            eased = -0.014 * Math.sin((t / 0.065) * Math.PI);
+          } else {
+            const st = (t - 0.065) / 0.935;
+            const c1 = 1.38;
+            const c3 = c1 + 1;
+            eased = 1 + c3 * Math.pow(st - 1, 3) + c1 * Math.pow(st - 1, 2);
+          }
+
+          const currentRot = startRot + (targetRot - startRot) * eased;
+          reel.group.rotation.x = currentRot;
+
+          const stepNow = Math.floor(currentRot / STOP_ANGLE);
+          if (stepNow !== lastClickStep && t < 0.95) {
+            lastClickStep = stepNow;
+            playSynthTone(250 + rIdx * 45, 'sine', 0.022, 0.045);
+          }
+
+          if (t < 1) {
+            requestAnimationFrame(updateReelSpin);
+          } else {
+            reel.angle = targetRot % (Math.PI * 2);
+            reel.group.rotation.x = reel.angle;
+            // Solid mechanical drum stop thud
+            playSynthTone(150 + rIdx * 55, 'triangle', 0.14, 0.24);
+
+            if (rIdx === 2) {
+              evaluatePayline(chosenStops, wager);
+            }
+          }
+        }
+
+        requestAnimationFrame(updateReelSpin);
+      });
+    }
+
+    function evaluatePayline(stops, wager) {
+      const landedSyms = stops.map(idx => SYM_BY_ID[REEL_STRIP[idx]]);
+      const [s0, s1, s2] = landedSyms;
+
+      let winMult = 0;
+      let winningReels = [];
+      let bannerMsg = '';
+
+      if (s0.id === s1.id && s1.id === s2.id) {
+        winMult = s0.mult;
+        winningReels = [0, 1, 2];
+        bannerMsg = s0.id === 'SEVEN'
+          ? `🚨 GRAND 777 VEGAS JACKPOT! ${winMult}× PAYOUT! 🚨`
+          : `✨ TRIPLE ${s0.name}! ${winMult}× PAYOUT! ✨`;
+      } else if (landedSyms.filter(s => s.id === 'SEVEN').length === 2) {
+        winMult = 5;
+        winningReels = landedSyms.map((s, i) => (s.id === 'SEVEN' ? i : -1)).filter(i => i !== -1);
+        bannerMsg = `⚡ DOUBLE LUCKY 777s! 5× Payout!`;
+      } else {
+        const cherryCount = landedSyms.filter(s => s.id === 'CHERRY').length;
+        if (cherryCount === 2) {
+          winMult = 2;
+          winningReels = landedSyms.map((s, i) => (s.id === 'CHERRY' ? i : -1)).filter(i => i !== -1);
+          bannerMsg = `🍒 Twin Cherries! 2× Payout!`;
+        } else if (cherryCount === 1) {
+          winMult = 1;
+          winningReels = landedSyms.map((s, i) => (s.id === 'CHERRY' ? i : -1)).filter(i => i !== -1);
+          bannerMsg = `🍒 Single Cherry! 1× Bet Returned!`;
+        }
+      }
+
+      if (winMult > 0) {
+        const payout = wager * winMult;
+        // The engine saved this payout before animation began.
+        lastWinAmount = payout;
+        setStatus(`${bannerMsg} (+${payout.toLocaleString()} Credits!)`);
+
+        // Turn Payline Laser Emerald Green
+        paylineLaserMat.color.setHex(0x4ade80);
+        paylineLaserMat.emissive.setHex(0x22c55e);
+
+        // Illuminate winning curved segments on the 3D drums
+        winningReels.forEach(rIdx => {
+          const stopIdx = stops[rIdx];
+          reels[rIdx].segments[stopIdx].mat.emissiveIntensity = 1.05;
+        });
+
+        const isJackpotOrBig = winMult >= 15 || payout >= 1000;
+        playSynthChord(
+          isJackpotOrBig
+            ? [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98]
+            : [440, 554.37, 659.25, 880],
+          'square',
+          0.18,
+          0.14
+        );
+        dispense3DCoins(isJackpotOrBig ? 75 : 28);
+      } else {
+        if (credits <= 0) {
+          setStatus(`No chips left. Open Players & Bank to transfer or borrow chips.`);
+        } else {
+          setStatus(`Result: ${s0.name} · ${s1.name} · ${s2.name} — Pull the 3D joystick again!`);
+        }
+      }
+
+      credits = engine.active.balance;
+      visualBalance = null;
+      engine.lock = null;
+      isSpinning = false;
+      document.getElementById('lucky-accessible-result').textContent = landedSyms.map(s => s.name).join(', ') + '. Returned ' + spinResult.payout.toLocaleString() + ' chips.';
+      spinResult = null;
+      refreshAllUI();
+      callbacks.changed();
+    }
+
+    /* ============================================================================
+       11. 3D GOLD COINS POURING INTO THE STAINLESS-STEEL COIN TRAY
+       ============================================================================ */
+    const coinGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.032, 20);
+    const activeCoins = [];
+
+    function dispense3DCoins(count) {
+      if (reducedMotion) return;
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          if (!visible) return;
+          const coinMesh = new THREE.Mesh(coinGeo, gold24kMat);
+          // Spawn from the coin chute opening
+          coinMesh.position.set(
+            (Math.random() - 0.5) * 0.75,
+            -1.82,
+            1.38
+          );
+          coinMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+          coinMesh.castShadow = true;
+          cabinetGroup.add(coinMesh);
+
+          if (i % 3 === 0) playSynthTone(1250 + Math.random() * 450, 'sine', 0.04, 0.05);
+
+          activeCoins.push({
+            mesh: coinMesh,
+            vx: (Math.random() - 0.5) * 0.06,
+            vy: 0.04 + Math.random() * 0.08,
+            vz: 0.04 + Math.random() * 0.07,
+            rx: (Math.random() - 0.5) * 0.25,
+            ry: (Math.random() - 0.5) * 0.25,
+            bounces: 0,
+            life: 0
+          });
+        }, i * 28);
+      }
+    }
+
+    /* ============================================================================
+       12. CAMERA PRESETS & MAIN ANIMATION LOOP
+       ============================================================================ */
+    function setCameraView(view) {
+      ['Play', 'Lever', 'Front'].forEach(v => {
+        const btn = document.getElementById(`cam${v}`);
+        const active = v.toLowerCase() === view;
+        btn.className = active
+          ? 'px-3 py-1 rounded-full bg-amber-400 text-black font-bold transition'
+          : 'px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition';
+      });
+
+      if (view === 'lever') {
+        // Close-up angled focus on the 3D mechanical joystick & gearbox
+        camTargetPos.set(2.35, 0.35, 5.15);
+        camLookTarget.set(1.15, 0.15, 0.2);
+      } else if (view === 'front') {
+        // Dead-center straight-on casino view
+        camTargetPos.set(0.3, 0.75, fitDistance());
+        camLookTarget.set(0, 0.08, 0.15);
+      } else {
+        // Balanced Close-Up 3D Play view
+        camTargetPos.set(0.68, 0.75, fitDistance());
+        camLookTarget.set(0.24, 0.08, 0.15);
+      }
+    }
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+      if (!visible) { frame = null; return; }
+      frame = requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+
+      // Smooth camera interpolation
+      camera.position.lerp(camTargetPos, 0.08);
+      camera.lookAt(camLookTarget);
+
+      // Chasing Marquee Light Bulbs animation
+      marqueeBulbs.forEach(b => {
+        const wave = reducedMotion ? 0 : Math.sin(elapsed * 7 - b.idx * 0.65);
+        b.mat.emissiveIntensity = isSpinning
+          ? (wave > 0 ? 2.4 : 0.25)
+          : 1.1 + 0.7 * wave;
+      });
+
+      // Idle pulsing grab-halo around the 3D Joystick Ball
+      if (!isDraggingArm && !isSpinning) {
+        grabHaloRing.visible = true;
+        const pulse = reducedMotion ? 1 : 1 + Math.sin(elapsed * 4) * 0.09;
+        grabHaloRing.scale.set(pulse, pulse, 1);
+        grabHaloMat.opacity = reducedMotion ? 0.35 : 0.35 + Math.sin(elapsed * 4) * 0.22;
+        grabHaloRing.lookAt(camera.position);
+      } else {
+        grabHaloRing.visible = false;
+      }
+
+      // Damped Harmonic Spring-Return Physics on the 3D Joystick Arm
+      if (!isDraggingArm && armPullRatio > 0.0005) {
+        const springAccel = -0.22 * armPullRatio;
+        armSpringVelocity = (armSpringVelocity + springAccel) * 0.76;
+        armPullRatio = Math.max(0, armPullRatio + armSpringVelocity);
+        syncArmVisuals(armPullRatio);
+      }
+
+      // Update 3D Gold Coins bouncing in the Coin Tray
+      for (let i = activeCoins.length - 1; i >= 0; i--) {
+        const c = activeCoins[i];
+        c.life++;
+        c.mesh.position.x += c.vx;
+        c.mesh.position.y += c.vy;
+        c.mesh.position.z += c.vz;
+        c.vy -= 0.0065; // Gravity
+        c.mesh.rotation.x += c.rx;
+        c.mesh.rotation.y += c.ry;
+
+        // Bounce inside the stainless-steel coin tray floor
+        if (c.mesh.position.y < -2.18) {
+          c.mesh.position.y = -2.18;
+          c.vy = -c.vy * 0.48;
+          c.vx *= 0.78;
+          c.vz *= 0.78;
+          c.bounces++;
+        }
+
+        if (c.life > 190) {
+          cabinetGroup.remove(c.mesh);
+          activeCoins.splice(i, 1);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      if (!visible) return;
+      camera.aspect = Math.max(1, host.clientWidth) / Math.max(1, host.clientHeight);
+      camera.updateProjectionMatrix();
+      setCameraView('play');
+      renderer.setSize(Math.max(1, host.clientWidth), Math.max(1, host.clientHeight));
+    });
+
+    refreshAllUI();
+    const actions = {
+      'rebuyCredits()': rebuyCredits, 'toggleMute()': toggleMute,
+      'forceJackpot777()': forceJackpot777, 'QuickPullAndSpin()': () => QuickPullAndSpin(),
+      "setCameraView('play')": () => setCameraView('play'),
+      "setCameraView('lever')": () => setCameraView('lever'),
+      "setCameraView('front')": () => setCameraView('front')
+    };
+    BET_TIERS.forEach(tier => { actions[typeof tier === 'number' ? `setBetMode(${tier})` : "setBetMode('ALL_IN')"] = () => setBetMode(tier); });
+    host.querySelectorAll('[data-machine-action]').forEach(button => {
+      button.addEventListener('click', actions[button.dataset.machineAction]);
+    });
+    return {
+      spin: () => QuickPullAndSpin(),
+      get dragging() { return isDraggingArm; },
+      get displayBalance() { return visualBalance; },
+      update() { credits = visualBalance ?? engine.active.balance; refreshAllUI(); },
+      resetPlayer() { lastWinAmount = 0; selectedBetMode = 100; credits = engine.active.balance; refreshAllUI(); setStatus('Playing as ' + engine.active.name + '. Tap a bet button and pull the red lever.'); },
+      setVisible(value) {
+        visible = value;
+        if (value) {
+          camera.aspect = Math.max(1, host.clientWidth) / Math.max(1, host.clientHeight);
+          camera.updateProjectionMatrix();
+          renderer.setSize(Math.max(1, host.clientWidth), Math.max(1, host.clientHeight));
+          setCameraView('play');
+          if (frame === null) animate();
+        } else {
+          input.cancel();
+          if (frame !== null) cancelAnimationFrame(frame);
+          frame = null;
+          activeCoins.forEach(c => cabinetGroup.remove(c.mesh));
+          activeCoins.length = 0;
+        }
+      }
+    };
+
+}

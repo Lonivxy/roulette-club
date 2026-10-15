@@ -12,7 +12,7 @@ function createCasinoClub(roulette) {
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
-    const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret || Boolean(blackjack?.animating);
+    const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret || Boolean(blackjack?.animating) || Boolean(lucky?.dragging);
     function toast(message, error = false) {
         clearTimeout(toastTimer);
         $('club-toast').textContent = message;
@@ -70,9 +70,9 @@ function createCasinoClub(roulette) {
     }
     function refresh() { engine.save(); render(); }
     function paintView() {
-        lucky.setVisible(view === 'slots');
         $('number-modal').classList.add('hidden'); $('number-modal').classList.remove('flex');
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
+        lucky.setVisible(view === 'slots');
         $('blackjack-view').hidden = view !== 'blackjack';
         blackjack.setVisible(view === 'blackjack');
         document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === view)));
@@ -106,7 +106,7 @@ function createCasinoClub(roulette) {
     }
     function init() {
         blackjack = createBlackjackTable(engine, { changed: () => updateBettingHUD(), notify: toast });
-        lucky = createLucky777(engine, {
+        lucky = createLucky777(engine, {bank: () => setView('bank'),
             locked: viewLocked,
             changed: () => updateBettingHUD(),
             notify: toast

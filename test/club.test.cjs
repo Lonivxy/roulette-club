@@ -83,14 +83,25 @@ test('Force 777 uses the shared wallet and cannot bypass funds or spin locks', (
     assert.throws(() => e.spinSlots(10, [0, 6, 0]), /enough chips/);
     assert.equal(e.active.balance, 5);
 });
-test('10–100 step wagers and invalid facet positions are validated before mutation', () => {
-    for (const n of [10,20,30,40,50,60,70,80,90,100]) {
+test('10–1000 step wagers and invalid facet positions are validated before mutation', () => {
+    for (const n of [10,20,30,40,50,60,70,80,90,100,500,1000]) {
         const e = engine(() => 0); assert.equal(e.spinSlots(n).wager, n);
     }
     const e = engine(() => 0), snapshot = JSON.stringify(e.data);
-    for (const n of [5,15,25,110,500]) assert.throws(() => e.spinSlots(n));
+    for (const n of [5,15,25,1010,1500]) assert.throws(() => e.spinSlots(n));
     for (const reels of [[0,6,12], [0,6,-1], [0,6], [0,6,1.5]]) assert.throws(() => e.spinSlots(20, reels));
     assert.equal(JSON.stringify(e.data), snapshot);
+});
+
+test('All In accepts an odd whole wallet but rejects partial or empty stakes', () => {
+    const e = engine(() => 0); e.active.balance = 1015;
+    assert.throws(() => e.spinSlots(1015));
+    assert.throws(() => e.spinSlots(1000, null, { allIn: true }));
+    const result = e.spinSlots(1015, [0, 6, 0], { allIn: true });
+    assert.equal(result.payout, 50750); assert.equal(e.active.balance, 50750);
+    e.lock = null; e.active.balance = 0;
+    assert.throws(() => e.spinSlots(0, null, { allIn: true }));
+    assert.equal(e.active.balance, 0);
 });
 test('losing spin debits only its stake and insufficient or invalid wagers are atomic', () => {
     let i = 0; const e = engine(() => [0.01, 0.2, 0.4][i++ % 3]);

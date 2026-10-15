@@ -3,16 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LUCKY 777 — 2.5D/3D Arcade Slot Machine</title>
+  <title>LUCKY 777 — Photorealistic 3D Vegas Slot Machine</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Chakra+Petch:wght@600;700&display=swap');
-
-    :root {
-      --cabinet-rot-x: 8deg;
-      --cabinet-rot-y: 0deg;
-      --cabinet-rot-z: 0deg;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Chakra+Petch:wght@600;700&display=swap');
 
     * {
       box-sizing: border-box;
@@ -22,778 +17,271 @@
 
     body {
       margin: 0;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at 50% 25%, rgba(220, 38, 38, 0.22), transparent 55%),
-        radial-gradient(circle at 80% 80%, rgba(234, 179, 8, 0.15), transparent 50%),
-        radial-gradient(circle at 20% 80%, rgba(147, 51, 234, 0.18), transparent 50%),
-        #07060c;
-      font-family: 'Chakra Petch', sans-serif;
-      color: #fff;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      background: radial-gradient(circle at 50% 35%, #1c0b19 0%, #09050d 60%, #030206 100%);
+      font-family: 'Chakra Petch', sans-serif;
+      color: #ffffff;
     }
 
-    /* Subtle 3D perspective floor grid */
-    .arcade-floor {
+    #webgl-mount {
       position: fixed;
       inset: 0;
-      background-image:
-        linear-gradient(rgba(234, 179, 8, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(234, 179, 8, 0.06) 1px, transparent 1px);
-      background-size: 48px 48px;
-      transform: perspective(600px) rotateX(68deg) translateY(220px) scale(2.4);
-      transform-origin: center bottom;
-      pointer-events: none;
-      z-index: 0;
+      z-index: 1;
     }
 
-    /* 3D Scene Container */
-    .scene-viewport {
-      perspective: 1300px;
-      perspective-origin: 50% 44%;
-      position: relative;
+    .hud-overlay {
+      position: fixed;
+      inset: 0;
       z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px;
-    }
-
-    /* 3D Slot Cabinet */
-    .slot-cabinet {
-      position: relative;
-      width: 500px;
-      transform-style: preserve-3d;
-      transform:
-        rotateX(var(--cabinet-rot-x))
-        rotateY(var(--cabinet-rot-y))
-        rotateZ(var(--cabinet-rot-z));
-      transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-
-    /* 3D Side Depth Walls of Cabinet */
-    .cabinet-body {
-      position: relative;
-      background: linear-gradient(180deg, #2a0912 0%, #16060b 55%, #0d0307 100%);
-      border: 4px solid #f59e0b;
-      border-radius: 28px 28px 18px 18px;
-      padding: 20px 24px 24px;
-      box-shadow:
-        0 30px 70px rgba(0, 0, 0, 0.85),
-        0 0 40px rgba(245, 158, 11, 0.22),
-        inset 0 2px 12px rgba(255, 255, 255, 0.25),
-        inset 0 -12px 28px rgba(0, 0, 0, 0.8);
-      transform-style: preserve-3d;
-    }
-
-    /* Left & Right 3D Extruded Sides */
-    .cabinet-side-left,
-    .cabinet-side-right {
-      position: absolute;
-      top: 14px;
-      bottom: 14px;
-      width: 56px;
-      background: linear-gradient(180deg, #450a0a 0%, #1c0508 50%, #090204 100%);
-      border: 2px solid #b45309;
       pointer-events: none;
-    }
-
-    .cabinet-side-left {
-      left: 0;
-      transform-origin: left center;
-      transform: rotateY(-90deg);
-      border-radius: 10px;
-    }
-
-    .cabinet-side-right {
-      right: 0;
-      transform-origin: right center;
-      transform: rotateY(90deg);
-      border-radius: 10px;
-    }
-
-    /* Top Marquee Crown (Extruded forward in Z) */
-    .marquee-crown {
-      position: relative;
-      transform: translateZ(26px);
-      background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 50%, #450a0a 100%);
-      border: 3px solid #fde047;
-      border-radius: 20px;
-      padding: 12px 16px;
-      text-align: center;
-      box-shadow:
-        0 12px 24px rgba(0, 0, 0, 0.65),
-        0 0 28px rgba(250, 204, 21, 0.35),
-        inset 0 0 18px rgba(254, 240, 138, 0.35);
-      margin-bottom: 16px;
-      overflow: hidden;
-    }
-
-    .marquee-title {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 2rem;
-      letter-spacing: 0.14em;
-      color: #fef08a;
-      text-shadow:
-        0 0 10px #facc15,
-        0 0 22px #ef4444,
-        0 3px 0 #713f12;
-      line-height: 1.05;
-    }
-
-    /* Chase Lights */
-    .bulb-strip {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 8px;
-      padding: 0 6px;
-    }
-
-    .bulb {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #fef08a;
-      box-shadow: 0 0 8px #facc15, 0 0 14px #f59e0b;
-      animation: bulbChase 0.8s infinite alternate;
-    }
-
-    .bulb:nth-child(even) {
-      animation-delay: 0.4s;
-      background: #f87171;
-      box-shadow: 0 0 8px #ef4444, 0 0 14px #dc2626;
-    }
-
-    @keyframes bulbChase {
-      0% { opacity: 0.3; transform: scale(0.82); }
-      100% { opacity: 1; transform: scale(1.15); }
-    }
-
-    /* Recessed 3D Reel Housing */
-    .reel-window-frame {
-      position: relative;
-      height: 230px;
-      background: #050508;
-      border: 5px solid #d97706;
-      border-radius: 18px;
-      box-shadow:
-        inset 0 18px 34px rgba(0, 0, 0, 0.95),
-        inset 0 -18px 34px rgba(0, 0, 0, 0.95),
-        0 4px 0 rgba(254, 240, 138, 0.35);
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      padding: 12px 16px;
-      overflow: hidden;
-      transform: translateZ(8px);
-      transform-style: preserve-3d;
-    }
-
-    /* Curved Glass Overlay + Depth Shading */
-    .reel-glass-overlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 25;
-      background:
-        linear-gradient(
-          180deg,
-          rgba(0, 0, 0, 0.88) 0%,
-          rgba(0, 0, 0, 0.18) 24%,
-          rgba(255, 255, 255, 0.07) 47%,
-          rgba(255, 255, 255, 0.0) 52%,
-          rgba(0, 0, 0, 0.22) 76%,
-          rgba(0, 0, 0, 0.9) 100%
-        );
-    }
-
-    /* Neon Payline Laser across the center */
-    .payline-bar {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 50%;
-      height: 4px;
-      transform: translateY(-50%);
-      background: linear-gradient(90deg, #ef4444, #fde047, #ef4444);
-      box-shadow: 0 0 12px #ef4444, 0 0 24px #facc15;
-      opacity: 0.65;
-      z-index: 26;
-      pointer-events: none;
-      transition: all 0.25s ease;
-    }
-
-    .payline-bar.win-active {
-      height: 6px;
-      opacity: 1;
-      background: linear-gradient(90deg, #22c55e, #fef08a, #22c55e);
-      box-shadow: 0 0 18px #4ade80, 0 0 36px #facc15;
-      animation: paylinePulse 0.35s infinite alternate;
-    }
-
-    @keyframes paylinePulse {
-      from { transform: translateY(-50%) scaleY(1); }
-      to { transform: translateY(-50%) scaleY(1.9); }
-    }
-
-    .payline-badge {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 27;
-      background: #dc2626;
-      border: 2px solid #fde047;
-      color: #fef08a;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.62rem;
-      font-weight: 800;
-      padding: 2px 5px;
-      border-radius: 6px;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
-    }
-
-    .payline-badge.left { left: 4px; }
-    .payline-badge.right { right: 4px; }
-
-    /* Individual Reel Slot Column */
-    .reel-column {
-      position: relative;
-      height: 100%;
-      perspective: 900px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at center, #1e1b2e 0%, #09080f 100%);
-      border-left: 2px solid rgba(250, 204, 21, 0.22);
-      border-right: 2px solid rgba(250, 204, 21, 0.22);
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    /* 3D Cylindrical Drum (12 facets x 30deg = 360deg) */
-    .reel-cylinder {
-      position: relative;
-      width: 100%;
-      height: 72px;
-      transform-style: preserve-3d;
-      will-change: transform;
-    }
-
-    .reel-facet {
-      position: absolute;
-      inset: 0;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(180deg, #fffbeb 0%, #fde68a 50%, #f59e0b 100%);
-      border-top: 2px solid rgba(255, 255, 255, 0.85);
-      border-bottom: 2px solid rgba(146, 64, 14, 0.65);
-      border-radius: 8px;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.6);
-    }
-
-    .reel-facet.lucky-seven-tile {
-      background: linear-gradient(180deg, #fef08a 0%, #facc15 45%, #dc2626 100%);
-      border-color: #fef9c3;
-    }
-
-    .reel-facet.win-highlight {
-      animation: tileWinGlow 0.45s infinite alternate;
-    }
-
-    @keyframes tileWinGlow {
-      from {
-        filter: brightness(1.05);
-        box-shadow: inset 0 0 12px #fef08a, 0 0 18px #facc15;
-      }
-      to {
-        filter: brightness(1.35);
-        box-shadow: inset 0 0 26px #ffffff, 0 0 28px #22c55e;
-      }
-    }
-
-    .symbol-glyph {
-      font-size: 2.25rem;
-      line-height: 1;
-      filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.35));
-    }
-
-    .symbol-seven {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 2.45rem;
-      line-height: 1;
-      background: linear-gradient(180deg, #ffffff 0%, #fef08a 30%, #ef4444 75%, #7f1d1d 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0 2px 0 #450a0a) drop-shadow(0 0 8px rgba(250, 204, 21, 0.7));
-    }
-
-    .symbol-bar {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 900;
-      font-size: 1.25rem;
-      letter-spacing: 0.08em;
-      color: #fef08a;
-      background: linear-gradient(180deg, #312e81 0%, #111827 100%);
-      border: 2px solid #facc15;
-      padding: 3px 10px;
-      border-radius: 6px;
-      box-shadow: 0 3px 0 #000;
-    }
-
-    .symbol-tag {
-      font-size: 0.58rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      color: #451a03;
-      text-transform: uppercase;
-      margin-top: 1px;
-    }
-
-    /* Digital Readout LED Panel */
-    .led-dashboard {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-top: 16px;
-      transform: translateZ(18px);
-    }
-
-    .led-box {
-      background: #090a10;
-      border: 2px solid #b45309;
-      border-radius: 12px;
-      padding: 7px 10px;
-      text-align: center;
-      box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.9);
-    }
-
-    .led-label {
-      font-size: 0.65rem;
-      color: #fbbf24;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    .led-value {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: #4ade80;
-      text-shadow: 0 0 10px rgba(74, 222, 128, 0.6);
-    }
-
-    .led-value.gold {
-      color: #facc15;
-      text-shadow: 0 0 10px rgba(250, 204, 21, 0.65);
-    }
-
-    /* 3D Protruding Control Deck */
-    .control-deck {
-      margin-top: 16px;
-      background: linear-gradient(180deg, #3f121d 0%, #1f080e 100%);
-      border: 3px solid #f59e0b;
-      border-radius: 16px;
-      padding: 14px;
-      transform: translateZ(34px) rotateX(10deg);
-      box-shadow:
-        0 16px 26px rgba(0, 0, 0, 0.75),
-        inset 0 2px 6px rgba(255, 255, 255, 0.25);
-      display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 8px;
+      padding: 12px 18px;
     }
 
-    /* 3D Arcade Push Buttons */
-    .arcade-btn {
+    .interactive {
+      pointer-events: auto;
+    }
+
+    .font-orbitron {
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* Casino Bet Chip Buttons */
+    .bet-btn {
       position: relative;
-      border: none;
-      border-radius: 12px;
       font-family: 'Orbitron', sans-serif;
       font-weight: 800;
+      font-size: 0.85rem;
+      padding: 9px 16px;
+      border-radius: 11px;
+      border: 2px solid rgba(251, 191, 36, 0.4);
+      background: linear-gradient(180deg, #271f36 0%, #110d19 100%);
+      color: #fde68a;
       cursor: pointer;
-      transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s;
-      text-transform: uppercase;
+      transition: all 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.2);
     }
 
-    .arcade-btn:active:not(:disabled) {
-      transform: translateY(4px);
+    .bet-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      border-color: #facc15;
+      color: #ffffff;
     }
 
-    .arcade-btn:disabled {
-      opacity: 0.5;
+    .bet-btn.active {
+      background: linear-gradient(180deg, #fef08a 0%, #f59e0b 55%, #b45309 100%);
+      color: #1f070b;
+      border-color: #ffffff;
+      box-shadow: 0 0 22px rgba(250, 204, 21, 0.85), 0 6px 14px rgba(0, 0, 0, 0.75);
+      transform: translateY(-3px) scale(1.05);
+    }
+
+    .bet-btn.all-in {
+      border-color: rgba(248, 113, 113, 0.65);
+      background: linear-gradient(180deg, #7f1d1d 0%, #3b0707 100%);
+      color: #fecaca;
+    }
+
+    .bet-btn.all-in.active {
+      background: linear-gradient(180deg, #fde047 0%, #ef4444 50%, #991b1b 100%);
+      color: #ffffff;
+      border-color: #fef08a;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+      box-shadow: 0 0 28px rgba(239, 68, 68, 0.95), 0 0 14px rgba(250, 204, 21, 0.9);
+      animation: pulseAllIn 0.65s infinite alternate;
+    }
+
+    .bet-btn:disabled {
+      opacity: 0.42;
       cursor: not-allowed;
     }
 
-    .btn-bet {
-      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
-      color: #fff;
-      padding: 10px 12px;
-      font-size: 0.75rem;
-      border: 2px solid #bae6fd;
-      box-shadow: 0 5px 0 #075985, 0 8px 14px rgba(0, 0, 0, 0.5);
+    @keyframes pulseAllIn {
+      from { filter: brightness(1); transform: translateY(-3px) scale(1.05); }
+      to { filter: brightness(1.22); transform: translateY(-4px) scale(1.08); }
     }
 
-    .btn-max {
-      background: linear-gradient(180deg, #c084fc 0%, #7e22ce 100%);
-      color: #fff;
-      padding: 10px 12px;
-      font-size: 0.72rem;
-      border: 2px solid #e9d5ff;
-      box-shadow: 0 5px 0 #4c1d95, 0 8px 14px rgba(0, 0, 0, 0.5);
-    }
-
-    .btn-spin {
-      flex: 1;
-      background: linear-gradient(180deg, #fde047 0%, #eab308 45%, #dc2626 100%);
-      color: #450a0a;
-      padding: 12px 18px;
-      font-size: 1.05rem;
-      letter-spacing: 0.08em;
-      border: 2px solid #fef9c3;
-      box-shadow:
-        0 6px 0 #7f1d1d,
-        0 0 22px rgba(250, 204, 21, 0.55),
-        0 10px 18px rgba(0, 0, 0, 0.65);
-      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-    }
-
-    .btn-spin:hover:not(:disabled) {
-      filter: brightness(1.1);
-    }
-
-    /* 3D Mechanical Pull Lever on Right Side of Cabinet */
-    .lever-assembly {
-      position: absolute;
-      right: -58px;
-      top: 190px;
-      width: 58px;
-      height: 170px;
-      transform-style: preserve-3d;
-      transform: translateZ(6px);
+    .spin-cta-btn {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 0.92rem;
+      letter-spacing: 0.06em;
+      padding: 10px 22px;
+      border-radius: 12px;
+      border: 2px solid #dcfce7;
+      background: linear-gradient(180deg, #4ade80 0%, #16a34a 55%, #14532d 100%);
+      color: #052e16;
       cursor: pointer;
+      box-shadow: 0 0 22px rgba(74, 222, 128, 0.6), 0 6px 14px rgba(0, 0, 0, 0.75);
+      transition: all 0.14s ease;
     }
 
-    .lever-base {
-      position: absolute;
-      left: 0;
-      bottom: 24px;
-      width: 28px;
-      height: 64px;
-      background: linear-gradient(90deg, #78350f, #f59e0b, #78350f);
-      border: 2px solid #fde68a;
-      border-radius: 0 14px 14px 0;
-      box-shadow: 4px 8px 16px rgba(0, 0, 0, 0.7);
+    .spin-cta-btn:hover:not(:disabled) {
+      filter: brightness(1.12);
+      transform: translateY(-2px);
     }
 
-    .lever-pivot {
-      position: absolute;
-      left: 16px;
-      bottom: 52px;
-      width: 14px;
-      height: 120px;
-      transform-origin: bottom center;
-      transform-style: preserve-3d;
-      transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+    .spin-cta-btn:active:not(:disabled) {
+      transform: translateY(2px);
     }
 
-    .lever-pivot.pulled {
-      transform: rotateX(-68deg);
-      transition: transform 0.16s ease-in;
+    .spin-cta-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
-    .lever-shaft {
-      width: 12px;
-      height: 100px;
-      margin: 0 auto;
-      background: linear-gradient(90deg, #9ca3af, #f9fafb, #4b5563);
+    /* Right-side Pull Tension Gauge */
+    .tension-pill {
+      width: 16px;
+      height: 148px;
+      background: rgba(8, 7, 14, 0.9);
+      border: 2px solid rgba(250, 204, 21, 0.55);
       border-radius: 999px;
-      box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.6);
-    }
-
-    .lever-knob {
-      position: absolute;
-      top: -26px;
-      left: 50%;
-      width: 44px;
-      height: 44px;
-      transform: translateX(-50%) translateZ(8px);
-      border-radius: 50%;
-      background: radial-gradient(circle at 32% 30%, #fca5a5 0%, #ef4444 45%, #7f1d1d 100%);
-      border: 2px solid #fde047;
-      box-shadow:
-        0 6px 14px rgba(0, 0, 0, 0.75),
-        0 0 18px rgba(239, 68, 68, 0.75);
-    }
-
-    /* Status Ticker Banner */
-    .status-banner {
-      margin-top: 12px;
-      transform: translateZ(20px);
-      background: rgba(9, 10, 16, 0.9);
-      border: 1px solid rgba(250, 204, 21, 0.4);
-      border-radius: 10px;
-      padding: 6px 12px;
-      text-align: center;
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: #fde047;
-      min-height: 34px;
+      padding: 2px;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-direction: column;
+      justify-content: flex-end;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.85);
     }
 
-    /* Paytable Pills */
-    .paytable-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-      margin-top: 12px;
-      transform: translateZ(14px);
-    }
-
-    .pay-pill {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(250, 204, 21, 0.25);
-      border-radius: 8px;
-      padding: 4px 8px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 0.72rem;
-    }
-
-    /* FX Coin Canvas */
-    #fxCanvas {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 40;
+    .tension-fill {
+      width: 100%;
+      height: 0%;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #ef4444 0%, #facc15 48%, #22c55e 100%);
+      transition: height 0.03s linear;
     }
   </style>
 </head>
 <body>
 
-  <div class="arcade-floor"></div>
-  <canvas id="fxCanvas"></canvas>
+  <!-- 3D WebGL Viewport -->
+  <div id="webgl-mount"></div>
 
-  <!-- Top Camera & Utility Bar -->
-  <div class="relative z-30 flex flex-wrap items-center justify-center gap-2 mb-3 px-4">
-    <div class="flex items-center bg-black/60 border border-amber-500/40 rounded-full p-1 gap-1 text-xs">
-      <button id="camTiltBtn" onclick="setCameraMode('tilt')" class="px-3 py-1 rounded-full bg-amber-500 text-black font-bold transition">
-        3D Mouse Tilt
-      </button>
-      <button id="camIsoBtn" onclick="setCameraMode('iso')" class="px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition">
-        3D Isometric
-      </button>
-      <button id="camFlatBtn" onclick="setCameraMode('flat')" class="px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition">
-        2.5D Front
-      </button>
-    </div>
+  <!-- Crisp Non-Intrusive HUD -->
+  <div class="hud-overlay">
 
-    <button onclick="forceLucky777()" class="px-3 py-1.5 rounded-full bg-red-600/80 hover:bg-red-500 border border-yellow-300/60 text-xs font-bold text-yellow-200 shadow-lg transition">
-      ⚡ Force 777 Jackpot
-    </button>
-
-    <button id="soundToggleBtn" onclick="toggleMute()" class="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold transition">
-      🔊 Audio: ON
-    </button>
-  </div>
-
-  <!-- 3D Viewport -->
-  <div class="scene-viewport" id="sceneViewport">
-    <div class="slot-cabinet" id="slotCabinet">
-      <div class="cabinet-body">
-        <div class="cabinet-side-left"></div>
-        <div class="cabinet-side-right"></div>
-
-        <!-- 3D Mechanical Lever -->
-        <div class="lever-assembly" id="leverAssembly" title="Pull Lever or Press Spacebar!">
-          <div class="lever-base"></div>
-          <div class="lever-pivot" id="leverPivot">
-            <div class="lever-knob"></div>
-            <div class="lever-shaft"></div>
-          </div>
+    <!-- Top Bar -->
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <!-- Live Readout Pill -->
+      <div class="interactive flex items-center gap-3 bg-black/80 backdrop-blur-md border border-amber-400/45 rounded-2xl px-4 py-2 shadow-2xl">
+        <div class="pr-3 border-r border-white/15">
+          <div class="text-[10px] uppercase tracking-widest text-amber-300/90">Credits</div>
+          <div id="uiCredits" class="font-orbitron text-lg sm:text-xl font-black text-emerald-400">1,000</div>
         </div>
-
-        <!-- Top Marquee -->
-        <div class="marquee-crown">
-          <div class="text-[10px] tracking-[0.28em] text-yellow-200/90 font-bold uppercase">
-            Triple Cylinder 3D Deluxe
-          </div>
-          <div class="marquee-title">LUCKY 777</div>
-          <div class="bulb-strip">
-            <span class="bulb"></span><span class="bulb"></span><span class="bulb"></span>
-            <span class="bulb"></span><span class="bulb"></span><span class="bulb"></span>
-            <span class="bulb"></span><span class="bulb"></span><span class="bulb"></span>
-            <span class="bulb"></span><span class="bulb"></span><span class="bulb"></span>
-          </div>
+        <div class="pr-3 border-r border-white/15">
+          <div class="text-[10px] uppercase tracking-widest text-amber-300/90">Active Bet</div>
+          <div id="uiBet" class="font-orbitron text-lg sm:text-xl font-black text-yellow-300">100</div>
         </div>
-
-        <!-- 3D Cylindrical Reel Window -->
-        <div class="reel-window-frame">
-          <div class="payline-badge left">PAY</div>
-          <div class="payline-badge right">LINE</div>
-          <div class="payline-bar" id="paylineBar"></div>
-          <div class="reel-glass-overlay"></div>
-
-          <div class="reel-column">
-            <div class="reel-cylinder" id="reel0"></div>
-          </div>
-          <div class="reel-column">
-            <div class="reel-cylinder" id="reel1"></div>
-          </div>
-          <div class="reel-column">
-            <div class="reel-cylinder" id="reel2"></div>
-          </div>
+        <div>
+          <div class="text-[10px] uppercase tracking-widest text-amber-300/90">Last Win</div>
+          <div id="uiWin" class="font-orbitron text-lg sm:text-xl font-black text-amber-400">0</div>
         </div>
+        <button id="rebuyBtn" onclick="rebuyCredits()" class="hidden ml-2 px-3 py-1.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-orbitron font-black text-xs shadow-lg transition">
+          +1,000 REBUY
+        </button>
+      </div>
 
-        <!-- Payout Mini Reference -->
-        <div class="paytable-grid">
-          <div class="pay-pill"><span><b class="text-red-400">777</b> Jackpot</span><span class="text-yellow-300 font-bold">50×</span></div>
-          <div class="pay-pill"><span>💎💎💎 Diamond</span><span class="text-yellow-300 font-bold">25×</span></div>
-          <div class="pay-pill"><span>BAR×3 Triple</span><span class="text-yellow-300 font-bold">20×</span></div>
-          <div class="pay-pill"><span>🔔🔔🔔 Bell</span><span class="text-yellow-300 font-bold">15×</span></div>
-          <div class="pay-pill"><span>🍀🍀🍀 Clover</span><span class="text-yellow-300 font-bold">10×</span></div>
-          <div class="pay-pill"><span>🍒 Any 1 / 2 / 3</span><span class="text-yellow-300 font-bold">1×/2×/5×</span></div>
-        </div>
+      <!-- Center Status Ticker -->
+      <div id="statusTicker" class="bg-black/80 backdrop-blur-md border border-amber-400/40 rounded-full px-5 py-2 text-xs sm:text-sm font-bold text-yellow-200 shadow-xl text-center">
+        🕹️ Grab & pull down the 3D Red Joystick on the right (or press SPACE / SPIN)!
+      </div>
 
-        <!-- Digital LED Readouts -->
-        <div class="led-dashboard">
-          <div class="led-box">
-            <div class="led-label">Credits</div>
-            <div class="led-value" id="creditsDisplay">1,000</div>
-          </div>
-          <div class="led-box">
-            <div class="led-label">Bet</div>
-            <div class="led-value gold" id="betDisplay">20</div>
-          </div>
-          <div class="led-box">
-            <div class="led-label">Last Win</div>
-            <div class="led-value gold" id="winDisplay">0</div>
-          </div>
+      <!-- Camera & Test Controls -->
+      <div class="interactive flex items-center gap-2">
+        <div class="flex bg-black/80 border border-amber-400/40 rounded-full p-1 text-xs">
+          <button id="camPlay" onclick="setCameraView('play')" class="px-3 py-1 rounded-full bg-amber-400 text-black font-bold transition">Close-Up 3D</button>
+          <button id="camLever" onclick="setCameraView('lever')" class="px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition">Joystick View</button>
+          <button id="camFront" onclick="setCameraView('front')" class="px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition">Front</button>
         </div>
-
-        <!-- Status Ticker -->
-        <div class="status-banner" id="statusBanner">
-          Pull the 3D lever, press SPACE, or hit SPIN to roll!
-        </div>
-
-        <!-- 3D Protruding Button Deck -->
-        <div class="control-deck">
-          <button class="arcade-btn btn-bet" id="betDownBtn" onclick="changeBet(-10)">Bet -</button>
-          <button class="arcade-btn btn-bet" id="betUpBtn" onclick="changeBet(10)">Bet +</button>
-          <button class="arcade-btn btn-max" id="maxBetBtn" onclick="setMaxBet()">Max (100)</button>
-          <button class="arcade-btn btn-spin" id="spinBtn" onclick="triggerSpin()">SPIN 777</button>
-        </div>
+        <button onclick="forceJackpot777()" class="px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-500 border border-yellow-300 text-xs font-bold text-yellow-100 shadow-lg transition">
+          ⚡ Force 777
+        </button>
+        <button id="muteBtn" onclick="toggleMute()" class="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 text-xs font-semibold transition">
+          🔊 SFX
+        </button>
       </div>
     </div>
+
+    <!-- Right-Side Joystick Tension Meter -->
+    <div class="fixed right-4 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5 pointer-events-none">
+      <div class="text-[10px] font-orbitron font-bold tracking-wider text-yellow-300 uppercase bg-black/80 px-2 py-0.5 rounded border border-yellow-500/40">
+        Arm Pull
+      </div>
+      <div class="tension-pill">
+        <div id="tensionFill" class="tension-fill"></div>
+      </div>
+      <div id="tensionPct" class="font-orbitron text-xs font-black text-amber-300">0%</div>
+    </div>
+
+    <!-- Bottom Dock: Paytable Reference + 6 Bet Options (10, 50, 100, 500, 1000, ALL IN) -->
+    <div class="flex flex-col items-center gap-2">
+      <div class="flex flex-wrap justify-center gap-2.5 text-[11px] bg-black/75 backdrop-blur-md border border-amber-400/35 rounded-full px-4 py-1 text-amber-100 shadow-lg">
+        <span><b class="text-red-400">777</b> = 50×</span>
+        <span>•</span>
+        <span><b class="text-sky-300">DIAMOND×3</b> = 25×</span>
+        <span>•</span>
+        <span><b class="text-yellow-300">BAR×3</b> = 20×</span>
+        <span>•</span>
+        <span><b class="text-amber-300">BELL×3</b> = 15×</span>
+        <span>•</span>
+        <span><b class="text-emerald-300">CLOVER×3</b> = 10×</span>
+        <span>•</span>
+        <span><b class="text-rose-400">CHERRY</b> = 5× / 2× / 1×</span>
+      </div>
+
+      <div class="interactive flex flex-wrap items-center justify-center gap-2 bg-black/85 backdrop-blur-md border-2 border-amber-400/55 rounded-2xl px-3.5 py-2 shadow-2xl">
+        <span class="text-[11px] font-orbitron uppercase tracking-wider text-amber-300 mr-1">BET:</span>
+        <button class="bet-btn" data-bet="10" onclick="setBetMode(10)">10</button>
+        <button class="bet-btn" data-bet="50" onclick="setBetMode(50)">50</button>
+        <button class="bet-btn active" data-bet="100" onclick="setBetMode(100)">100</button>
+        <button class="bet-btn" data-bet="500" onclick="setBetMode(500)">500</button>
+        <button class="bet-btn" data-bet="1000" onclick="setBetMode(1000)">1000</button>
+        <button class="bet-btn all-in" data-bet="ALL_IN" onclick="setBetMode('ALL_IN')">🔥 ALL IN</button>
+        <div class="h-6 w-[1px] bg-white/20 mx-1"></div>
+        <button id="uiSpinBtn" class="spin-cta-btn" onclick="QuickPullAndSpin()">PULL LEVER / SPIN</button>
+      </div>
+    </div>
+
   </div>
 
   <script>
-    /* ==========================================================
-       1. SYMBOL DEFINITIONS & 12-FACET CYLINDER REEL STRIP
-       ========================================================== */
-    const SYMBOLS = {
-      SEVEN:   { id: 'SEVEN',   label: 'LUCKY 7', mult3: 50, render: () => `<div class="symbol-seven">7</div><div class="symbol-tag">JACKPOT</div>` },
-      DIAMOND: { id: 'DIAMOND', label: 'DIAMOND', mult3: 25, render: () => `<div class="symbol-glyph">💎</div><div class="symbol-tag">25×</div>` },
-      BAR:     { id: 'BAR',     label: 'BAR',     mult3: 20, render: () => `<div class="symbol-bar">BAR</div><div class="symbol-tag">20×</div>` },
-      BELL:    { id: 'BELL',    label: 'BELL',    mult3: 15, render: () => `<div class="symbol-glyph">🔔</div><div class="symbol-tag">15×</div>` },
-      CLOVER:  { id: 'CLOVER',  label: 'CLOVER',  mult3: 10, render: () => `<div class="symbol-glyph">🍀</div><div class="symbol-tag">10×</div>` },
-      CHERRY:  { id: 'CHERRY',  label: 'CHERRY',  mult3: 5,  render: () => `<div class="symbol-glyph">🍒</div><div class="symbol-tag">CHERRY</div>` }
-    };
-
-    // 12 facets per 3D cylinder (30 deg per facet, radius = 134px)
-    const REEL_STRIP = [
-      SYMBOLS.SEVEN,
-      SYMBOLS.CHERRY,
-      SYMBOLS.BELL,
-      SYMBOLS.DIAMOND,
-      SYMBOLS.CLOVER,
-      SYMBOLS.BAR,
-      SYMBOLS.SEVEN,
-      SYMBOLS.CHERRY,
-      SYMBOLS.CLOVER,
-      SYMBOLS.BELL,
-      SYMBOLS.CHERRY,
-      SYMBOLS.DIAMOND
-    ];
-
-    const FACET_COUNT = REEL_STRIP.length; // 12
-    const STEP_DEG = 360 / FACET_COUNT;    // 30 deg
-    const CYLINDER_RADIUS = 134;           // px
-
-    /* ==========================================================
-       2. STATE & INITIALIZATION
-       ========================================================== */
+    /* ============================================================================
+       1. GAME STATE, BETTING TIERS & WEB AUDIO SYNTHESIZER
+       ============================================================================ */
+    const BET_TIERS = [10, 50, 100, 500, 1000, 'ALL_IN'];
     let credits = 1000;
-    let currentBet = 20;
+    let selectedBetMode = 100;
+    let lastWinAmount = 0;
     let isSpinning = false;
-    let soundMuted = false;
-    let cameraMode = 'tilt';
+    let isMuted = false;
 
-    // Track current rotation angle (degrees) and landed index for each of the 3 reels
-    const reelStates = [
-      { el: null, angle: 0, targetIndex: 0 },
-      { el: null, angle: 0, targetIndex: 0 },
-      { el: null, angle: 0, targetIndex: 0 }
-    ];
-
-    function buildCylindricalReels() {
-      for (let r = 0; r < 3; r++) {
-        const container = document.getElementById(`reel${r}`);
-        reelStates[r].el = container;
-        container.innerHTML = '';
-
-        REEL_STRIP.forEach((sym, idx) => {
-          const facet = document.createElement('div');
-          facet.className = `reel-facet ${sym.id === 'SEVEN' ? 'lucky-seven-tile' : ''}`;
-          facet.dataset.index = idx;
-          // Position each facet on the 3D cylinder ring
-          facet.style.transform = `rotateX(${idx * STEP_DEG}deg) translateZ(${CYLINDER_RADIUS}px)`;
-          facet.innerHTML = sym.render();
-          container.appendChild(facet);
-        });
-
-        // Start on 7-7-7 for an iconic initial display
-        reelStates[r].angle = 0;
-        reelStates[r].el.style.transform = `rotateX(0deg)`;
-      }
+    function getActiveBetAmount() {
+      if (selectedBetMode === 'ALL_IN') return Math.max(0, credits);
+      return Math.min(credits, selectedBetMode);
     }
 
-    /* ==========================================================
-       3. WEB AUDIO SYNTHESIZER (NO EXTERNAL ASSETS NEEDED)
-       ========================================================== */
     let audioCtx = null;
-    function getAudio() {
+    function getAudioCtx() {
       if (!audioCtx) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContextClass();
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC();
       }
       if (audioCtx.state === 'suspended') audioCtx.resume();
       return audioCtx;
     }
 
-    function playTone(freq, type = 'triangle', duration = 0.08, gainLevel = 0.12) {
-      if (soundMuted) return;
+    function playSynthTone(freq, type = 'triangle', duration = 0.08, gainVal = 0.12) {
+      if (isMuted) return;
       try {
-        const ctx = getAudio();
+        const ctx = getAudioCtx();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        gain.gain.setValueAtTime(gainLevel, ctx.currentTime);
+        gain.gain.setValueAtTime(gainVal, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -802,358 +290,1716 @@
       } catch (e) {}
     }
 
-    function playLeverSound() {
-      playTone(150, 'sawtooth', 0.12, 0.18);
-      setTimeout(() => playTone(95, 'square', 0.1, 0.16), 70);
-    }
-
-    function playReelStopSound(reelIdx) {
-      playTone(180 + reelIdx * 65, 'triangle', 0.14, 0.24);
-    }
-
-    function playWinFanfare(isJackpot) {
-      if (soundMuted) return;
-      const notes = isJackpot
-        ? [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5, 1318.5, 1567.98]
-        : [440, 554.37, 659.25, 880];
-      notes.forEach((freq, i) => {
-        setTimeout(() => playTone(freq, 'Byte' ? 'square' : 'triangle', 0.18, 0.16), i * 95);
+    function playSynthChord(freqs, type = 'triangle', duration = 0.18, gainVal = 0.11) {
+      freqs.forEach((f, idx) => {
+        setTimeout(() => playSynthTone(f, type, duration, gainVal), idx * 42);
       });
     }
 
     function toggleMute() {
-      soundMuted = !soundMuted;
-      document.getElementById('soundToggleBtn').textContent = soundMuted ? '🔇 Audio: OFF' : '🔊 Audio: ON';
+      isMuted = !isMuted;
+      document.getElementById('muteBtn').textContent = isMuted ? '🔇 Muted' : '🔊 SFX';
     }
 
-    /* ==========================================================
-       4. SPIN PHYSICS & OUTCOME RESOLUTION
-       ========================================================== */
-    function changeBet(delta) {
-      if (isSpinning) return;
-      currentBet = Math.max(10, Math.min(100, currentBet + delta));
-      if (currentBet > credits && credits >= 10) currentBet = Math.floor(credits / 10) * 10;
-      playTone(420, 'sine', 0.05, 0.08);
-      updateHUD();
+    function setStatus(text) {
+      document.getElementById('statusTicker').textContent = text;
     }
 
-    function setMaxBet() {
-      if (isSpinning) return;
-      currentBet = Math.min(100, Math.max(10, Math.floor(credits / 10) * 10));
-      playTone(620, 'sine', 0.08, 0.1);
-      updateHUD();
+    /* ============================================================================
+       2. THREE.JS RENDERER & PROCEDURAL STUDIO HDRI ENVIRONMENT (PMREMGenerator)
+       ============================================================================ */
+    const mount = document.getElementById('webgl-mount');
+    const scene = new THREE.Scene();
+
+    // Crisp, close-up perspective camera so reels, buttons, and joystick are crystal clear
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+    const camTargetPos = new THREE.Vector3(0.68, 0.22, 6.25);
+    const camLookTarget = new THREE.Vector3(0.24, 0.08, 0.15);
+    camera.position.copy(camTargetPos);
+    camera.lookAt(camLookTarget);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.95;
+    mount.appendChild(renderer.domElement);
+
+    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+
+    // Build a procedural Studio HDRI Reflection Environment via PMREMGenerator
+    // with balanced contrast so gold and gunmetal look rich without washing out
+    function buildStudioEnvironment() {
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      pmremGenerator.compileCubemapShader();
+
+      const envScene = new THREE.Scene();
+      envScene.background = new THREE.Color(0x06040a);
+
+      // Overhead studio softbox
+      const topBox = new THREE.Mesh(
+        new THREE.PlaneGeometry(20, 20),
+        new THREE.MeshBasicMaterial({ color: 0xffe8b3, side: THREE.DoubleSide })
+      );
+      topBox.position.set(0, 12, 0);
+      topBox.rotation.x = Math.PI / 2;
+      envScene.add(topBox);
+
+      // Warm Las Vegas Gold Left Strip
+      const leftStrip = new THREE.Mesh(
+        new THREE.PlaneGeometry(16, 10),
+        new THREE.MeshBasicMaterial({ color: 0xd4af37, side: THREE.DoubleSide })
+      );
+      leftStrip.position.set(-12, 3, 4);
+      leftStrip.rotation.y = Math.PI / 2;
+      envScene.add(leftStrip);
+
+      // Warm Amber Right Strip
+      const rightStrip = new THREE.Mesh(
+        new THREE.PlaneGeometry(16, 10),
+        new THREE.MeshBasicMaterial({ color: 0xb45309, side: THREE.DoubleSide })
+      );
+      rightStrip.position.set(12, 3, 4);
+      rightStrip.rotation.y = -Math.PI / 2;
+      envScene.add(rightStrip);
+
+      // Subtle Cool Rim Accent
+      const backStrip = new THREE.Mesh(
+        new THREE.PlaneGeometry(18, 8),
+        new THREE.MeshBasicMaterial({ color: 0x1e293b, side: THREE.DoubleSide })
+      );
+      backStrip.position.set(0, 6, -12);
+      envScene.add(backStrip);
+
+      const envRT = pmremGenerator.fromScene(envScene, 0.04);
+      scene.environment = envRT.texture;
+      pmremGenerator.dispose();
+    }
+    buildStudioEnvironment();
+
+    // Direct Scene Lights — balanced for deep casino contrast with zero reel glare hotspot
+    const ambientLight = new THREE.AmbientLight(0xfff5e4, 0.42);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffe8bf, 1.25);
+    keyLight.position.set(5, 9, 6);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.35);
+    fillLight.position.set(-6, 3, 4);
+    scene.add(fillLight);
+
+    const cabinetGlowLight = new THREE.PointLight(0xf59e0b, 0.9, 10);
+    cabinetGlowLight.position.set(0, 2.5, 2.2);
+    scene.add(cabinetGlowLight);
+
+    const leverHighlightLight = new THREE.PointLight(0xff3344, 1.1, 6);
+    leverHighlightLight.position.set(3.0, 1.2, 2.2);
+    scene.add(leverHighlightLight);
+
+    /* ============================================================================
+       3. HIGH-CONTRAST CASINO PBR MATERIALS (DARK CHROME, 24K GOLD, OBSIDIAN-CRIMSON)
+       ============================================================================ */
+    const mirrorChromeMat = new THREE.MeshStandardMaterial({
+      color: 0x3f3f46,
+      metalness: 0.85,
+      roughness: 0.2,
+      envMapIntensity: 1.0
+    });
+
+    const gold24kMat = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      metalness: 0.88,
+      roughness: 0.22,
+      envMapIntensity: 1.1
+    });
+
+    const brushedObsidianMat = new THREE.MeshStandardMaterial({
+      color: 0x0d0b14,
+      metalness: 0.7,
+      roughness: 0.35,
+      envMapIntensity: 0.8
+    });
+
+    const crimsonLacquerMat = new THREE.MeshStandardMaterial({
+      color: 0x1a0509,
+      metalness: 0.65,
+      roughness: 0.35,
+      envMapIntensity: 0.75
+    });
+
+    const gunmetalDrumMat = new THREE.MeshStandardMaterial({
+      color: 0x11131a,
+      metalness: 0.8,
+      roughness: 0.35,
+      envMapIntensity: 0.6
+    });
+
+    const rubberBootMat = new THREE.MeshStandardMaterial({
+      color: 0x121216,
+      metalness: 0.1,
+      roughness: 0.75
+    });
+
+    /* ============================================================================
+       4. HIGH-DPI UPRIGHT VECTOR CASINO SYMBOL ARTWORK GENERATOR (512x340)
+       ============================================================================ */
+    const SYMBOL_DEFS = [
+      { id: 'SEVEN',   name: 'LUCKY 777', mult: 50 },
+      { id: 'DIAMOND', name: 'DIAMOND',   mult: 25 },
+      { id: 'BAR',     name: 'TRIPLE BAR',mult: 20 },
+      { id: 'BELL',    name: 'GOLD BELL', mult: 15 },
+      { id: 'CLOVER',  name: 'CLOVER',    mult: 10 },
+      { id: 'CHERRY',  name: 'CHERRIES',  mult: 5  }
+    ];
+    const SYM_BY_ID = {};
+    SYMBOL_DEFS.forEach(s => { SYM_BY_ID[s.id] = s; });
+
+    // 12 stops per cylindrical drum
+    const REEL_STRIP = [
+      'SEVEN', 'CHERRY', 'BELL', 'DIAMOND',
+      'CLOVER', 'BAR', 'SEVEN', 'CHERRY',
+      'CLOVER', 'BELL', 'CHERRY', 'DIAMOND'
+    ];
+    const STOP_COUNT = REEL_STRIP.length; // 12
+    const STOP_ANGLE = (Math.PI * 2) / STOP_COUNT;
+
+    const symbolTextureCache = {};
+
+    function drawStarSparkle(ctx, cx, cy, outerR, innerR, points = 4, color = '#ffffff') {
+      ctx.save();
+      ctx.beginPath();
+      for (let i = 0; i < points * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const a = (i * Math.PI) / points;
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
     }
 
-    function forceLucky777() {
-      if (isSpinning) return;
-      // Indices 0 and 6 on REEL_STRIP are both SEVEN
-      triggerSpin([0, 6, 0]);
-    }
+    function createHighDPISymbolTexture(symId) {
+      if (symbolTextureCache[symId]) return symbolTextureCache[symId];
 
-    function triggerSpin(forcedIndices = null) {
-      if (isSpinning) return;
+      const W = 512;
+      const H = 340;
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const ctx = c.getContext('2d');
 
-      // Refill credits automatically if broke
-      if (credits < currentBet) {
-        credits = 1000;
-        setStatus('🎁 Free Arcade House Refill: +1,000 Credits!');
-        updateHUD();
+      // Rich warm ivory/gold radial casino card background (#fffbeb to #fde68a)
+      const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 18, W / 2, H / 2, 285);
+      bgGrad.addColorStop(0, '#fffbeb');
+      bgGrad.addColorStop(0.7, '#fde68a');
+      bgGrad.addColorStop(1, '#f59e0b');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Subtle warm sunburst rays
+      ctx.save();
+      ctx.translate(W / 2, H / 2 - 12);
+      ctx.fillStyle = 'rgba(217, 119, 6, 0.08)';
+      for (let i = 0; i < 16; i++) {
+        ctx.rotate((Math.PI * 2) / 16);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(320, -18);
+        ctx.lineTo(320, 18);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Crisp inner & outer borders (#b45309)
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(5, 5, W - 10, H - 10);
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(14, 14, W - 28, H - 28);
+
+      // Upright Vector Artwork per Symbol
+      if (symId === 'SEVEN') {
+        const drawVegasSeven = (cx, cy, scale, angle) => {
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(angle);
+          ctx.scale(scale, scale);
+
+          const define7Path = () => {
+            ctx.beginPath();
+            ctx.moveTo(-85, -95);
+            ctx.lineTo(90, -95);
+            ctx.lineTo(90, -48);
+            ctx.bezierCurveTo(42, 0, 12, 55, -2, 105);
+            ctx.lineTo(-58, 105);
+            ctx.bezierCurveTo(-40, 45, -5, -12, 34, -52);
+            ctx.lineTo(-85, -52);
+            ctx.closePath();
+          };
+
+          // 3D Extrusion Shadow
+          ctx.save();
+          ctx.translate(8, 12);
+          define7Path();
+          ctx.fillStyle = '#2a0404';
+          ctx.fill();
+          ctx.restore();
+
+          // Gold Metallic Outer Bevel
+          define7Path();
+          ctx.lineWidth = 18;
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = '#d97706';
+          ctx.stroke();
+
+          // Crimson Candy Gradient Fill
+          const redGrad = ctx.createLinearGradient(0, -95, 0, 105);
+          redGrad.addColorStop(0, '#ff3b3b');
+          redGrad.addColorStop(0.45, '#dc2626');
+          redGrad.addColorStop(1, '#7f1d1d');
+          ctx.fillStyle = redGrad;
+          ctx.fill();
+
+          // Inner Gold Rim
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#fef08a';
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        drawVegasSeven(145, 142, 0.68, -0.14);
+        drawVegasSeven(367, 142, 0.68, 0.14);
+        drawVegasSeven(256, 134, 0.96, 0);
+
+        drawStarSparkle(ctx, 180, 56, 22, 5, 4, '#ffffff');
+        drawStarSparkle(ctx, 340, 68, 18, 4, 4, '#ffffff');
+
+        // Bottom Jackpot Ribbon
+        ctx.fillStyle = '#450a0a';
+        ctx.fillRect(96, 262, 320, 46);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(96, 262, 320, 46);
+        ctx.font = '900 28px Orbitron, sans-serif';
+        ctx.fillStyle = '#fef08a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('JACKPOT 50×', 256, 286);
       }
 
+      else if (symId === 'DIAMOND') {
+        const cx = 256, cy = 136;
+        ctx.save();
+        ctx.fillStyle = 'rgba(3, 105, 161, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(cx - 78, cy - 68);
+        ctx.lineTo(cx + 78, cy - 68);
+        ctx.lineTo(cx + 118, cy - 18);
+        ctx.lineTo(cx, cy + 104);
+        ctx.lineTo(cx - 118, cy - 18);
+        ctx.closePath();
+        ctx.fill();
+
+        const dGrad = ctx.createLinearGradient(cx - 110, cy - 75, cx + 110, cy + 95);
+        dGrad.addColorStop(0, '#38bdf8');
+        dGrad.addColorStop(0.5, '#0284c7');
+        dGrad.addColorStop(1, '#1e3a8a');
+        ctx.fillStyle = dGrad;
+        ctx.beginPath();
+        ctx.moveTo(cx - 76, cy - 74);
+        ctx.lineTo(cx + 76, cy - 74);
+        ctx.lineTo(cx + 116, cy - 22);
+        ctx.lineTo(cx, cy + 96);
+        ctx.lineTo(cx - 116, cy - 22);
+        ctx.closePath();
+        ctx.fill();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#0c4a6e';
+        ctx.stroke();
+
+        // Top Table Facet
+        ctx.fillStyle = '#bae6fd';
+        ctx.beginPath();
+        ctx.moveTo(cx - 52, cy - 74);
+        ctx.lineTo(cx + 52, cy - 74);
+        ctx.lineTo(cx + 64, cy - 22);
+        ctx.lineTo(cx - 64, cy - 22);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bright Left Crown Facet
+        ctx.fillStyle = '#e0f2fe';
+        ctx.beginPath();
+        ctx.moveTo(cx - 76, cy - 74);
+        ctx.lineTo(cx - 52, cy - 74);
+        ctx.lineTo(cx - 64, cy - 22);
+        ctx.lineTo(cx - 116, cy - 22);
+        ctx.closePath();
+        ctx.fill();
+
+        // Center Lower Pavilion Facet
+        ctx.fillStyle = '#0ea5e9';
+        ctx.beginPath();
+        ctx.moveTo(cx - 64, cy - 22);
+        ctx.lineTo(cx + 64, cy - 22);
+        ctx.lineTo(cx, cy + 96);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#e0f2fe';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx - 116, cy - 22);
+        ctx.lineTo(cx + 116, cy - 22);
+        ctx.moveTo(cx - 52, cy - 74);
+        ctx.lineTo(cx - 64, cy - 22);
+        ctx.lineTo(cx, cy + 96);
+        ctx.lineTo(cx + 64, cy - 22);
+        ctx.lineTo(cx + 52, cy - 74);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.font = '900 28px Orbitron, sans-serif';
+        ctx.fillStyle = '#0c4a6e';
+        ctx.textAlign = 'center';
+        ctx.fillText('DIAMOND 25×', 256, 294);
+      }
+
+      else if (symId === 'BAR') {
+        const barYPositions = [36, 112, 188];
+        barYPositions.forEach((by) => {
+          ctx.fillStyle = 'rgba(0,0,0,0.45)';
+          ctx.fillRect(78, by + 6, 364, 60);
+
+          const rimG = ctx.createLinearGradient(74, by, 74, by + 60);
+          rimG.addColorStop(0, '#fef08a');
+          rimG.addColorStop(0.5, '#d97706');
+          rimG.addColorStop(1, '#78350f');
+          ctx.fillStyle = rimG;
+          ctx.fillRect(74, by, 364, 60);
+
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(82, by + 6, 348, 48);
+
+          ctx.font = '900 42px Orbitron, sans-serif';
+          ctx.fillStyle = '#fef08a';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('B A R', 256, by + 32);
+
+          [96, 416].forEach(rx => {
+            ctx.beginPath();
+            ctx.arc(rx, by + 30, 5, 0, Math.PI * 2);
+            ctx.fillStyle = '#facc15';
+            ctx.fill();
+          });
+        });
+
+        ctx.font = '900 26px Orbitron, sans-serif';
+        ctx.fillStyle = '#451a03';
+        ctx.textAlign = 'center';
+        ctx.fillText('TRIPLE BAR 20×', 256, 296);
+      }
+
+      else if (symId === 'BELL') {
+        const cx = 256, cy = 142;
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy + 78, 22, 0, Math.PI * 2);
+        ctx.fillStyle = '#78350f';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#b45309';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy - 82, 22, Math.PI, 0);
+        ctx.lineWidth = 12;
+        ctx.strokeStyle = '#92400e';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - 52, cy - 72);
+        ctx.quadraticCurveTo(cx, cy - 88, cx + 52, cy - 72);
+        ctx.bezierCurveTo(cx + 68, cy - 10, cx + 95, cy + 45, cx + 114, cy + 68);
+        ctx.lineTo(cx - 114, cy + 68);
+        ctx.bezierCurveTo(cx - 95, cy + 45, cx - 68, cy - 10, cx - 52, cy - 72);
+        ctx.closePath();
+
+        const bellGrad = ctx.createLinearGradient(cx - 100, cy, cx + 100, cy);
+        bellGrad.addColorStop(0, '#92400e');
+        bellGrad.addColorStop(0.3, '#fde047');
+        bellGrad.addColorStop(0.55, '#d97706');
+        bellGrad.addColorStop(0.82, '#fef08a');
+        bellGrad.addColorStop(1, '#78350f');
+        ctx.fillStyle = bellGrad;
+        ctx.fill();
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#78350f';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cx - 26, cy - 62);
+        ctx.quadraticCurveTo(cx - 38, cy, cx - 62, cy + 54);
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.font = '900 28px Orbitron, sans-serif';
+        ctx.fillStyle = '#78350f';
+        ctx.textAlign = 'center';
+        ctx.fillText('GOLD BELL 15×', 256, 294);
+      }
+
+      else if (symId === 'CLOVER') {
+        const cx = 256, cy = 134;
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + 10);
+        ctx.quadraticCurveTo(cx + 12, cy + 68, cx + 38, cy + 98);
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#14532d';
+        ctx.stroke();
+
+        for (let i = 0; i < 4; i++) {
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate((i * Math.PI) / 2 + Math.PI / 4);
+
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.bezierCurveTo(-55, -25, -65, -92, -18, -98);
+          ctx.bezierCurveTo(0, -100, 0, -78, 0, -78);
+          ctx.bezierCurveTo(0, -78, 0, -100, 18, -98);
+          ctx.bezierCurveTo(65, -92, 55, -25, 0, 0);
+          ctx.closePath();
+
+          const leafG = ctx.createRadialGradient(0, -52, 5, 0, -52, 65);
+          leafG.addColorStop(0, '#4ade80');
+          leafG.addColorStop(0.55, '#15803d');
+          leafG.addColorStop(1, '#052e16');
+          ctx.fillStyle = leafG;
+          ctx.fill();
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = '#b45309';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(0, -10);
+          ctx.lineTo(0, -68);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#bbf7d0';
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fill();
+        ctx.restore();
+
+        ctx.font = '900 28px Orbitron, sans-serif';
+        ctx.fillStyle = '#14532d';
+        ctx.textAlign = 'center';
+        ctx.fillText('LUCKY CLOVER 10×', 256, 294);
+      }
+
+      else if (symId === 'CHERRY') {
+        ctx.save();
+
+        ctx.beginPath();
+        ctx.moveTo(188, 174);
+        ctx.quadraticCurveTo(215, 75, 268, 44);
+        ctx.quadraticCurveTo(295, 95, 326, 180);
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#15803d';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(268, 44);
+        ctx.quadraticCurveTo(325, 22, 352, 64);
+        ctx.quadraticCurveTo(305, 84, 268, 44);
+        ctx.fillStyle = '#16a34a';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#14532d';
+        ctx.stroke();
+
+        const drawCherryBall = (x, y, r) => {
+          ctx.beginPath();
+          ctx.arc(x + 5, y + 8, r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,0,0,0.32)';
+          ctx.fill();
+
+          const cg = ctx.createRadialGradient(x - r * 0.32, y - r * 0.32, 6, x, y, r);
+          cg.addColorStop(0, '#fb7185');
+          cg.addColorStop(0.3, '#e11d48');
+          cg.addColorStop(0.78, '#9f1239');
+          cg.addColorStop(1, '#4c0519');
+
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fillStyle = cg;
+          ctx.fill();
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#4c0519';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.22, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.fill();
+        };
+
+        drawCherryBall(184, 184, 54);
+        drawCherryBall(324, 188, 54);
+        ctx.restore();
+
+        ctx.font = '900 26px Orbitron, sans-serif';
+        ctx.fillStyle = '#881337';
+        ctx.textAlign = 'center';
+        ctx.fillText('CHERRY 5× / 2× / 1×', 256, 294);
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = maxAnisotropy;
+      tex.needsUpdate = true;
+      symbolTextureCache[symId] = tex;
+      return tex;
+    }
+
+    /* ============================================================================
+       5. LAS VEGAS 3D CABINET CHASSIS, CHASING BULBS & 3D DIGITAL SCOREBOARD
+       ============================================================================ */
+    const cabinetGroup = new THREE.Group();
+    scene.add(cabinetGroup);
+
+    // Reflective Dark Marble Casino Floor
+    const floorMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(45, 45),
+      new THREE.MeshStandardMaterial({ color: 0x08060e, metalness: 0.7, roughness: 0.2 })
+    );
+    floorMesh.rotation.x = -Math.PI / 2;
+    floorMesh.position.y = -2.65;
+    floorMesh.receiveShadow = true;
+    scene.add(floorMesh);
+
+    // 1. Lower Cabinet Pedestal & Recessed Stainless-Steel Coin Tray
+    const pedestalMesh = new THREE.Mesh(new THREE.BoxGeometry(4.6, 1.35, 2.7), brushedObsidianMat);
+    pedestalMesh.position.set(0, -1.95, 0);
+    pedestalMesh.castShadow = true;
+    pedestalMesh.receiveShadow = true;
+    cabinetGroup.add(pedestalMesh);
+
+    // Chrome Coin Tray Basin at bottom front
+    const trayOuter = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.32, 0.95), mirrorChromeMat);
+    trayOuter.position.set(0, -2.35, 1.48);
+    trayOuter.castShadow = true;
+    cabinetGroup.add(trayOuter);
+
+    const trayInner = new THREE.Mesh(
+      new THREE.BoxGeometry(3.26, 0.22, 0.76),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.25 })
+    );
+    trayInner.position.set(0, -2.28, 1.52);
+    cabinetGroup.add(trayInner);
+
+    // Coin Chute Dispenser Slot
+    const chuteSlot = new THREE.Mesh(
+      new THREE.BoxGeometry(0.95, 0.22, 0.2),
+      new THREE.MeshStandardMaterial({ color: 0x030305, roughness: 0.9 })
+    );
+    chuteSlot.position.set(0, -1.82, 1.34);
+    cabinetGroup.add(chuteSlot);
+
+    // 2. Main Upper Cabinet Body
+    const upperCabinet = new THREE.Mesh(new THREE.BoxGeometry(4.45, 3.1, 2.35), crimsonLacquerMat);
+    upperCabinet.position.set(0, 0.25, -0.1);
+    upperCabinet.castShadow = true;
+    upperCabinet.receiveShadow = true;
+    cabinetGroup.add(upperCabinet);
+
+    // Stepped Mirror-Chrome & 24K Gold Vertical Side Rails
+    [-2.24, 2.24].forEach(xSide => {
+      const chromeRail = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 3.2, 24), mirrorChromeMat);
+      chromeRail.position.set(xSide, 0.25, 1.06);
+      chromeRail.castShadow = true;
+      cabinetGroup.add(chromeRail);
+
+      const goldAccentRail = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.15, 16), gold24kMat);
+      goldAccentRail.position.set(xSide * 0.94, 0.25, 1.15);
+      cabinetGroup.add(goldAccentRail);
+    });
+
+    // Top & Bottom Heavy 24K Gold Moldings framing the Reel Window
+    [-0.78, 1.18].forEach(yBar => {
+      const molding = new THREE.Mesh(new THREE.BoxGeometry(4.52, 0.16, 0.36), gold24kMat);
+      molding.position.set(0, yBar, 1.08);
+      molding.castShadow = true;
+      cabinetGroup.add(molding);
+    });
+
+    // Deep Matte Obsidian Reel Bay Cavity (zero pink reflection behind the reels)
+    const reelBayCavity = new THREE.Mesh(
+      new THREE.BoxGeometry(4.12, 1.92, 1.45),
+      new THREE.MeshStandardMaterial({ color: 0x050508, roughness: 0.9, metalness: 0.05 })
+    );
+    reelBayCavity.position.set(0, 0.2, 0.15);
+    cabinetGroup.add(reelBayCavity);
+
+    // Chrome Internal Dividers between the 3 Reels
+    [-0.66, 0.66].forEach(divX => {
+      const dividerRing = new THREE.Mesh(
+        new THREE.TorusGeometry(1.06, 0.025, 16, 48, Math.PI * 0.85),
+        mirrorChromeMat
+      );
+      dividerRing.rotation.y = Math.PI / 2;
+      dividerRing.rotation.z = -Math.PI * 0.425;
+      dividerRing.position.set(divX, 0.2, 0.12);
+      cabinetGroup.add(dividerRing);
+    });
+
+    // Center Neon Payline Guide Bars & Left/Right Illuminated Payline Arrows
+    const paylineLaserMat = new THREE.MeshStandardMaterial({
+      color: 0xff2a2a,
+      emissive: 0xff2222,
+      emissiveIntensity: 1.8,
+      roughness: 0.15
+    });
+
+    // Thin top & bottom laser rails bracketing the center winning row so symbols aren't covered
+    [-0.25, 0.65].forEach(py => {
+      const laserLine = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 4.08, 12), paylineLaserMat);
+      laserLine.rotation.z = Math.PI / 2;
+      laserLine.position.set(0, py, 1.18);
+      cabinetGroup.add(laserLine);
+    });
+
+    // Left & Right 3D Payline Pointer Triangles
+    [-2.02, 2.02].forEach((px, idx) => {
+      const arrowGeo = new THREE.ConeGeometry(0.13, 0.24, 3);
+      arrowGeo.rotateZ(idx === 0 ? -Math.PI / 2 : Math.PI / 2);
+      const arrowMesh = new THREE.Mesh(arrowGeo, paylineLaserMat);
+      arrowMesh.position.set(px, 0.2, 1.22);
+      cabinetGroup.add(arrowMesh);
+    });
+
+    // 3. Top Marquee Crown with 18 Animated 3D Chasing Light Bulbs
+    function createVegasMarqueeTexture() {
+      const c = document.createElement('canvas');
+      c.width = 1024;
+      c.height = 256;
+      const ctx = c.getContext('2d');
+
+      const g = ctx.createLinearGradient(0, 0, 0, 256);
+      g.addColorStop(0, '#3b0707');
+      g.addColorStop(0.5, '#991b1b');
+      g.addColorStop(1, '#260404');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 1024, 256);
+
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(10, 10, 1004, 236);
+
+      ctx.font = '800 28px Orbitron, sans-serif';
+      ctx.fillStyle = '#fde68a';
+      ctx.textAlign = 'center';
+      ctx.fillText('★ LAS VEGAS CASINO DELUXE ★', 512, 54);
+
+      ctx.font = '900 122px Orbitron, sans-serif';
+      ctx.shadowColor = '#facc15';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = '#fef08a';
+      ctx.fillText('LUCKY 777', 512, 165);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = maxAnisotropy;
+      return tex;
+    }
+
+    const marqueeBox = new THREE.Mesh(new THREE.BoxGeometry(4.35, 0.92, 1.35), gold24kMat);
+    marqueeBox.position.set(0, 2.22, 0.25);
+    marqueeBox.castShadow = true;
+    cabinetGroup.add(marqueeBox);
+
+    const marqueeTex = createVegasMarqueeTexture();
+    const marqueePanel = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.05, 0.72),
+      new THREE.MeshStandardMaterial({
+        map: marqueeTex,
+        emissive: 0xffffff,
+        emissiveMap: marqueeTex,
+        emissiveIntensity: 0.85,
+        roughness: 0.2
+      })
+    );
+    marqueePanel.position.set(0, 2.22, 0.935);
+    cabinetGroup.add(marqueePanel);
+
+    // 18 Chasing 3D Light Bulbs around the Marquee Bezel
+    const marqueeBulbs = [];
+    const bulbGeo = new THREE.SphereGeometry(0.052, 12, 12);
+    for (let i = 0; i < 18; i++) {
+      const bx = -1.95 + (i / 17) * 3.9;
+      const bMat = new THREE.MeshStandardMaterial({
+        color: 0xfef08a,
+        emissive: i % 2 === 0 ? 0xfacc15 : 0xef4444,
+        emissiveIntensity: 1.5,
+        roughness: 0.1
+      });
+      const bulbTop = new THREE.Mesh(bulbGeo, bMat);
+      bulbTop.position.set(bx, 2.63, 0.94);
+      cabinetGroup.add(bulbTop);
+      marqueeBulbs.push({ mat: bMat, idx: i });
+    }
+
+    // 4. Integrated 3D Digital LED Scoreboard on the Cabinet Face
+    const ledCanvas = document.createElement('canvas');
+    ledCanvas.width = 1024;
+    ledCanvas.height = 160;
+    const ledCtx = ledCanvas.getContext('2d');
+    const ledTexture = new THREE.CanvasTexture(ledCanvas);
+    ledTexture.encoding = THREE.sRGBEncoding;
+    ledTexture.anisotropy = maxAnisotropy;
+
+    function update3DScoreboardTexture() {
+      ledCtx.fillStyle = '#05060b';
+      ledCtx.fillRect(0, 0, 1024, 160);
+
+      ledCtx.strokeStyle = '#f59e0b';
+      ledCtx.lineWidth = 6;
+      ledCtx.strokeRect(4, 4, 1016, 152);
+
+      // Divider lines
+      ledCtx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+      ledCtx.beginPath();
+      ledCtx.moveTo(340, 14);
+      ledCtx.lineTo(340, 146);
+      ledCtx.moveTo(682, 14);
+      ledCtx.lineTo(682, 146);
+      ledCtx.stroke();
+
+      ledCtx.textAlign = 'center';
+      ledCtx.font = '700 22px Orbitron, sans-serif';
+      ledCtx.fillStyle = '#fbbf24';
+      ledCtx.fillText('CREDITS', 170, 40);
+      ledCtx.fillText('ACTIVE BET', 512, 40);
+      ledCtx.fillText('LAST WIN', 852, 40);
+
+      ledCtx.font = '900 54px Orbitron, sans-serif';
+      // Credits Value
+      ledCtx.fillStyle = '#4ade80';
+      ledCtx.fillText(credits.toLocaleString(), 170, 110);
+
+      // Bet Value
+      const betVal = getActiveBetAmount();
+      ledCtx.fillStyle = selectedBetMode === 'ALL_IN' ? '#f87171' : '#fde047';
+      ledCtx.fillText(
+        selectedBetMode === 'ALL_IN' ? `ALL (${betVal})` : betVal.toLocaleString(),
+        512,
+        110
+      );
+
+      // Last Win Value
+      ledCtx.fillStyle = '#38bdf8';
+      ledCtx.fillText(lastWinAmount.toLocaleString(), 852, 110);
+
+      ledTexture.needsUpdate = true;
+    }
+
+    const scoreboardBezel = new THREE.Mesh(new THREE.BoxGeometry(4.1, 0.44, 0.16), mirrorChromeMat);
+    scoreboardBezel.position.set(0, -0.52, 1.15);
+    cabinetGroup.add(scoreboardBezel);
+
+    const scoreboardScreen = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.96, 0.36),
+      new THREE.MeshStandardMaterial({
+        map: ledTexture,
+        emissive: 0xffffff,
+        emissiveMap: ledTexture,
+        emissiveIntensity: 0.92,
+        roughness: 0.15
+      })
+    );
+    scoreboardScreen.position.set(0, -0.52, 1.235);
+    cabinetGroup.add(scoreboardScreen);
+
+    /* ============================================================================
+       6. UPRIGHT 3D CURVED CYLINDRICAL REEL DRUMS (CUSTOM BENT PLANE GEOMETRY)
+       ============================================================================ */
+    const reels = [];
+    const REEL_X_COORDS = [-1.28, 0, 1.28];
+    const REEL_RADIUS = 1.05;
+    const REEL_WIDTH = 1.18;
+
+    // Create a single reusable curved tile geometry bent around the X-axis
+    // so PlaneGeometry's standard UVs stay 100% UPRIGHT (never rotated 90 degrees!)
+    function createCurvedReelTileGeometry() {
+      const arcHeight = 2 * REEL_RADIUS * Math.sin(STOP_ANGLE / 2) * 0.98;
+      const geo = new THREE.PlaneGeometry(REEL_WIDTH * 0.94, arcHeight, 1, 16);
+      const pos = geo.attributes.position;
+      const norm = geo.attributes.normal;
+
+      for (let i = 0; i < pos.count; i++) {
+        const vx = pos.getX(i);
+        const vy = pos.getY(i);
+        const localTheta = (vy / (arcHeight / 2)) * (STOP_ANGLE / 2);
+        pos.setXYZ(
+          i,
+          vx,
+          Math.sin(localTheta) * REEL_RADIUS,
+          Math.cos(localTheta) * REEL_RADIUS
+        );
+        norm.setXYZ(i, 0, Math.sin(localTheta), Math.cos(localTheta));
+      }
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    const sharedCurvedTileGeo = createCurvedReelTileGeometry();
+
+    REEL_X_COORDS.forEach((rx) => {
+      const drumPivot = new THREE.Group();
+      drumPivot.position.set(rx, 0.2, 0.12);
+      cabinetGroup.add(drumPivot);
+
+      // Dark Gunmetal Inner Drum Core so no gaps ever appear between curved tiles
+      const innerDrumCore = new THREE.Mesh(
+        new THREE.CylinderGeometry(REEL_RADIUS * 0.98, REEL_RADIUS * 0.98, REEL_WIDTH, 48),
+        gunmetalDrumMat
+      );
+      innerDrumCore.rotation.z = Math.PI / 2;
+      drumPivot.add(innerDrumCore);
+
+      // Left & Right Brushed 24K Gold Outer Flange Rings
+      [-REEL_WIDTH / 2 - 0.02, REEL_WIDTH / 2 + 0.02].forEach(sideX => {
+        const flange = new THREE.Mesh(
+          new THREE.CylinderGeometry(REEL_RADIUS * 1.015, REEL_RADIUS * 1.015, 0.04, 48),
+          gold24kMat
+        );
+        flange.rotation.z = Math.PI / 2;
+        flange.position.x = sideX;
+        drumPivot.add(flange);
+      });
+
+      // Mount 12 upright curved symbol segments around the drum circumference
+      const segmentMeshes = [];
+      REEL_STRIP.forEach((symId, idx) => {
+        const tex = createHighDPISymbolTexture(symId);
+        // Glare-free satin material so there is zero white specular hotspot on the reels
+        const segMat = new THREE.MeshStandardMaterial({
+          map: tex,
+          roughness: 0.65,
+          metalness: 0.05,
+          envMapIntensity: 0.15,
+          emissive: 0xffffff,
+          emissiveMap: tex,
+          emissiveIntensity: 0.28
+        });
+
+        const segMesh = new THREE.Mesh(sharedCurvedTileGeo, segMat);
+        // Position each stop at its angle around X-axis so idx=0 faces +Z upright
+        segMesh.rotation.x = -idx * STOP_ANGLE;
+        drumPivot.add(segMesh);
+        segmentMeshes.push({ mesh: segMesh, mat: segMat, symId });
+      });
+
+      reels.push({
+        group: drumPivot,
+        segments: segmentMeshes,
+        angle: 0,
+        targetStop: 0
+      });
+    });
+
+    /* ============================================================================
+       7. SLANTED CHROME CONTROL DECK WITH 6 BACKLIT 3D BET BUTTONS + 3D SPIN BUTTON
+       ============================================================================ */
+    const deckGroup = new THREE.Group();
+    deckGroup.position.set(0, -1.06, 1.48);
+    deckGroup.rotation.x = 0.34;
+    cabinetGroup.add(deckGroup);
+
+    // Chrome Deck Base & Gold Front Wrist Rest
+    const deckBody = new THREE.Mesh(new THREE.BoxGeometry(4.56, 0.32, 1.08), brushedObsidianMat);
+    deckBody.castShadow = true;
+    deckGroup.add(deckBody);
+
+    const wristRail = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.58, 24), mirrorChromeMat);
+    wristRail.rotation.z = Math.PI / 2;
+    wristRail.position.set(0, 0.14, 0.54);
+    deckGroup.add(wristRail);
+
+    const interactiveMeshes = [];
+    const deckButtons3D = [];
+
+    function createAcrylicButtonTexture(text, bgHex, borderHex) {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 144;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = bgHex;
+      ctx.fillRect(0, 0, 256, 144);
+      ctx.strokeStyle = borderHex;
+      ctx.lineWidth = 10;
+      ctx.strokeRect(6, 6, 244, 132);
+
+      ctx.font = text.length > 4 ? '900 42px Orbitron, sans-serif' : '900 52px Orbitron, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 74);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = maxAnisotropy;
+      return tex;
+    }
+
+    // 6 Physical Bet Buttons (10, 50, 100, 500, 1000, ALL IN)
+    BET_TIERS.forEach((tier, idx) => {
+      const bx = -1.88 + idx * 0.61;
+      const isAllIn = tier === 'ALL_IN';
+      const label = isAllIn ? 'ALL IN' : String(tier);
+      const tex = createAcrylicButtonTexture(
+        label,
+        isAllIn ? '#b91c1c' : '#d97706',
+        '#fef08a'
+      );
+
+      // Chrome Bezel Housing
+      const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.14, 0.48), mirrorChromeMat);
+      bezel.position.set(bx, 0.16, 0.02);
+      deckGroup.add(bezel);
+
+      const capMat = new THREE.MeshStandardMaterial({
+        map: tex,
+        emissive: isAllIn ? 0xff2222 : 0xfacc15,
+        emissiveMap: tex,
+        emissiveIntensity: tier === 100 ? 0.95 : 0.25,
+        roughness: 0.15
+      });
+
+      const capMesh = new THREE.Mesh(new THREE.BoxGeometry(0.49, 0.14, 0.41), capMat);
+      capMesh.position.set(bx, 0.23, 0.02);
+      capMesh.userData = { action: 'BET', value: tier };
+      deckGroup.add(capMesh);
+
+      deckButtons3D.push({ mesh: capMesh, mat: capMat, value: tier });
+      interactiveMeshes.push(capMesh);
+    });
+
+    // Large Glowing 3D SPIN Push-Button on the right of the Deck
+    const spinBezel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.16, 28), gold24kMat);
+    spinBezel.position.set(1.78, 0.17, 0.02);
+    deckGroup.add(spinBezel);
+
+    const spinTex = createAcrylicButtonTexture('SPIN', '#16a34a', '#dcfce7');
+    const spinCapMat = new THREE.MeshStandardMaterial({
+      map: spinTex,
+      emissive: 0x4ade80,
+      emissiveMap: spinTex,
+      emissiveIntensity: 0.85,
+      roughness: 0.12
+    });
+    const spinCapMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.15, 28), spinCapMat);
+    spinCapMesh.rotation.y = Math.PI / 2;
+    spinCapMesh.position.set(1.78, 0.24, 0.02);
+    spinCapMesh.userData = { action: 'SPIN_BUTTON' };
+    deckGroup.add(spinCapMesh);
+    interactiveMeshes.push(spinCapMesh);
+
+    /* ============================================================================
+       8. HYPER-REALISTIC PULLABLE 3D MECHANICAL JOYSTICK / SLOT ARM
+       ============================================================================ */
+    const gearboxGroup = new THREE.Group();
+    gearboxGroup.position.set(2.35, -0.08, 0.22);
+    cabinetGroup.add(gearboxGroup);
+
+    // 1. Cast-Gold & Brushed-Chrome Rotary Ratchet Gearbox Housing bolted to cabinet
+    const gearboxFlange = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.22, 32), gold24kMat);
+    gearboxFlange.rotation.z = Math.PI / 2;
+    gearboxFlange.castShadow = true;
+    gearboxGroup.add(gearboxFlange);
+
+    const gearboxDrum = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.42, 32), mirrorChromeMat);
+    gearboxDrum.rotation.z = Math.PI / 2;
+    gearboxDrum.position.x = 0.18;
+    gearboxGroup.add(gearboxDrum);
+
+    // 6 Hex Bolts around Gearbox Flange
+    for (let b = 0; b < 6; b++) {
+      const ba = (b * Math.PI) / 3;
+      const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.26, 6), mirrorChromeMat);
+      bolt.rotation.z = Math.PI / 2;
+      bolt.position.set(0.02, Math.sin(ba) * 0.36, Math.cos(ba) * 0.36);
+      gearboxGroup.add(bolt);
+    }
+
+    // 2. 3D Curved LED Pull-Force Arc mounted right on the Gearbox side
+    const pullArcLEDs = [];
+    const arcLedGeo = new THREE.BoxGeometry(0.06, 0.045, 0.09);
+    for (let i = 0; i < 10; i++) {
+      // Arc from top (-20 deg) down to front (+75 deg)
+      const angle = -0.2 + (i / 9) * 1.35;
+      const ledColor = i < 4 ? 0x22c55e : i < 7 ? 0xfacc15 : 0xef4444;
+      const ledMat = new THREE.MeshStandardMaterial({
+        color: 0x1f2937,
+        emissive: ledColor,
+        emissiveIntensity: 0.08,
+        roughness: 0.2
+      });
+      const ledMesh = new THREE.Mesh(arcLedGeo, ledMat);
+      ledMesh.position.set(
+        0.14,
+        Math.cos(angle) * 0.54,
+        Math.sin(angle) * 0.54
+      );
+      ledMesh.rotation.x = angle;
+      gearboxGroup.add(ledMesh);
+      pullArcLEDs.push({ mat: ledMat, threshold: (i + 1) / 10 });
+    }
+
+    // 3. Rotating Lever Arm Pivot Group
+    const leverPivot = new THREE.Group();
+    leverPivot.position.set(0.36, 0, 0);
+    gearboxGroup.add(leverPivot);
+
+    // Ribbed Black Rubber Accordion Dust Boot (5 stacked torus rings)
+    const bootRings = [];
+    for (let r = 0; r < 5; r++) {
+      const ringRadius = 0.19 - r * 0.015;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(ringRadius, 0.036, 14, 28), rubberBootMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.08 + r * 0.052;
+      leverPivot.add(ring);
+      bootRings.push(ring);
+    }
+
+    // Tapered Mirror-Chrome Cylindrical Arm Shaft
+    const armShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.105, 1.95, 28), mirrorChromeMat);
+    armShaft.position.set(0, 1.05, 0);
+    armShaft.castShadow = true;
+    armShaft.userData = { action: 'JOYSTICK' };
+    leverPivot.add(armShaft);
+    interactiveMeshes.push(armShaft);
+
+    // Knurled 24K Gold Middle Collar & Upper Neck Collar
+    [0.52, 1.82].forEach(cy => {
+      const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.12, 24), gold24kMat);
+      collar.position.set(0, cy, 0);
+      collar.userData = { action: 'JOYSTICK' };
+      leverPivot.add(collar);
+      interactiveMeshes.push(collar);
+    });
+
+    // 4. Glossy Candy-Apple Red Clearcoat Ball-Top Handle with Inlaid Gold "777" Cap
+    const ballHandleMat = new THREE.MeshPhysicalMaterial({
+      color: 0xdc2626,
+      emissive: 0x7f1d1d,
+      emissiveIntensity: 0.32,
+      roughness: 0.05,
+      metalness: 0.15,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.03,
+      envMapIntensity: 1.8
+    });
+
+    const ballHandle = new THREE.Mesh(new THREE.SphereGeometry(0.36, 40, 40), ballHandleMat);
+    ballHandle.position.set(0, 2.15, 0);
+    ballHandle.castShadow = true;
+    ballHandle.userData = { action: 'JOYSTICK' };
+    leverPivot.add(ballHandle);
+    interactiveMeshes.push(ballHandle);
+
+    // Equator 24K Gold Ring around the Joystick Ball
+    const ballGoldBelt = new THREE.Mesh(new THREE.TorusGeometry(0.362, 0.024, 16, 40), gold24kMat);
+    ballGoldBelt.rotation.x = Math.PI / 2;
+    ballHandle.add(ballGoldBelt);
+
+    // Top Inlaid "777" Medallion Cap on the Ball Handle
+    const capMedallion = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.04, 28), gold24kMat);
+    capMedallion.position.set(0, 0.34, 0);
+    ballHandle.add(capMedallion);
+
+    // Pulsing 3D Golden Grab-Halo Ring around Joystick Ball when idle
+    const grabHaloMat = new THREE.MeshBasicMaterial({
+      color: 0xfde047,
+      transparent: true,
+      opacity: 0.55,
+      side: THREE.DoubleSide
+    });
+    const grabHaloRing = new THREE.Mesh(new THREE.RingGeometry(0.43, 0.48, 36), grabHaloMat);
+    grabHaloRing.position.set(0, 2.15, 0);
+    leverPivot.add(grabHaloRing);
+
+    /* ============================================================================
+       9. JOYSTICK DRAG PHYSICS, SPRING RETURN & RAYCAST INTERACTION
+       ============================================================================ */
+    const ARM_REST_ANGLE = -0.14;       // Slight backward rest angle
+    const ARM_MAX_PULL_ANGLE = 1.28;    // Full forward/downward pull (~80 degrees)
+    const ARM_TRIGGER_THRESHOLD = 0.58; // Pull past 58% triggers spin!
+
+    let isDraggingArm = false;
+    let dragStartClientY = 0;
+    let dragStartTimestamp = 0;
+    let armPullRatio = 0;               // 0.0 to 1.0
+    let armSpringVelocity = 0;
+    let lastRatchetTooth = 0;
+
+    leverPivot.rotation.x = ARM_REST_ANGLE;
+
+    function syncArmVisuals(ratio) {
+      const clamped = Math.max(0, Math.min(1, ratio));
+      leverPivot.rotation.x = ARM_REST_ANGLE + clamped * (ARM_MAX_PULL_ANGLE - ARM_REST_ANGLE);
+
+      // Compress rubber dust boot slightly as arm bends forward
+      bootRings.forEach((ring, idx) => {
+        ring.position.z = clamped * idx * 0.014;
+      });
+
+      // Light up the 3D LED Pull-Force Arc on the gearbox
+      pullArcLEDs.forEach(led => {
+        led.mat.emissiveIntensity = clamped >= led.threshold - 0.05 ? 1.8 : 0.08;
+      });
+
+      // Update HTML Right-Side Tension Gauge
+      const pct = Math.round(clamped * 100);
+      document.getElementById('tensionFill').style.height = `${pct}%`;
+      document.getElementById('tensionPct').textContent = `${pct}%`;
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const pointerNDC = new THREE.Vector2();
+    let isOrbiting = false;
+    let orbitLastX = 0;
+    let orbitLastY = 0;
+
+    function updatePointerNDC(e) {
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      pointerNDC.x = (clientX / window.innerWidth) * 2 - 1;
+      pointerNDC.y = -(clientY / window.innerHeight) * 2 + 1;
+      return { clientX, clientY };
+    }
+
+    window.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.interactive')) return;
+      const { clientX, clientY } = updatePointerNDC(e);
+
+      raycaster.setFromCamera(pointerNDC, camera);
+      const intersects = raycaster.intersectObjects(interactiveMeshes, true);
+
+      if (intersects.length > 0) {
+        const hit = intersects[0].object;
+        const action = hit.userData.action;
+
+        if (action === 'JOYSTICK' && !isSpinning) {
+          isDraggingArm = true;
+          dragStartClientY = clientY;
+          dragStartTimestamp = performance.now();
+          armSpringVelocity = 0;
+          lastRatchetTooth = 0;
+          ballHandleMat.emissiveIntensity = 0.85;
+          document.body.style.cursor = 'grabbing';
+          playSynthTone(240, 'sine', 0.05, 0.1);
+          return;
+        }
+
+        if (action === 'BET' && !isSpinning) {
+          setBetMode(hit.userData.value);
+          return;
+        }
+
+        if (action === 'SPIN_BUTTON' && !isSpinning) {
+          QuickPullAndSpin();
+          return;
+        }
+      }
+
+      // Allow subtle camera inspection orbit when dragging background
+      isOrbiting = true;
+      orbitLastX = clientX;
+      orbitLastY = clientY;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      const { clientX, clientY } = updatePointerNDC(e);
+
+      if (isDraggingArm) {
+        const dy = clientY - dragStartClientY;
+        // 175px downward drag = 100% full mechanical pull
+        armPullRatio = Math.max(0, Math.min(1, dy / 175));
+        syncArmVisuals(armPullRatio);
+
+        // Realistic Ratchet Gear Teeth Clicks every 8% pull
+        const tooth = Math.floor(armPullRatio * 12);
+        if (tooth !== lastRatchetTooth) {
+          lastRatchetTooth = tooth;
+          playSynthTone(170 + tooth * 28, 'sawtooth', 0.032, 0.12);
+        }
+
+        // Auto-release & fire when pulled all the way to the bottom stop (98%+)
+        if (armPullRatio >= 0.98 && !isSpinning) {
+          completeArmRelease(true);
+        }
+        return;
+      }
+
+      if (isOrbiting) {
+        const dx = (clientX - orbitLastX) * 0.006;
+        const dy = (clientY - orbitLastY) * 0.005;
+        orbitLastX = clientX;
+        orbitLastY = clientY;
+        camTargetPos.x = Math.max(-2.6, Math.min(3.2, camTargetPos.x - dx * 3.5));
+        camTargetPos.y = Math.max(-0.6, Math.min(2.2, camTargetPos.y + dy * 2.5));
+        return;
+      }
+
+      // Hover state feedback
+      raycaster.setFromCamera(pointerNDC, camera);
+      const intersects = raycaster.intersectObjects(interactiveMeshes, true);
+      if (intersects.length > 0 && !isSpinning) {
+        document.body.style.cursor = 'grab';
+        if (intersects[0].object.userData.action === 'JOYSTICK') {
+          ballHandleMat.emissiveIntensity = 0.65;
+        }
+      } else {
+        document.body.style.cursor = 'default';
+        ballHandleMat.emissiveIntensity = 0.32;
+      }
+    });
+
+    function completeArmRelease(forceSpin = false) {
+      if (!isDraggingArm) return;
+      isDraggingArm = false;
+      ballHandleMat.emissiveIntensity = 0.32;
+      document.body.style.cursor = 'default';
+
+      const elapsedTap = performance.now() - dragStartTimestamp;
+      const isQuickClick = elapsedTap < 230 && armPullRatio < 0.18;
+
+      if (forceSpin || armPullRatio >= ARM_TRIGGER_THRESHOLD || isQuickClick) {
+        if (isQuickClick) {
+          armPullRatio = 1.0;
+          syncArmVisuals(1.0);
+        }
+        executeReelSpin();
+      } else {
+        playSynthTone(135, 'sine', 0.07, 0.08);
+        setStatus('🕹️ Pull the 3D joystick past 60% (or tap it) to engage the reels!');
+      }
+    }
+
+    window.addEventListener('pointerup', () => {
+      if (isDraggingArm) completeArmRelease(false);
+      isOrbiting = false;
+    });
+
+    function QuickPullAndSpin(forcedStopIndices = null) {
+      if (isSpinning) return;
+      armPullRatio = 1.0;
+      syncArmVisuals(1.0);
+      executeReelSpin(forcedStopIndices);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !isSpinning) {
+        e.preventDefault();
+        QuickPullAndSpin();
+      }
+    });
+
+    /* ============================================================================
+       10. BETTING LOGIC, REEL SPIN PHYSICS & PAYOUT EVALUATION
+       ============================================================================ */
+    function setBetMode(mode) {
+      if (isSpinning) return;
+      selectedBetMode = mode;
+
+      if (mode === 'ALL_IN') {
+        playSynthChord([220, 330, 440, 660], 'sawtooth', 0.2, 0.13);
+        setStatus('🔥 ALL IN ARMED! Every single credit is on the payline — pull the 3D joystick!');
+      } else {
+        playSynthTone(520, 'triangle', 0.06, 0.1);
+        setStatus(`Bet set to ${mode.toLocaleString()} credits. Pull the 3D joystick or click SPIN!`);
+      }
+      refreshAllUI();
+    }
+
+    function rebuyCredits() {
+      if (isSpinning) return;
+      credits += 1000;
+      playSynthChord([523.25, 659.25, 783.99], 'triangle', 0.18, 0.14);
+      setStatus('🪙 +1,000 Free Casino Credits added! Pull the 3D joystick to play!');
+      refreshAllUI();
+    }
+
+    function refreshAllUI() {
+      const activeBet = getActiveBetAmount();
+      document.getElementById('uiCredits').textContent = credits.toLocaleString();
+      document.getElementById('uiBet').textContent =
+        selectedBetMode === 'ALL_IN'
+          ? `ALL IN (${activeBet.toLocaleString()})`
+          : activeBet.toLocaleString();
+      document.getElementById('uiWin').textContent = lastWinAmount.toLocaleString();
+
+      document.getElementById('rebuyBtn').classList.toggle('hidden', credits > 0);
+      document.getElementById('uiSpinBtn').disabled = isSpinning;
+
+      // Sync HTML bet buttons
+      document.querySelectorAll('.bet-btn').forEach(btn => {
+        const val = btn.dataset.bet === 'ALL_IN' ? 'ALL_IN' : Number(btn.dataset.bet);
+        btn.classList.toggle('active', val === selectedBetMode);
+        btn.disabled = isSpinning;
+      });
+
+      // Sync 3D Physical Deck Buttons (depress active button & boost internal LED glow)
+      deckButtons3D.forEach(b => {
+        const active = b.value === selectedBetMode;
+        b.mesh.position.y = active ? 0.19 : 0.23;
+        b.mat.emissiveIntensity = active ? 1.15 : 0.25;
+      });
+
+      // Update 3D Digital LED Scoreboard on the Cabinet
+      update3DScoreboardTexture();
+    }
+
+    function forceJackpot777() {
+      if (isSpinning) return;
+      // Stops 0 and 6 on REEL_STRIP are both 'SEVEN'
+      QuickPullAndSpin([0, 6, 0]);
+    }
+
+    function executeReelSpin(forcedStops = null) {
+      if (isSpinning) return;
+
+      if (credits <= 0) {
+        credits = 1000;
+        setStatus('🎁 Complimentary House Refill: +1,000 Credits!');
+      }
+
+      const wager = getActiveBetAmount();
+      if (wager <= 0) return;
+
       isSpinning = true;
-      credits -= currentBet;
-      document.getElementById('winDisplay').textContent = '0';
-      document.getElementById('paylineBar').classList.remove('win-active');
-      clearFacetHighlights();
-      updateHUD();
-      setButtonsDisabled(true);
+      const isAllInSpin = selectedBetMode === 'ALL_IN' || wager === credits;
+      credits -= wager;
+      lastWinAmount = 0;
 
-      // Animate 3D lever pull
-      const leverPivot = document.getElementById('leverPivot');
-      leverPivot.classList.add('pulled');
-      playLeverSound();
-      setTimeout(() => leverPivot.classList.remove('pulled'), 280);
+      // Reset payline laser & segment emissive levels
+      paylineLaserMat.color.setHex(0xff2a2a);
+      paylineLaserMat.emissive.setHex(0xff2222);
+      reels.forEach(r => r.segments.forEach(s => { s.mat.emissiveIntensity = 0.28; }));
 
-      setStatus('🎰 Reels spinning... Good luck!');
+      // Depress 3D Spin button momentarily
+      spinCapMesh.position.y = 0.19;
+      setTimeout(() => { spinCapMesh.position.y = 0.24; }, 220);
 
-      // Choose target facet index (0..11) for each of the 3 reels
-      const chosenIndices = forcedIndices || [
-        Math.floor(Math.random() * FACET_COUNT),
-        Math.floor(Math.random() * FACET_COUNT),
-        Math.floor(Math.random() * FACET_COUNT)
+      refreshAllUI();
+
+      // Heavy mechanical latch clunk
+      playSynthChord([135, 92, 280], 'sawtooth', 0.12, 0.18);
+      setStatus(
+        isAllInSpin
+          ? `🔥 ALL IN (${wager.toLocaleString()} CREDITS)! Reels rolling...`
+          : `🎰 Spinning for ${wager.toLocaleString()} credits...`
+      );
+
+      const chosenStops = forcedStops || [
+        Math.floor(Math.random() * STOP_COUNT),
+        Math.floor(Math.random() * STOP_COUNT),
+        Math.floor(Math.random() * STOP_COUNT)
       ];
 
-      const spinDurations = [1400, 1950, 2550];
-      const extraRotations = [5, 7, 9];
+      const spinTimes = [1500, 2100, 2750];
+      const extraTurns = [6, 8, 11];
 
-      reelStates.forEach((state, rIdx) => {
-        const targetIndex = chosenIndices[rIdx];
-        state.targetIndex = targetIndex;
+      reels.forEach((reel, rIdx) => {
+        const stopIdx = chosenStops[rIdx];
+        reel.targetStop = stopIdx;
 
-        const startAngle = state.angle;
-        // Align to next full negative 360 rotation so the cylinder spins downward smoothly
-        const baseFullTurns = Math.floor(startAngle / 360) * 360;
-        const targetAngle = baseFullTurns - (extraRotations[rIdx] * 360) - (targetIndex * STEP_DEG);
+        const startRot = reel.angle;
+        const baseFullTurns = Math.ceil(startRot / (Math.PI * 2)) * (Math.PI * 2);
+        const targetRot = baseFullTurns + extraTurns[rIdx] * (Math.PI * 2) + stopIdx * STOP_ANGLE;
 
-        const duration = spinDurations[rIdx];
-        const startTime = performance.now();
-        let lastTickStep = Math.floor(startAngle / STEP_DEG);
+        const duration = spinTimes[rIdx];
+        const tStart = performance.now();
+        let lastClickStep = Math.floor(startRot / STOP_ANGLE);
 
-        function animateReel(now) {
-          const elapsed = now - startTime;
+        function updateReelSpin(now) {
+          const elapsed = now - tStart;
           const t = Math.min(1, elapsed / duration);
 
-          // Custom easing with slight wind-up and realistic mechanical overshoot snap
+          // Authentic wind-up + mechanical overshoot bounce when locking into place
           let eased;
-          if (t < 0.08) {
-            // Slight upward wind-up before spinning down
-            const wt = t / 0.08;
-            eased = -0.012 * Math.sin(wt * Math.PI);
+          if (t < 0.065) {
+            eased = -0.014 * Math.sin((t / 0.065) * Math.PI);
           } else {
-            const st = (t - 0.08) / 0.92;
-            const c1 = 1.45;
+            const st = (t - 0.065) / 0.935;
+            const c1 = 1.38;
             const c3 = c1 + 1;
             eased = 1 + c3 * Math.pow(st - 1, 3) + c1 * Math.pow(st - 1, 2);
           }
 
-          const currentAngle = startAngle + (targetAngle - startAngle) * eased;
-          state.el.style.transform = `rotateX(${currentAngle.toFixed(2)}deg)`;
+          const currentRot = startRot + (targetRot - startRot) * eased;
+          reel.group.rotation.x = currentRot;
 
-          // Emit mechanical click sound every 30deg facet pass
-          const currentTickStep = Math.floor(currentAngle / STEP_DEG);
-          if (currentTickStep !== lastTickStep && t < 0.94) {
-            lastTickStep = currentTickStep;
-            playTone(260 + (rIdx * 40), 'sine', 0.025, 0.045);
+          const stepNow = Math.floor(currentRot / STOP_ANGLE);
+          if (stepNow !== lastClickStep && t < 0.95) {
+            lastClickStep = stepNow;
+            playSynthTone(250 + rIdx * 45, 'sine', 0.022, 0.045);
           }
 
           if (t < 1) {
-            requestAnimationFrame(animateReel);
+            requestAnimationFrame(updateReelSpin);
           } else {
-            state.angle = targetAngle;
-            state.el.style.transform = `rotateX(${targetAngle}deg)`;
-            playReelStopSound(rIdx);
+            reel.angle = targetRot % (Math.PI * 2);
+            reel.group.rotation.x = reel.angle;
+            // Solid mechanical drum stop thud
+            playSynthTone(150 + rIdx * 55, 'triangle', 0.14, 0.24);
 
             if (rIdx === 2) {
-              evaluateSpinOutcome(chosenIndices);
+              evaluatePayline(chosenStops, wager);
             }
           }
         }
 
-        requestAnimationFrame(animateReel);
+        requestAnimationFrame(updateReelSpin);
       });
     }
 
-    function evaluateSpinOutcome(indices) {
-      const landed = indices.map(i => REEL_STRIP[i]);
-      const [s0, s1, s2] = landed;
+    function evaluatePayline(stops, wager) {
+      const landedSyms = stops.map(idx => SYM_BY_ID[REEL_STRIP[idx]]);
+      const [s0, s1, s2] = landedSyms;
 
-      let winMultiplier = 0;
-      let winMessage = '';
+      let winMult = 0;
       let winningReels = [];
+      let bannerMsg = '';
 
-      // 1. All 3 identical symbols
       if (s0.id === s1.id && s1.id === s2.id) {
-        winMultiplier = s0.mult3;
+        winMult = s0.mult;
         winningReels = [0, 1, 2];
-        if (s0.id === 'SEVEN') {
-          winMessage = `🔥 GRAND 777 JACKPOT! ${winMultiplier}× PAYOUT! 🔥`;
-        } else {
-          winMessage = `✨ TRIPLE ${s0.label}! ${winMultiplier}× WIN! ✨`;
-        }
-      }
-      // 2. Two Lucky 7s
-      else if (landed.filter(s => s.id === 'SEVEN').length === 2) {
-        winMultiplier = 5;
-        winningReels = landed.map((s, idx) => s.id === 'SEVEN' ? idx : -1).filter(i => i !== -1);
-        winMessage = `⚡ DOUBLE LUCKY 7s! 5× Payout!`;
-      }
-      // 3. Cherry combinations (1 or 2 cherries anywhere on payline)
-      else {
-        const cherryCount = landed.filter(s => s.id === 'CHERRY').length;
+        bannerMsg = s0.id === 'SEVEN'
+          ? `🚨 GRAND 777 VEGAS JACKPOT! ${winMult}× PAYOUT! 🚨`
+          : `✨ TRIPLE ${s0.name}! ${winMult}× PAYOUT! ✨`;
+      } else if (landedSyms.filter(s => s.id === 'SEVEN').length === 2) {
+        winMult = 5;
+        winningReels = landedSyms.map((s, i) => (s.id === 'SEVEN' ? i : -1)).filter(i => i !== -1);
+        bannerMsg = `⚡ DOUBLE LUCKY 777s! 5× Payout!`;
+      } else {
+        const cherryCount = landedSyms.filter(s => s.id === 'CHERRY').length;
         if (cherryCount === 2) {
-          winMultiplier = 2;
-          winningReels = landed.map((s, idx) => s.id === 'CHERRY' ? idx : -1).filter(i => i !== -1);
-          winMessage = `🍒 Double Cherries! 2× Payout!`;
+          winMult = 2;
+          winningReels = landedSyms.map((s, i) => (s.id === 'CHERRY' ? i : -1)).filter(i => i !== -1);
+          bannerMsg = `🍒 Twin Cherries! 2× Payout!`;
         } else if (cherryCount === 1) {
-          winMultiplier = 1;
-          winningReels = landed.map((s, idx) => s.id === 'CHERRY' ? idx : -1).filter(i => i !== -1);
-          winMessage = `🍒 Single Cherry! 1× Bet Returned!`;
+          winMult = 1;
+          winningReels = landedSyms.map((s, i) => (s.id === 'CHERRY' ? i : -1)).filter(i => i !== -1);
+          bannerMsg = `🍒 Single Cherry! 1× Bet Returned!`;
         }
       }
 
-      if (winMultiplier > 0) {
-        const payout = currentBet * winMultiplier;
+      if (winMult > 0) {
+        const payout = wager * winMult;
         credits += payout;
-        document.getElementById('winDisplay').textContent = payout.toLocaleString();
-        document.getElementById('paylineBar').classList.add('win-active');
-        setStatus(winMessage);
+        lastWinAmount = payout;
+        setStatus(`${bannerMsg} (+${payout.toLocaleString()} Credits!)`);
 
-        // Highlight winning facets on the 3D cylinder
+        // Turn Payline Laser Emerald Green
+        paylineLaserMat.color.setHex(0x4ade80);
+        paylineLaserMat.emissive.setHex(0x22c55e);
+
+        // Illuminate winning curved segments on the 3D drums
         winningReels.forEach(rIdx => {
-          const facetIdx = indices[rIdx];
-          const facetEl = reelStates[rIdx].el.querySelector(`[data-index="${facetIdx}"]`);
-          if (facetEl) facetEl.classList.add('win-highlight');
+          const stopIdx = stops[rIdx];
+          reels[rIdx].segments[stopIdx].mat.emissiveIntensity = 1.05;
         });
 
-        const isBigWin = winMultiplier >= 15;
-        playWinFanfare(isBigWin);
-        spawnCoins(isBigWin ? 90 : 32);
+        const isJackpotOrBig = winMult >= 15 || payout >= 1000;
+        playSynthChord(
+          isJackpotOrBig
+            ? [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98]
+            : [440, 554.37, 659.25, 880],
+          'square',
+          0.18,
+          0.14
+        );
+        dispense3DCoins(isJackpotOrBig ? 75 : 28);
       } else {
-        setStatus(`No match (${s0.label} · ${s1.label} · ${s2.label}) — Spin again!`);
+        if (credits <= 0) {
+          setStatus(`💥 BUSTED! Click "+1,000 REBUY" or pull the 3D joystick for a free house refill!`);
+        } else {
+          setStatus(`Result: ${s0.name} · ${s1.name} · ${s2.name} — Pull the 3D joystick again!`);
+        }
       }
 
-      updateHUD();
-      setButtonsDisabled(false);
       isSpinning = false;
+      refreshAllUI();
     }
 
-    function clearFacetHighlights() {
-      document.querySelectorAll('.reel-facet.win-highlight').forEach(el => {
-        el.classList.remove('win-highlight');
-      });
+    /* ============================================================================
+       11. 3D GOLD COINS POURING INTO THE STAINLESS-STEEL COIN TRAY
+       ============================================================================ */
+    const coinGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.032, 20);
+    const activeCoins = [];
+
+    function dispense3DCoins(count) {
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          const coinMesh = new THREE.Mesh(coinGeo, gold24kMat);
+          // Spawn from the coin chute opening
+          coinMesh.position.set(
+            (Math.random() - 0.5) * 0.75,
+            -1.82,
+            1.38
+          );
+          coinMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+          coinMesh.castShadow = true;
+          cabinetGroup.add(coinMesh);
+
+          if (i % 3 === 0) playSynthTone(1250 + Math.random() * 450, 'sine', 0.04, 0.05);
+
+          activeCoins.push({
+            mesh: coinMesh,
+            vx: (Math.random() - 0.5) * 0.06,
+            vy: 0.04 + Math.random() * 0.08,
+            vz: 0.04 + Math.random() * 0.07,
+            rx: (Math.random() - 0.5) * 0.25,
+            ry: (Math.random() - 0.5) * 0.25,
+            bounces: 0,
+            life: 0
+          });
+        }, i * 28);
+      }
     }
 
-    function updateHUD() {
-      document.getElementById('creditsDisplay').textContent = credits.toLocaleString();
-      document.getElementById('betDisplay').textContent = currentBet.toLocaleString();
-    }
-
-    function setStatus(text) {
-      document.getElementById('statusBanner').textContent = text;
-    }
-
-    function setButtonsDisabled(disabled) {
-      ['spinBtn', 'betDownBtn', 'betUpBtn', 'maxBetBtn'].forEach(id => {
-        document.getElementById(id).disabled = disabled;
-      });
-    }
-
-    /* ==========================================================
-       5. 2.5D / 3D CAMERA PERSPECTIVE & MOUSE PARALLAX
-       ========================================================== */
-    function setCameraMode(mode) {
-      cameraMode = mode;
-      const root = document.documentElement;
-      const modes = ['tilt', 'iso', 'flat'];
-      modes.forEach(m => {
-        const btn = document.getElementById(
-          m === 'tilt' ? 'camTiltBtn' : m === 'iso' ? 'camIsoBtn' : 'camFlatBtn'
-        );
-        btn.className = m === mode
-          ? 'px-3 py-1 rounded-full bg-amber-500 text-black font-bold transition'
+    /* ============================================================================
+       12. CAMERA PRESETS & MAIN ANIMATION LOOP
+       ============================================================================ */
+    function setCameraView(view) {
+      ['Play', 'Lever', 'Front'].forEach(v => {
+        const btn = document.getElementById(`cam${v}`);
+        const active = v.toLowerCase() === view;
+        btn.className = active
+          ? 'px-3 py-1 rounded-full bg-amber-400 text-black font-bold transition'
           : 'px-3 py-1 rounded-full text-amber-200 hover:bg-white/10 transition';
       });
 
-      if (mode === 'iso') {
-        root.style.setProperty('--cabinet-rot-x', '12deg');
-        root.style.setProperty('--cabinet-rot-y', '-22deg');
-      } else if (mode === 'flat') {
-        root.style.setProperty('--cabinet-rot-x', '0deg');
-        root.style.setProperty('--cabinet-rot-y', '0deg');
+      if (view === 'lever') {
+        // Close-up angled focus on the 3D mechanical joystick & gearbox
+        camTargetPos.set(2.35, 0.35, 5.15);
+        camLookTarget.set(1.15, 0.15, 0.2);
+      } else if (view === 'front') {
+        // Dead-center straight-on casino view
+        camTargetPos.set(0, 0.22, 6.2);
+        camLookTarget.set(0, 0.08, 0.15);
       } else {
-        root.style.setProperty('--cabinet-rot-x', '8deg');
-        root.style.setProperty('--cabinet-rot-y', '0deg');
+        // Balanced Close-Up 3D Play view
+        camTargetPos.set(0.68, 0.22, 6.25);
+        camLookTarget.set(0.24, 0.08, 0.15);
       }
     }
 
-    window.addEventListener('mousemove', (e) => {
-      if (cameraMode !== 'tilt') return;
-      const nx = (e.clientX / window.innerWidth - 0.5) * 2;  // -1 to 1
-      const ny = (e.clientY / window.innerHeight - 0.5) * 2; // -1 to 1
-      const rotY = nx * 16;
-      const rotX = 6 - ny * 11;
-      document.documentElement.style.setProperty('--cabinet-rot-x', `${rotX.toFixed(2)}deg`);
-      document.documentElement.style.setProperty('--cabinet-rot-y', `${rotY.toFixed(2)}deg`);
-    });
+    const clock = new THREE.Clock();
 
-    /* ==========================================================
-       6. 2.5D GOLD COIN FOUNTAIN (HTML5 CANVAS)
-       ========================================================== */
-    const canvas = document.getElementById('fxCanvas');
-    const ctx = canvas.getContext('2d');
-    let coins = [];
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
 
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+      // Smooth camera interpolation
+      camera.position.lerp(camTargetPos, 0.08);
+      camera.lookAt(camLookTarget);
 
-    function spawnCoins(count) {
-      const originX = window.innerWidth / 2;
-      const originY = window.innerHeight * 0.48;
-      for (let i = 0; i < count; i++) {
-        const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.35;
-        const speed = 7 + Math.random() * 11;
-        coins.push({
-          x: originX + (Math.random() - 0.5) * 160,
-          y: originY,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 4,
-          radius: 9 + Math.random() * 6,
-          spinPhase: Math.random() * Math.PI * 2,
-          spinSpeed: 0.14 + Math.random() * 0.18,
-          alpha: 1
-        });
+      // Chasing Marquee Light Bulbs animation
+      marqueeBulbs.forEach(b => {
+        const wave = Math.sin(elapsed * 7 - b.idx * 0.65);
+        b.mat.emissiveIntensity = isSpinning
+          ? (wave > 0 ? 2.4 : 0.25)
+          : 1.1 + 0.7 * wave;
+      });
+
+      // Idle pulsing grab-halo around the 3D Joystick Ball
+      if (!isDraggingArm && !isSpinning) {
+        grabHaloRing.visible = true;
+        const pulse = 1 + Math.sin(elapsed * 4) * 0.09;
+        grabHaloRing.scale.set(pulse, pulse, 1);
+        grabHaloMat.opacity = 0.35 + Math.sin(elapsed * 4) * 0.22;
+        grabHaloRing.lookAt(camera.position);
+      } else {
+        grabHaloRing.visible = false;
       }
-    }
 
-    function renderCoins() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let i = coins.length - 1; i >= 0; i--) {
-        const c = coins[i];
-        c.x += c.vx;
-        c.y += c.vy;
-        c.vy += 0.42; // Gravity
-        c.spinPhase += c.spinSpeed;
+      // Damped Harmonic Spring-Return Physics on the 3D Joystick Arm
+      if (!isDraggingArm && armPullRatio > 0.0005) {
+        const springAccel = -0.22 * armPullRatio;
+        armSpringVelocity = (armSpringVelocity + springAccel) * 0.76;
+        armPullRatio = Math.max(0, armPullRatio + armSpringVelocity);
+        syncArmVisuals(armPullRatio);
+      }
 
-        if (c.y > canvas.height + 40) {
-          coins.splice(i, 1);
-          continue;
+      // Update 3D Gold Coins bouncing in the Coin Tray
+      for (let i = activeCoins.length - 1; i >= 0; i--) {
+        const c = activeCoins[i];
+        c.life++;
+        c.mesh.position.x += c.vx;
+        c.mesh.position.y += c.vy;
+        c.mesh.position.z += c.vz;
+        c.vy -= 0.0065; // Gravity
+        c.mesh.rotation.x += c.rx;
+        c.mesh.rotation.y += c.ry;
+
+        // Bounce inside the stainless-steel coin tray floor
+        if (c.mesh.position.y < -2.18) {
+          c.mesh.position.y = -2.18;
+          c.vy = -c.vy * 0.48;
+          c.vx *= 0.78;
+          c.vz *= 0.78;
+          c.bounces++;
         }
 
-        const scaleX = Math.cos(c.spinPhase);
-        ctx.save();
-        ctx.translate(c.x, c.y);
-        ctx.scale(scaleX, 1);
-
-        // Outer gold coin rim
-        ctx.beginPath();
-        ctx.arc(0, 0, c.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#facc15';
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#b45309';
-        ctx.stroke();
-
-        // Inner star/emblem shine
-        ctx.beginPath();
-        ctx.arc(0, 0, c.radius * 0.62, 0, Math.PI * 2);
-        ctx.strokeStyle = '#fef08a';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
-        ctx.restore();
+        if (c.life > 190) {
+          cabinetGroup.remove(c.mesh);
+          activeCoins.splice(i, 1);
+        }
       }
-      requestAnimationFrame(renderCoins);
+
+      renderer.render(scene, camera);
     }
-    requestAnimationFrame(renderCoins);
 
-    /* ==========================================================
-       7. INPUT LISTENERS (LEVER CLICK & SPACEBAR)
-       ========================================================== */
-    document.getElementById('leverAssembly').addEventListener('click', () => triggerSpin());
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        triggerSpin();
-      }
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Boot up machine
-    buildCylindricalReels();
-    updateHUD();
+    refreshAllUI();
+    animate();
   </script>
 </body>
 </html>
