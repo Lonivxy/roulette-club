@@ -20,6 +20,15 @@ function ui() {
     }});controller.render();
     return {engine,get,controller,notices,setLocked(value){locked=value;controller.render();},get played(){return played;}};
 }
+test('interest countdowns display the new ten-minute bank and three-minute shark schedules',()=>{
+    const t=ui();let now=1000000;t.engine.now=()=>now;
+    t.engine.borrow(100000);t.engine.active.balance=0;t.engine.borrowShark(1000);t.controller.tick();
+    assert.match(t.get('bank-interest-progress').textContent,/10:00.*每 10 分钟 15%/);
+    assert.match(t.get('shark-progress').textContent,/3:00.*每 3 分钟 125%/);
+    now+=60000;t.controller.tick();
+    assert.match(t.get('bank-interest-progress').textContent,/9:00/);assert.match(t.get('shark-progress').textContent,/2:00/);
+});
+
 test('loan offer appears only with exhausted bank and empty wallet, while repayments remain accessible',async () =>{
     const t=ui();assert.equal(t.get('shark-panel').hidden,true);
     t.engine.borrow(100000);t.engine.active.balance=0;t.controller.render();

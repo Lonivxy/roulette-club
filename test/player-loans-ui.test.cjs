@@ -32,5 +32,5 @@ test('players and bank are separate panels and show the requested real-time inte
     assert.ok(html.includes('id="players-view"'));assert.ok(html.includes('id="bank-view"'));
     const players=html.slice(html.indexOf('<section id="players-view"'),html.indexOf('<section id="bank-view"'));
     assert.ok(players.includes('id="transfer-form"'));assert.ok(players.includes('id="peer-loan-form"'));assert.ok(!players.includes('id="bank-form"'));
-    assert.ok(html.includes('每 30 分钟'));assert.ok(html.includes('每 5 分钟'));assert.ok(html.includes('0.5%'));
+    assert.ok(html.includes('每 10 分钟'));assert.ok(html.includes('每 3 分钟'));assert.ok(html.includes('15%'));
 });

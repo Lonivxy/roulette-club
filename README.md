@@ -33,9 +33,11 @@ The separate Bank tab belongs to the selected player:
 
 | Loan | Borrowing ceiling | Compound interest |
 | --- | --- | --- |
-| Bank | 100,000 | 0.5% per complete 30 minutes |
-| Loan shark | 1,500,000 | 10% per complete five minutes |
+| Bank | 100,000 | 15% per complete ten minutes |
+| Loan shark | 1,500,000 | 125% per complete three minutes |
 | Player loan | 1,000,000 per agreement | Lender's agreed rate; ten-minute default period |
+
+The bank adds 15% interest per period (debt multiplies by 1.15); the shark adds 125% (debt multiplies by 2.25). Existing debts first settle completed periods under their previous schedule when loaded by the updated server, then start a fresh timer under the new schedule. This conversion is saved once and does not apply the increased rates retroactively. Player-to-player loan terms remain those accepted by both parties.
 
 Interest uses actual wall time, including offline time and time spent on other profiles. Every completed period rounds its interest up to a whole chip and adds it to the outstanding debt. Borrowing into an existing bank/shark balance preserves that account's current period; partial repayment also preserves its clock. Paying off the balance clears its clock. Reload settles elapsed periods once and persists the new boundary. Debt is capped at 1,000,000,000 per account/agreement. A backwards clock adjustment does not charge periods twice. Existing round-based saves retain their debts and begin the new timer when first opened after this update.
 

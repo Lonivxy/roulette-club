@@ -4,8 +4,8 @@ function createEconomyUI(engine, callbacks) {
     const remaining = ms => { const seconds = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0'); };
     function tick() {
         const user = engine.active, now = engine.now();
-        $('bank-interest-progress').textContent = user.debt > 0 ? `下次计息 ${remaining(user.bankInterestAt + 30 * 60000 - now)} · 每 30 分钟 0.5%。` : '无欠款，不计息。';
-        $('shark-progress').textContent = user.sharkDebt > 0 ? `下次计息 ${remaining(user.sharkInterestAt + 5 * 60000 - now)} · 每 5 分钟 10%。` : '每 5 分钟，未还欠款加 10%。';
+        $('bank-interest-progress').textContent = user.debt > 0 ? `下次计息 ${remaining(user.bankInterestAt + 10 * 60000 - now)} · 每 10 分钟 15%。` : '无欠款，不计息。';
+        $('shark-progress').textContent = user.sharkDebt > 0 ? `下次计息 ${remaining(user.sharkInterestAt + 3 * 60000 - now)} · 每 3 分钟 125%。` : '每 3 分钟，未还欠款加 125%。';
         const cooling = now < user.marketAvailableAt;
         $('market-cooldown').textContent = cooling ? '商人进货中 · 下次购买还需 ' + remaining(user.marketAvailableAt - now) : '商人已到货 · 购买后冷却 15 分钟';
         buyButtons.forEach(({button, blocked}) => { button.disabled = blocked || cooling; });

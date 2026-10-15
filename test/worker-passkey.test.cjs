@@ -113,6 +113,21 @@ test('legacy import requires passkey admin and refuses to overwrite subsequent s
     assert.equal((await (await t.request('/api/state')).json()).data.users.length,30);
     assert.equal((await t.cmd('import',[legacy])).status,409);
 });
+test('server persists the new bank and shark interest once at their respective real-time boundaries',async()=>{
+    const t=await fixture();await t.cmd('borrow',[100000]);
+    let row=t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club'),data=JSON.parse(row.snapshot);
+    data.users[0].balance=0;t.sql.prepare('UPDATE casino_state SET snapshot=? WHERE id=?').run(JSON.stringify(data),'club');
+    assert.equal((await t.cmd('borrowShark',[1000])).status,200);
+    row=t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club');data=JSON.parse(row.snapshot);
+    data.users[0].bankInterestAt=Date.now()-10*60000;data.users[0].sharkInterestAt=Date.now()-3*60000;
+    t.sql.prepare('UPDATE casino_state SET snapshot=? WHERE id=?').run(JSON.stringify(data),'club');
+    for(let i=0;i<2;i++){
+        const state=await (await t.request('/api/state')).json();assert.equal(state.data.users[0].debt,115000);assert.equal(state.data.users[0].sharkDebt,2250);
+    }
+    const persisted=JSON.parse(t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot);
+    assert.equal(persisted.users[0].debt,115000);assert.equal(persisted.users[0].sharkDebt,2250);
+});
+
 test('PLAYER contains player finance while management forms are confined to ADMIN',async()=>{
     const html=fs.readFileSync(path.join(__dirname,'../dist/index.html'),'utf8'),start=html.indexOf('<section id="players-view"'),end=html.indexOf('<section id="bank-view"');
     assert.ok(start>=0&&end>start);const players=html.slice(start,end);

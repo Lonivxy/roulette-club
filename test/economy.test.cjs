@@ -13,21 +13,21 @@ test('legacy profiles migrate without losing balances, bank debts or roulette be
     assert.equal(restored.storageWarning,'');assert.equal(restored.active.balance,5963);assert.equal(restored.active.debt,5000);
     assert.equal(restored.availableCredit,95000);assert.equal(restored.active.bets.RED,37);assert.deepEqual(restored.active.cards,[]);
 });
-test('bank accrues 0.5% per real 30 minutes, compounds and never charges again on reload', () => {
+test('bank accrues 15% per real ten minutes, compounds and never charges again on reload', () => {
     const saved=storage();let now=1000000;const e=new Engine(saved,()=>0,()=>now);e.borrow(100000);
     for(let i=0;i<20;i++){e.spinSlots(1);e.lock=null;}assert.equal(e.active.debt,100000);
-    now+=30*60000-1;e.save();assert.equal(e.active.debt,100000);
-    now++;e.save();assert.equal(e.active.debt,100500);
-    now+=30*60000;e.save();assert.equal(e.active.debt,101003);
-    const restored=new Engine(saved,()=>0,()=>now);assert.equal(restored.active.debt,101003);assert.equal(restored.storageWarning,'');
-    restored.save();assert.equal(restored.active.debt,101003);
+    now+=10*60000-1;e.save();assert.equal(e.active.debt,100000);
+    now++;e.save();assert.equal(e.active.debt,115000);
+    now+=10*60000;e.save();assert.equal(e.active.debt,132250);
+    const restored=new Engine(saved,()=>0,()=>now);assert.equal(restored.active.debt,132250);assert.equal(restored.storageWarning,'');
+    restored.save();assert.equal(restored.active.debt,132250);
 });
 test('offline time charges all players; partial repayments keep time progress and full repayments reset it', () => {
     const saved=storage();let now=1000000;const e=new Engine(saved,()=>0,()=>now);e.borrow(1000);e.switchUser('jamie');e.borrow(2000);
-    now+=60*60000;const restored=new Engine(saved,()=>0,()=>now);
-    assert.equal(restored.active.debt,2021);restored.switchUser('alex');assert.equal(restored.active.debt,1011);
+    now+=20*60000;const restored=new Engine(saved,()=>0,()=>now);
+    assert.equal(restored.active.debt,2645);restored.switchUser('alex');assert.equal(restored.active.debt,1323);
     const clock=restored.active.bankInterestAt;restored.repay(100);assert.equal(restored.active.bankInterestAt,clock);
-    restored.repay(911);assert.equal(restored.active.bankInterestAt,null);restored.borrow(100);assert.equal(restored.active.bankInterestAt,now);
+    restored.repay(1223);assert.equal(restored.active.bankInterestAt,null);restored.borrow(100);assert.equal(restored.active.bankInterestAt,now);
 });
 test('loan shark rejects ordinary players, positive cash, reserved roulette stakes and active games', () => {
     const {e}=game();assert.equal(e.canBorrowShark,false);assert.throws(()=>e.borrowShark(1));
@@ -43,13 +43,28 @@ test('loan shark lends the full 1.5M once when eligible and prevents borrowing o
     assert.throws(()=>e.borrowShark(1));e.active.balance=0;assert.throws(()=>e.borrowShark(1));
     e.save();const restored=new Engine(saved);assert.equal(restored.active.sharkDebt,1500000);assert.equal(restored.availableSharkCredit,0);
 });
-test('negative wallets qualify and shark charges 10% per five minutes even while offline', () => {
+test('negative wallets qualify and shark charges 125% per three minutes even while offline', () => {
     const saved=storage();let now=1000000;const e=new Engine(saved,()=>0,()=>now);e.borrow(100000);e.active.balance=-50;e.save();
     const restored=new Engine(saved,()=>0,()=>now);assert.equal(restored.canBorrowShark,true);restored.borrowShark(1500000);
-    assert.equal(restored.active.balance,1499950);now+=5*60000;restored.save();
-    assert.equal(restored.active.sharkDebt,1650000);assert.equal(restored.active.debt,100000);
-    assert.equal(restored.availableSharkCredit,0);assert.equal(new Engine(saved,()=>0,()=>now).active.sharkDebt,1650000);
-    restored.active.balance=2000000;restored.repayShark(1650000);assert.equal(restored.active.sharkInterestAt,null);assert.throws(()=>restored.repayShark(1));
+    assert.equal(restored.active.balance,1499950);now+=3*60000-1;restored.save();assert.equal(restored.active.sharkDebt,1500000);
+    now++;restored.save();assert.equal(restored.active.sharkDebt,3375000);assert.equal(restored.active.debt,100000);
+    now+=3*60000;
+    const offline=new Engine(saved,()=>0,()=>now);assert.equal(offline.active.sharkDebt,7593750);
+    assert.equal(offline.availableSharkCredit,0);assert.equal(new Engine(saved,()=>0,()=>now).active.sharkDebt,7593750);
+    offline.active.balance=10000000;offline.repayShark(7593750);assert.equal(offline.active.sharkInterestAt,null);assert.throws(()=>offline.repayShark(1));
+});
+
+test('old bank and shark debts settle old completed periods once before the new schedules start', () => {
+    const saved=storage();let now=1000000;const e=new Engine(saved,()=>0,()=>now);
+    const user=e.active;user.debt=100000;user.bankInterestAt=now;user.sharkDebt=1000;user.sharkInterestAt=now+25*60000;
+    delete user.bankInterestPolicy;delete user.sharkInterestPolicy;
+    saved.setItem(Engine.storageKey,JSON.stringify(e.data));now+=30*60000;
+    const migrated=new Engine(saved,()=>0,()=>now);
+    assert.equal(migrated.active.debt,100500);assert.equal(migrated.active.sharkDebt,1100);
+    assert.equal(migrated.active.bankInterestAt,now);assert.equal(migrated.active.sharkInterestAt,now);
+    const reloaded=new Engine(saved,()=>0,()=>now);assert.equal(reloaded.active.debt,100500);assert.equal(reloaded.active.sharkDebt,1100);
+    now+=3*60000;reloaded.save();assert.equal(reloaded.active.sharkDebt,2475);assert.equal(reloaded.active.debt,100500);
+    now+=7*60000;reloaded.save();assert.equal(reloaded.active.debt,115575);
 });
 test('all merchant cards charge their price and force the correct result for exactly one spin', () => {
     for(const type of Object.keys(Engine.cards)) {

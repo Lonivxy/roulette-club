@@ -4,7 +4,8 @@
     const KEY = 'roulette-club-v1';
     const LIMIT = 100000;
     const SHARK_LIMIT = 1500000;
-    const BANK_PERIOD = 30 * 60000, SHARK_PERIOD = 5 * 60000, MARKET_COOLDOWN = 15 * 60000;
+    const BANK_PERIOD = 10 * 60000, SHARK_PERIOD = 3 * 60000, MARKET_COOLDOWN = 15 * 60000;
+    const INTEREST_POLICY = 2;
     const MAX = 1000000000;
     const symbols = ['7', '💎', 'BAR', '🔔', '🍀', '🍒'];
     const triples = [50, 25, 20, 15, 10, 5];
@@ -224,7 +225,7 @@
             if (n > this.availableCredit) throw new Error(`You can borrow up to ${this.availableCredit.toLocaleString()} more chips.`);
             if (u.balance + n > MAX) throw new Error('Your wallet has reached its chip limit.');
             u.balance += n;
-            if (u.debt === 0) u.bankInterestAt = this.now();
+            if (u.debt === 0) { u.bankInterestAt = this.now(); u.bankInterestPolicy = INTEREST_POLICY; }
             u.debt += n;
             this.record(`Bank → ${u.name}: borrowed ${n.toLocaleString()} chips.`);
             this.save();
@@ -245,9 +246,9 @@
             const n = this.amount(value, SHARK_LIMIT), user = this.active;
             if (!this.canBorrowShark) throw new Error('高利贷仅在银行额度耗尽、钱包 ≤ 0 且没有未结算下注时开放。');
             if (n > this.availableSharkCredit) throw new Error('高利贷剩余额度不足。');
-            if (user.sharkDebt === 0) user.sharkInterestAt = this.now();
+            if (user.sharkDebt === 0) { user.sharkInterestAt = this.now(); user.sharkInterestPolicy = INTEREST_POLICY; }
             user.balance += n; user.sharkDebt += n;
-            this.record(`高利贷 → ${user.name}: 借入 ${n.toLocaleString()}；每 5 分钟计息 10%。`);
+            this.record(`高利贷 → ${user.name}: 借入 ${n.toLocaleString()}；每 3 分钟计息 125%。`);
             this.save();
         }
         repayShark(value) {
@@ -272,9 +273,19 @@
                 target[clock] += periods * period; changed = true;
                 if (target[debt] !== before) this.record(`${label} · ${periods} 期利息 +${(target[debt] - before).toLocaleString()}，欠款 ${target[debt].toLocaleString()}。`);
             };
+            const account = (user, debt, clock, policy, period, rate, oldPeriod, oldRate, label) => {
+                if (user[debt] > 0 && user[policy] !== INTEREST_POLICY) {
+                    // Settle completed old periods once before starting the new schedule.
+                    accrue(user, debt, clock, oldPeriod, oldRate, label);
+                    user[policy] = INTEREST_POLICY;
+                    user[clock] = Math.max(now, user[clock] ?? now);
+                    changed = true;
+                }
+                accrue(user, debt, clock, period, rate, label);
+            };
             for (const user of this.data.users) {
-                accrue(user, 'debt', 'bankInterestAt', BANK_PERIOD, 50, user.name + ' · 银行');
-                accrue(user, 'sharkDebt', 'sharkInterestAt', SHARK_PERIOD, 1000, user.name + ' · 高利贷');
+                account(user, 'debt', 'bankInterestAt', 'bankInterestPolicy', BANK_PERIOD, 1500, 30 * 60000, 50, user.name + ' · 银行');
+                account(user, 'sharkDebt', 'sharkInterestAt', 'sharkInterestPolicy', SHARK_PERIOD, 12500, 5 * 60000, 1000, user.name + ' · 高利贷');
             }
             for (const loan of this.data.loans) if (loan.status === 'active') accrue(loan, 'balance', 'interestAt', loan.periodMs, loan.rateBps, loan.borrowerName + ' → ' + loan.lenderName);
             return changed;
