@@ -146,11 +146,43 @@ test('negative-mode balances persist in D1, never refill an unfinished stake and
     assert.equal(persisted.users[0].recovery.deficit,190);assert.equal(persisted.users[0].sharkDebt,100);
 });
 
+test('one-click repayment settles latest bank and shark interest and ignores duplicate requests',async()=>{
+    const t=await fixture();assert.equal((await t.cmd('borrow',[1000])).status,200);
+    let data=JSON.parse(t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot);
+    data.users[0].bankInterestAt=Date.now()-10*60000;t.sql.prepare('UPDATE casino_state SET snapshot=? WHERE id=?').run(JSON.stringify(data),'club');
+    const id=crypto.randomUUID();let response=await t.cmd('repayAll',['bank'],{id});assert.equal(response.status,200);
+    let state=await response.json();assert.equal(state.data.users[0].debt,0);assert.equal(state.data.users[0].balance,850);
+    const replay=await (await t.cmd('repayAll',['bank'],{id})).json();assert.equal(replay.data.users[0].balance,850);
+    assert.equal((await t.cmd('repayAll',['bank'])).status,400);
+    data=JSON.parse(t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot);
+    Object.assign(data.users[0],{balance:3000,sharkDebt:1000,sharkInterestPolicy:2,sharkInterestAt:Date.now()-3*60000});
+    t.sql.prepare('UPDATE casino_state SET snapshot=? WHERE id=?').run(JSON.stringify(data),'club');
+    response=await t.cmd('repayAll',['shark']);assert.equal(response.status,200);state=await response.json();
+    assert.equal(state.data.users[0].sharkDebt,0);assert.equal(state.data.users[0].sharkInterestAt,null);assert.equal(state.data.users[0].balance,750);
+    data=JSON.parse(t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot);
+    Object.assign(data.users[0],{sharkDebt:500,sharkInterestPolicy:2,sharkInterestAt:Date.now()-3*60000});
+    t.sql.prepare('UPDATE casino_state SET snapshot=? WHERE id=?').run(JSON.stringify(data),'club');
+    assert.equal((await t.cmd('repayAll',['shark'])).status,400);
+    state=await (await t.request('/api/state')).json();assert.equal(state.data.users[0].balance,750);assert.equal(state.data.users[0].sharkDebt,1125);
+});
+
+test('one-click peer repayment validates its borrower and preserves the lender transfer in D1',async()=>{
+    const t=await fixture(),offer=await (await t.cmd('offerLoan',['jamie',100,2,1])).json(),loan=offer.result;
+    assert.equal((await t.cmd('respondLoan',[loan.id,true],{playerId:'jamie'})).status,200);
+    const data=JSON.parse(t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot);
+    data.loans[0].interestAt=Date.now()-60000;t.sql.prepare('UPDATE casino_state SET snapshot=? WHERE id=?').run(JSON.stringify(data),'club');
+    assert.equal((await t.cmd('repayAll',['peer',loan.id])).status,400);
+    const id=crypto.randomUUID(),response=await t.cmd('repayAll',['peer',loan.id],{playerId:'jamie',id});assert.equal(response.status,200);
+    const state=await response.json();assert.equal(state.data.users[0].balance,1002);assert.equal(state.data.users[1].balance,998);assert.equal(state.data.loans[0].status,'repaid');
+    const replay=await (await t.cmd('repayAll',['peer',loan.id],{playerId:'jamie',id})).json();assert.equal(replay.data.users[0].balance,1002);
+});
+
 test('PLAYER contains player finance while management forms are confined to ADMIN',async()=>{
     const html=fs.readFileSync(path.join(__dirname,'../dist/index.html'),'utf8'),start=html.indexOf('<section id="players-view"'),end=html.indexOf('<section id="bank-view"');
     assert.ok(start>=0&&end>start);const players=html.slice(start,end);
     assert.ok(!players.includes('club-player-list'));assert.ok(!players.includes('player-form'));assert.ok(players.includes('peer-loan-form'));
     assert.ok(html.includes('id="admin-view"'));assert.ok(html.includes('id="admin-adjust-form"'));assert.ok(html.includes('href="/player"'));assert.ok(html.includes('href="/admin"'));
+    for(const id of ['directory-search','directory-sort','directory-rows','forecast-minutes','bank-repay-all','shark-repay-all','activity-search','activity-export','admin-player-search'])assert.ok(html.includes('id="'+id+'"'));
 });
 
 test('built Worker serves PLAYER and ADMIN with server bootstrap and denies management without authentication',async()=>{

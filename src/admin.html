@@ -19,7 +19,7 @@
           <div class="club-actions"><button type="submit" class="club-action" data-admin-action>确认调整并记录</button></div>
         </form>
         <form id="player-form" class="club-card"><h3>添加玩家</h3><p class="club-muted">新玩家初始 1,000 筹码；可再通过余额调整修改。玩家保存到数据库，无固定人数上限。</p><label class="club-field" for="player-name">新玩家名称</label><input id="player-name" class="club-input" type="text" maxlength="24" required placeholder="玩家名称"><div class="club-actions"><button type="submit" class="club-action" data-admin-action>添加玩家</button></div></form>
-        <div class="club-card club-wide"><h3>玩家列表</h3><p class="club-muted">删除需要再次确认。存在未清欠款、借出款、待确认协议或未结算游戏时须先处理，最后一名玩家不能删除。</p><div class="club-account-list" id="club-player-list"></div></div>
+        <div class="club-card club-wide"><h3>玩家列表</h3><p class="club-muted">删除需要再次确认。存在未清欠款、借出款、待确认协议或未结算游戏时须先处理，最后一名玩家不能删除。</p><label class="club-field" for="admin-player-search">搜索玩家</label><input type="search" id="admin-player-search" class="club-input" maxlength="80" placeholder="输入名称查找玩家"><p id="admin-player-count" class="club-muted" role="status"></p><div class="club-account-list" id="club-player-list"></div><div class="account-pagination"><button type="button" id="admin-player-prev" class="club-action secondary">上一页</button><span id="admin-player-page" class="club-muted" role="status"></span><button type="button" id="admin-player-next" class="club-action secondary">下一页</button></div></div>
       </div>
     </div>
   </div>

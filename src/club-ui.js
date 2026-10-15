@@ -8,7 +8,7 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, admin, distress, recoveryPlayer = null, pendingDelete = null;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, accounts, admin, distress, adminPage = 1, recoveryPlayer = null, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -46,7 +46,12 @@ function createCasinoClub(roulette) {
         $('bank-debt').textContent = fmt(u.debt);
         $('bank-credit').textContent = fmt(engine.availableCredit);
         $('club-storage-note').textContent = engine.storageWarning;
-        $('club-player-list').replaceChildren(...engine.data.users.map(p => {
+        const adminSelection = CasinoAccounts.selectPlayers(engine.data.users,{query:$('admin-player-search').value,page:adminPage});
+        adminPage = adminSelection.page;
+        $('admin-player-count').textContent = `${adminSelection.total} 位匹配 · 共 ${engine.data.users.length} 位玩家`;
+        $('admin-player-page').textContent = `${adminPage} / ${adminSelection.pages}`;
+        $('admin-player-prev').disabled = adminPage === 1; $('admin-player-next').disabled = adminPage === adminSelection.pages;
+        $('club-player-list').replaceChildren(...adminSelection.rows.map(p => {
             const row = document.createElement('div'); row.className = 'club-player';
             const avatar = document.createElement('span'); avatar.className = 'club-avatar'; avatar.textContent = p.name[0].toUpperCase();
             const data = document.createElement('div'); data.className = 'club-player-data';
@@ -70,14 +75,7 @@ function createCasinoClub(roulette) {
             });
             row.append(avatar, data, button, remove); return row;
         }));
-        const entries = engine.data.ledger.slice(0, 40).map(t => {
-            const li = document.createElement('li'); const text = document.createElement('span'); text.textContent = t.text;
-            const time = document.createElement('time'); time.dateTime = t.time;
-            const date = new Date(t.time); time.textContent = Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
-            li.append(text, time); return li;
-        });
-        if (!entries.length) { const li = document.createElement('li'); li.textContent = 'Your table activity will appear here.'; entries.push(li); }
-        $('club-ledger').replaceChildren(...entries);
+        if (!adminSelection.total) { const empty = document.createElement('p'); empty.textContent = '没有匹配的玩家，请更换搜索名称。'; empty.className = 'club-muted'; $('club-player-list').append(empty); }
         document.querySelectorAll('[data-idle-only]').forEach(el => { el.disabled = viewLocked(); });
         document.querySelectorAll('#transfer-form button, #peer-loan-form button, #bank-form button, #shark-repay-form button').forEach(el => { el.disabled = viewLocked() || Boolean(u.recovery); });
         document.querySelectorAll('[data-view]').forEach(el => { el.disabled = viewLocked(); });
@@ -87,6 +85,7 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('#roulette-controls [data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
         economy?.render();
         playerLoans?.render();
+        accounts?.render();
         distress?.render(view);
     }
     function refresh() { engine.save(); render(); }
@@ -158,7 +157,11 @@ function createCasinoClub(roulette) {
         });
         admin = createAdminUI(engine, {locked:viewLocked,transact,changed:()=>{lucky.resetPlayer();render();}});
         distress = createDistressUI(engine, {locked:viewLocked,openBank:()=>setView('bank')});
+        accounts = createAccountUI(engine, {locked:viewLocked,transact,switchPlayer,notify:toast});
         if(engine.remote) engine.onChange = render;
+        $('admin-player-search').addEventListener('input',()=>{adminPage=1;pendingDelete=null;render();});
+        $('admin-player-prev').addEventListener('click',()=>{adminPage--;pendingDelete=null;render();});
+        $('admin-player-next').addEventListener('click',()=>{adminPage++;pendingDelete=null;render();});
         document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
         document.querySelectorAll('[data-go-bank]').forEach(b => b.addEventListener('click', () => setView('bank')));
         $('club-user').addEventListener('change', e => switchPlayer(e.target.value));
@@ -208,7 +211,7 @@ function createCasinoClub(roulette) {
         const tick = () => {
             if(engine.remote && !viewLocked() && Date.now()-lastSync >= 5000){lastSync=Date.now();engine.sync().catch(()=>{});}
             if (engine.accrueInterest()) { engine.save(); render(); }
-            else { economy?.tick(); playerLoans?.tick(); }
+            else { economy?.tick(); playerLoans?.tick(); accounts?.tick(); }
         };
         setInterval(tick, 1000);
         window.addEventListener('focus', tick);

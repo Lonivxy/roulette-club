@@ -27,6 +27,14 @@ The Players tab under PLAYER contains gifts and loans. ADMIN manages the profile
 
 Deletion requires two clicks and removes the selected player's wallet and cards. It cannot remove the last profile or a player with bank/shark debt, pending/active peer loans (as lender or borrower), outstanding roulette stakes or an unfinished blackjack hand. Completed loan receipts retain party names even after an account is deleted.
 
+### Account tools
+
+- PLAYER's Players tab includes a searchable directory with twenty players per page and sorting by name, wallet, net assets or total debt. It can switch the selected player. ADMIN's management list has its own search and pagination; adding, removing and adjusting players still require Windows Hello.
+- Net assets include ordinary cash, reserved roulette/blackjack wagers and active peer-loan receivables, minus bank debt, shark debt, active peer borrowing and the separate negative record. Pending agreements and cards are not valued. The ten-chip recovery allowance and its reserved wagers are excluded from assets.
+- Bank includes an assets/liabilities summary and 3-, 10-, 30- or 60-minute debt forecasts. Forecasts use each loan's existing interest boundary, round every period up, obey debt caps and never mutate balances. They assume no intervening transactions. Negative records have no added interest of their own.
+- Bank, shark and active peer loans have one-click full repayment. The server accrues due interest before choosing the amount and validates cash, counterparty capacity, active games and negative-mode restrictions. Duplicate requests use the existing receipt protection.
+- Account activity can be searched by player name, action, date or note and exported as UTF-8 CSV. Search and export cover the currently retained ledger (at most the latest 100 entries), not a permanent complete history. CSV cells are quoted, and formula-like content is neutralized.
+
 ## Bank and real-time interest
 
 The separate Bank tab belongs to the selected player:

@@ -200,8 +200,9 @@
         repayLoan(id, value) {
             this.ensureIdle();
             this.ensureCashWallet();
-            const loan = this.data.loans.find(item => item.id === id), amount = this.amount(value, MAX);
+            const loan = this.data.loans.find(item => item.id === id);
             if (!loan || loan.status !== 'active' || loan.borrowerId !== this.active.id) throw new Error('只能偿还自己的有效借款。');
+            const amount = this.amount(value === 'all' ? loan.balance : value, MAX);
             const lender = this.data.users.find(user => user.id === loan.lenderId), borrower = this.active;
             if (amount > loan.balance || amount > borrower.balance) throw new Error('还款超过欠款或钱包余额。');
             if (!lender || lender.balance + amount > MAX) throw new Error('出借人钱包已接近上限。');
@@ -265,7 +266,7 @@
         repay(value) {
             this.ensureIdle();
             this.ensureCashWallet();
-            const n = this.amount(value, MAX), u = this.active;
+            const u = this.active, n = this.amount(value === 'all' ? u.debt : value, MAX);
             if (n > u.debt) throw new Error('That amount is greater than your outstanding debt.');
             if (n > u.balance) throw new Error('Your wallet does not have enough chips to repay that amount.');
             u.balance -= n;
@@ -287,13 +288,32 @@
         repayShark(value) {
             this.ensureIdle();
             this.ensureCashWallet();
-            const n = this.amount(value, MAX), user = this.active;
+            const user = this.active, n = this.amount(value === 'all' ? user.sharkDebt : value, MAX);
             if (n > user.sharkDebt) throw new Error('还款不能超过高利贷欠款。');
             if (n > user.balance) throw new Error('钱包余额不足以还款。');
             user.balance -= n; user.sharkDebt -= n;
             if (user.sharkDebt === 0) user.sharkInterestAt = null;
             this.record(`${user.name} → 高利贷: 偿还 ${n.toLocaleString()}。`);
             this.save();
+        }
+        repayAll(kind, id) {
+            if (kind === 'bank') return this.repay('all');
+            if (kind === 'shark') return this.repayShark('all');
+            if (kind === 'peer') return this.repayLoan(id, 'all');
+            throw new Error('请选择银行、高利贷或一笔玩家借款。');
+        }
+        projectDebts(minutes, id = this.active.id) {
+            if (!integer(minutes, 1440)) throw new Error('预览时间需为 0–1,440 分钟。');
+            const user = this.data.users.find(person => person.id === id);
+            if (!user) throw new Error('请选择有效玩家。');
+            const now = this.now(), until = now + minutes * 60000;
+            const projected = (debt, clock, period, rate) => growDebt(debt, rate, Math.max(0, Math.floor((until - (clock ?? now)) / period)));
+            const bank = projected(user.debt, user.bankInterestAt, BANK_PERIOD, 1500);
+            const shark = projected(user.sharkDebt, user.sharkInterestAt, SHARK_PERIOD, 12500);
+            const peer = this.data.loans.filter(loan => loan.status === 'active' && loan.borrowerId === id)
+                .reduce((total, loan) => total + projected(loan.balance, loan.interestAt, loan.periodMs, loan.rateBps), 0);
+            const negative = user.recovery?.deficit || 0;
+            return { bank, shark, peer, negative, total: bank + shark + peer + negative };
         }
         completeRound(net = 0) {
             this.accrueInterest();

@@ -48,6 +48,26 @@
 body:has(.club-recovery:not([hidden])) #roulette-controls { bottom: 76px; }
 .recovery-card { margin-top: 20px; background: #360e20; border-color: #e95b7c55; color: #f6c3d0; font-size: 13px; line-height: 1.7; }
 @keyframes shark-glow { 0%,100% { opacity: .5; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.06); } }
+.account-directory,.account-overview { margin-top: 24px; }
+.account-section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.account-section-heading h3 { margin: 6px 0; }
+.account-toolbar { display: grid; grid-template-columns: minmax(0,1fr) minmax(160px,230px); gap: 14px; margin-bottom: 18px; }
+.account-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid #ffffff12; border-radius: 12px; }
+.account-table { border-collapse: collapse; width: 100%; text-align: left; font-size: 12px; font-variant-numeric: tabular-nums; }
+.account-table th { padding: 13px 14px; font-size: 10px; color: #b6a9c9; font-weight: 700; background: #0e0b1570; white-space: nowrap; }
+.account-table td { padding: 14px; border-top: 1px solid #ffffff0c; color: #e6deee; white-space: nowrap; }
+.account-table td:first-child { white-space: normal; min-width: 105px; max-width: 240px; overflow-wrap: anywhere; }
+.account-table small { display: block; margin-top: 5px; color: #a99bb9; font-size: 10px; }
+.account-table [data-negative="true"],.account-stat-row [data-negative="true"] { color: #ff94aa; }
+.account-table button { padding: 7px 10px; font-size: 10px; }
+.account-pagination { display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 16px; }
+.account-pagination button { padding: 8px 13px; }
+.account-stat-row { grid-template-columns: repeat(4,minmax(0,1fr)); margin: 16px 0 24px; }
+.account-stat-row dd { font-size: clamp(16px,2.6vw,24px); overflow-wrap: anywhere; }
+.forecast-heading { padding-top: 16px; border-top: 1px solid #ffffff12; }
+.forecast-heading .club-field { margin-top: 0; }
+.account-forecast-growth { color: #f3cd8d; font-size: 13px; margin-top: 16px; }
+@media(max-width:700px) { .account-stat-row { grid-template-columns: repeat(2,minmax(0,1fr)); } .account-toolbar { grid-template-columns: 1fr; gap: 0; } .account-table td,.account-table th { padding: 11px; } }
 @media(prefers-reduced-motion:reduce) { .shark-crisis::before { animation: none; } }
 @media(max-width: 700px) { .market-catalog { grid-template-columns: 1fr; } .club-tabs button { min-width: 0; } }
 .custom-bet-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #f7db8d; font-size: 12px; }

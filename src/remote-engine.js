@@ -60,6 +60,7 @@ if (window.__CASINO_BOOTSTRAP__) {
         repay(...args){return this.send('repay',args);}
         borrowShark(...args){return this.send('borrowShark',args);}
         repayShark(...args){return this.send('repayShark',args);}
+        repayAll(...args){return this.send('repayAll',args);}
         buyCard(...args){return this.send('buyCard',args);}
         armCard(...args){return this.send('armCard',args);}
         spinSlots(value, _forced, options={}){return this.send('slots',[value,options]);}

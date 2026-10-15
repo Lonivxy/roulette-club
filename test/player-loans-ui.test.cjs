@@ -24,6 +24,13 @@ test('lender form creates a pending agreement; switching to borrower exposes con
     row=t.get('peer-loan-list').children[0];const form=row.children.find(child=>child.tag==='form');form.children[0].value='500';await form.fire('submit');
     assert.equal(t.e.data.loans[0].status,'repaid');assert.equal(t.e.active.balance,1000);assert.equal(t.e.data.users[0].balance,1000);
 });
+test('the full-repayment button pays the active peer loan into its lender wallet',async()=>{
+    const t=ui();await t.get('peer-loan-form').fire('submit');const loan=t.e.data.loans[0];
+    t.e.switchUser('jamie');t.e.respondLoan(loan.id,true);t.controller.render();
+    const row=t.get('peer-loan-list').children[0],all=row.children.at(-1).children.find(button=>button.textContent==='一键还清这笔');
+    assert.equal(all.disabled,false);await all.fire('click');assert.equal(loan.status,'repaid');assert.equal(t.e.active.balance,1000);assert.equal(t.e.data.users[0].balance,1000);
+});
+
 test('locked player controls cannot propose or accept loans',async () =>{
     const t=ui();t.lock();await t.get('peer-loan-form').fire('submit');assert.equal(t.e.data.loans.length,0);assert.equal(t.get('peer-loan-rate').disabled,true);
 });

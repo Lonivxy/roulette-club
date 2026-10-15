@@ -52,7 +52,7 @@ function rouletteSpin(engine, jackpot) {
 export async function applyCommand(engine, command, args, admin) {
     if(!Array.isArray(args)||args.length>5)fail('无效的操作参数。');
     const game=new Blackjack(engine);
-    const playerCommands={gift:'transfer',offerLoan:'offerLoan',respondLoan:'respondLoan',cancelLoan:'cancelLoan',repayLoan:'repayLoan',borrow:'borrow',repay:'repay',borrowShark:'borrowShark',repayShark:'repayShark',buyCard:'buyCard',armCard:'armCard'};
+    const playerCommands={gift:'transfer',offerLoan:'offerLoan',respondLoan:'respondLoan',cancelLoan:'cancelLoan',repayLoan:'repayLoan',repayAll:'repayAll',borrow:'borrow',repay:'repay',borrowShark:'borrowShark',repayShark:'repayShark',buyCard:'buyCard',armCard:'armCard'};
     if(Object.hasOwn(playerCommands,command))return engine[playerCommands[command]](...args);
     if(['addUser','deletePlayer','adminAdjust','import'].includes(command)&&!admin)fail('请先通过 Windows Hello 管理验证。',403);
     if(['addUser','deletePlayer','adminAdjust'].includes(command))return engine[command](...args);

@@ -23,6 +23,13 @@
   <div class="club-shell"><div class="club-eyebrow">Players · 玩家</div><h2 id="players-greeting" class="club-title">玩家往来</h2>
     <p class="club-muted">赠送直接到账；借款由出借人设定条款、借款人确认后才转账。双方通过右上角选择玩家分别操作；账户变更由服务器保存。玩家管理仅在 ADMIN 入口开放。</p>
     <dl class="club-stat-row"><div><dt>钱包</dt><dd id="players-wallet">0</dd></div><div><dt>欠其他玩家</dt><dd id="peer-debt">0</dd></div><div><dt>应收借款</dt><dd id="peer-receivable">0</dd></div></dl>
+    <section class="club-card account-directory" aria-labelledby="directory-title"><div class="account-section-heading"><div><div class="club-eyebrow">账户总览</div><h3 id="directory-title">所有玩家</h3></div><span id="directory-count" class="club-muted" role="status"></span></div>
+      <div class="account-toolbar"><div><label class="club-field" for="directory-search">搜索玩家</label><input id="directory-search" class="club-input" type="search" maxlength="80" placeholder="输入玩家名称"></div><div><label class="club-field" for="directory-sort">排序</label><select id="directory-sort" class="club-select"><option value="name">名称</option><option value="cash">钱包从高到低</option><option value="net">净资产从高到低</option><option value="debt">欠款从高到低</option></select></div></div>
+      <div class="account-table-wrap"><table class="account-table"><thead><tr><th scope="col">玩家</th><th scope="col">钱包</th><th scope="col">全部欠款</th><th scope="col">净资产</th><th scope="col">操作</th></tr></thead><tbody id="directory-rows"></tbody></table></div>
+      <p id="directory-empty" class="club-muted" hidden>没有找到匹配的玩家，请换个名称。</p>
+      <div class="account-pagination"><button type="button" id="directory-prev" class="club-action secondary">上一页</button><span id="directory-page" class="club-muted" role="status"></span><button type="button" id="directory-next" class="club-action secondary">下一页</button></div>
+      <p class="club-muted">净资产包含钱包、未结算下注和应收借款，扣除银行、高利贷、玩家借款及负数记录。负数模式的 10 筹码底金和卡包不计入资产。</p>
+    </section>
     <div class="club-grid">
       <form id="transfer-form" class="club-card"><h3>赠送筹码</h3><p class="club-muted">这是赠送，不产生欠款，确认赠送后立即转入对方钱包。</p>
         <label class="club-field" for="transfer-user">收款玩家</label><select id="transfer-user" class="club-select" required></select>
@@ -46,6 +53,14 @@
     <dl class="club-stat-row"><div><dt>钱包 / 筹码</dt><dd id="bank-wallet">1,000</dd></div><div><dt>银行欠款</dt><dd id="bank-debt">0</dd></div><div><dt>银行可借额度</dt><dd id="bank-credit">100,000</dd></div></dl>
     <p class="club-muted">银行 + 高利贷总欠款：<strong id="bank-total-debt">0</strong> 筹码。利息加入欠款，可能超过借款上限。</p>
     <div id="bank-recovery" class="club-card recovery-card" hidden><h3>负数记录 <strong id="bank-recovery-deficit">-0</strong></h3><p>每局固定 10 筹码。净亏损增加负数，净盈利先抵负数；还清后，多出的盈利和 10 筹码底金恢复为正常余额。</p><p class="club-muted">这里的负数单独记账，银行与高利贷欠款仍然保留。10 筹码底金仅可用于游戏。</p></div>
+    <section class="club-card account-overview" aria-labelledby="account-overview-title"><div class="club-eyebrow">当前玩家</div><h3 id="account-overview-title">资产与负债</h3>
+      <dl class="club-stat-row account-stat-row"><div><dt>净资产</dt><dd id="summary-net">0</dd></div><div><dt>全部欠款</dt><dd id="summary-liabilities">0</dd></div><div><dt>未结算下注</dt><dd id="summary-reserved">0</dd></div><div><dt>应收借款</dt><dd id="summary-receivable">0</dd></div></dl>
+      <div class="account-section-heading forecast-heading"><h3>利息预览</h3><div><label class="club-field" for="forecast-minutes">预览多久以后</label><select id="forecast-minutes" class="club-select"><option value="3">3 分钟后</option><option value="10" selected>10 分钟后</option><option value="30">30 分钟后</option><option value="60">60 分钟后</option></select></div></div>
+      <p class="club-muted">假设期间没有借款、还款或游戏输赢。按照每笔借款剩余计息时间复利计算；实际欠款以结算时为准。</p>
+      <div class="account-table-wrap"><table class="account-table"><thead><tr><th scope="col">项目</th><th scope="col">现在</th><th scope="col" id="forecast-heading">10 分钟后</th></tr></thead><tbody id="forecast-rows"></tbody></table></div>
+      <p id="forecast-growth" class="account-forecast-growth" role="status"></p>
+      <div class="club-actions"><button type="button" id="bank-repay-all" class="club-action secondary">一键还清银行</button><button type="button" id="shark-repay-all" class="club-action secondary">一键还清高利贷</button></div><p id="repay-all-help" class="club-muted"></p>
+    </section>
     <div class="club-grid">
       <form id="bank-form" class="club-card club-wide"><h3>银行借款与还款</h3><p class="club-muted">借款额度 100,000；每 10 分钟，未还欠款加 15%。还款恢复可借额度。</p><p id="bank-interest-progress" class="club-muted"></p>
         <label class="club-field" for="bank-amount">金额 / 筹码</label><input id="bank-amount" class="club-input" type="number" min="1" max="1000000000" step="1" inputmode="numeric" required placeholder="例如 500">
@@ -55,7 +70,7 @@
         <div id="shark-offer" hidden><form id="shark-borrow-form"><label class="club-field" for="shark-borrow-amount">借入金额</label><input id="shark-borrow-amount" class="club-input" type="number" min="1" max="1500000" step="1" required inputmode="numeric" placeholder="最多 1,500,000"><div class="club-actions"><button type="submit" class="club-action" data-idle-only>借入高利贷 · 每 3 分钟 125%</button></div></form></div>
         <div id="shark-repayment" hidden><form id="shark-repay-form"><label class="club-field" for="shark-repay-amount">偿还高利贷</label><input id="shark-repay-amount" class="club-input" type="number" min="1" max="1000000000" step="1" required inputmode="numeric" placeholder="还款金额"><div class="club-actions"><button type="submit" class="club-action secondary" data-idle-only>偿还高利贷</button></div></form></div>
       </div>
-      <div class="club-card club-wide"><h3>账户活动</h3><ol id="club-ledger" class="club-ledger" aria-label="Table activity"></ol></div>
+      <div class="club-card club-wide"><div class="account-section-heading"><h3>账户活动</h3><button type="button" class="club-action secondary" id="activity-export">导出筛选记录 CSV</button></div><label class="club-field" for="activity-search">搜索流水</label><input type="search" id="activity-search" class="club-input" maxlength="100" placeholder="玩家名称、游戏、借款或备注"><p id="activity-count" class="club-muted" role="status"></p><ol id="club-ledger" class="club-ledger" aria-label="Table activity"></ol></div>
     </div>
   </div>
 </section>

@@ -40,10 +40,12 @@ function createPlayerLoansUI(engine, callbacks) {
                     const form = document.createElement('form'), input = document.createElement('input'), submit = element('button', '还给 ' + loan.lenderName, 'club-action');
                     form.className = 'peer-repay-form'; input.className = 'club-input'; input.type = 'number'; input.min = '1'; input.max = String(loan.balance); input.step = '1'; input.required = true;
                     input.setAttribute('aria-label', '偿还给 ' + loan.lenderName + ' 的金额'); input.value = repaymentValues.get(loan.id) ?? String(Math.max(1, Math.min(loan.balance, user.balance)));
-                    input.disabled = locked; submit.type = 'submit'; submit.disabled = locked;
+                    input.disabled = locked || Boolean(user.recovery); submit.type = 'submit'; submit.disabled = locked || Boolean(user.recovery);
                     input.addEventListener('input', () => repaymentValues.set(loan.id, input.value));
                     form.addEventListener('submit', async event => { event.preventDefault(); callbacks.transact(() => engine.repayLoan(loan.id, Number(input.value)), '还款已进入出借人钱包。'); });
                     form.append(input, submit); row.append(form);
+                    const all = button('一键还清这笔', () => callbacks.transact(() => engine.repayAll('peer', loan.id), '这笔玩家借款已全部还清。'));
+                    all.disabled = locked || Boolean(user.recovery) || user.balance < loan.balance; actions.append(all);
                 }
             }
             row.append(actions); return row;
