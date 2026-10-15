@@ -374,6 +374,26 @@
             this.active.armedCardId = id;
             this.save();
         }
+        playPlinko(value, risk = 'medium', lane = 'center', { jackpot = false } = {}) {
+            this.ensureIdle();const n=this.amount(value),user=this.active;
+            const {table}=root.CasinoArcade.plinkoSettings(risk,lane);
+            if(n>user.balance)throw new Error('钱包余额不足，请降低下注或前往银行。');
+            if(user.balance+n*(Math.max(...table)/100-1)>MAX)throw new Error('钱包已接近上限，请降低下注。');
+            return this.finishArcade(root.CasinoArcade.plinko(n,risk,lane,this.random,jackpot),'Plinko');
+        }
+        playDice(value, kind = 'small', target = null, { jackpot = false } = {}) {
+            this.ensureIdle();const n=this.amount(value),user=this.active,multiplier=root.CasinoArcade.diceSettings(kind,target);
+            if(n>user.balance)throw new Error('钱包余额不足，请降低下注或前往银行。');
+            if(user.balance+n*(multiplier-1)>MAX)throw new Error('钱包已接近上限，请降低下注。');
+            return this.finishArcade(root.CasinoArcade.dice(n,kind,target,this.random,jackpot),'骰宝');
+        }
+        finishArcade(result,label) {
+            const user=this.active;result.id=root.crypto.randomUUID();result.time=new Date(this.now()).toISOString();result.walletAfterWager=user.balance-result.wager;
+            user.balance+=result.net;
+            user.arcadeHistory=[result,...(Array.isArray(user.arcadeHistory)?user.arcadeHistory.filter(root.CasinoArcade.validHistory):[])].slice(0,30);
+            this.record(`${user.name} · ${label}${result.game==='dice'?' '+result.dice.join(' · '):' '+result.risk+' / '+result.lane}: 下注 ${result.wager.toLocaleString()}，返还 ${result.payout.toLocaleString()}，净输赢 ${result.net>=0?'+':''}${result.net.toLocaleString()}。`);
+            this.completeRound(result.net);this.lock=result.game;this.save();return result;
+        }
         slotResult(reels, wager) {
             if (!Array.isArray(reels) || reels.length !== 3 || !reels.every(i => integer(i, 11))) throw new Error('Invalid reels.');
             const landed = reels.map(i => reelStrip[i]);

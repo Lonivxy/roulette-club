@@ -1,3 +1,4 @@
+import '../src/arcade-core.js';
 import '../src/club-core.js';
 import '../src/blackjack-core.js';
 import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } from '@simplewebauthn/server';
@@ -56,6 +57,8 @@ export async function applyCommand(engine, command, args, admin) {
     if(Object.hasOwn(playerCommands,command))return engine[playerCommands[command]](...args);
     if(['addUser','deletePlayer','adminAdjust','import'].includes(command)&&!admin)fail('请先通过 Windows Hello 管理验证。',403);
     if(['addUser','deletePlayer','adminAdjust'].includes(command))return engine[command](...args);
+    if(command==='plinko')return engine.playPlinko(...args);
+    if(command==='dice')return engine.playDice(...args);
     if(command==='slots'){
         if(args[1]&&typeof args[1]!=='object')fail('无效的下注选项。');
         return engine.spinSlots(args[0],null,{allIn:Boolean(args[1]?.allIn),jackpot:Boolean(args[1]?.jackpot)});

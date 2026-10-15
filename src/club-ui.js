@@ -8,11 +8,11 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, accounts, admin, distress, adminPage = 1, recoveryPlayer = null, pendingDelete = null;
+    let view = 'roulette', toastTimer, lucky, blackjack, plinko, dice, customRoulette, economy, playerLoans, accounts, admin, distress, adminPage = 1, recoveryPlayer = null, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
-    const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret || Boolean(blackjack?.animating) || Boolean(lucky?.dragging);
+    const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret || Boolean(blackjack?.animating) || Boolean(lucky?.dragging) || Boolean(plinko?.animating) || Boolean(dice?.animating);
     function toast(message, error = false) {
         clearTimeout(toastTimer);
         $('club-toast').textContent = message;
@@ -40,7 +40,8 @@ function createCasinoClub(roulette) {
         $('club-user').disabled = viewLocked();
         $('transfer-user').replaceChildren(...engine.data.users.filter(p => p.id !== u.id).map(option));
         if ([...$('transfer-user').options].some(o => o.value === selectedRecipient)) $('transfer-user').value = selectedRecipient;
-        $('club-wallet').textContent = u.recovery ? `-${fmt(u.recovery.deficit)} · 可用 ${fmt(lucky?.displayBalance ?? u.balance)} ₵` : `${fmt(lucky?.displayBalance ?? u.balance)} ₵`;
+        const visualWallet = (view === 'plinko' ? plinko?.displayBalance : view === 'dice' ? dice?.displayBalance : lucky?.displayBalance) ?? u.balance;
+        $('club-wallet').textContent = u.recovery ? `-${fmt(u.recovery.deficit)} · 可用 ${fmt(visualWallet)} ₵` : `${fmt(visualWallet)} ₵`;
         $('bank-greeting').textContent = `${u.name}’s wallet & bank`;
         $('bank-wallet').textContent = fmt(u.balance);
         $('bank-debt').textContent = fmt(u.debt);
@@ -82,6 +83,7 @@ function createCasinoClub(roulette) {
         lucky?.update(viewLocked());
         customRoulette?.update(viewLocked());
         blackjack?.update();
+        plinko?.update();dice?.update();
         document.querySelectorAll('#roulette-controls [data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
         economy?.render();
         playerLoans?.render();
@@ -99,6 +101,8 @@ function createCasinoClub(roulette) {
         lucky.setVisible(view === 'slots');
         $('blackjack-view').hidden = view !== 'blackjack';
         blackjack.setVisible(view === 'blackjack');
+        $('plinko-view').hidden = view !== 'plinko';$('dice-view').hidden = view !== 'dice';
+        plinko.setVisible(view === 'plinko');dice.setVisible(view === 'dice');
         document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === view)));
         document.querySelectorAll('.club-roulette-hud, #roulette-controls, #hint-pill, #status-banner, #canvas-container').forEach(el => {
             if (view === 'roulette') el.style.removeProperty('display'); else el.style.display = 'none';
@@ -106,7 +110,7 @@ function createCasinoClub(roulette) {
         render();
     }
     function setView(next) {
-        if (!['roulette', 'slots', 'blackjack', 'bank', 'market', 'players', 'admin'].includes(next)) return;
+        if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'bank', 'market', 'players', 'admin'].includes(next)) return;
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
         paintView();
@@ -131,9 +135,11 @@ function createCasinoClub(roulette) {
     function init() {
         bindJackpotShortcut(window, () => {
             if (distress?.blocking) return false;
-            if (!['roulette', 'slots', 'blackjack'].includes(view)) return false;
+            if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice'].includes(view)) return false;
             if (roulette.isChargingSpin || roulette.isDraggingTurret || lucky?.dragging) { toast('Release the controls before using the shortcut.', true); return; }
             if (view === 'blackjack') blackjack.forceJackpot();
+            else if (view === 'plinko') plinko.forceJackpot();
+            else if (view === 'dice') dice.forceJackpot();
             else if (view === 'roulette') forceRouletteJackpot();
             else if (!busy()) lucky.forceJackpot();
             else toast('Wait for this spin to finish, then use the shortcut again.', true);
@@ -150,6 +156,8 @@ function createCasinoClub(roulette) {
             }
         });
         blackjack = createBlackjackTable(engine, { changed: () => updateBettingHUD(), notify: toast });
+        plinko = createArcadeGame('plinko',engine,{locked:viewLocked,changed:()=>updateBettingHUD(),notify:toast});
+        dice = createArcadeGame('dice',engine,{locked:viewLocked,changed:()=>updateBettingHUD(),notify:toast});
         lucky = createLucky777(engine, {bank: () => setView('bank'), market: () => setView('market'),
             locked: viewLocked,
             changed: () => updateBettingHUD(),
@@ -205,7 +213,7 @@ function createCasinoClub(roulette) {
         const requestedView = window.location.pathname === '/admin' ? 'admin' : window.location.hash.slice(1);
         if (requestedView === 'admin') view = 'admin';
         else if (blackjack.pending) view = 'blackjack';
-        else if (['roulette', 'slots', 'blackjack', 'bank', 'market', 'players', 'admin'].includes(requestedView)) view = requestedView;
+        else if (['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'bank', 'market', 'players', 'admin'].includes(requestedView)) view = requestedView;
         paintView();
         let lastSync = 0;
         const tick = () => {

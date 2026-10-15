@@ -64,6 +64,8 @@ if (window.__CASINO_BOOTSTRAP__) {
         buyCard(...args){return this.send('buyCard',args);}
         armCard(...args){return this.send('armCard',args);}
         spinSlots(value, _forced, options={}){return this.send('slots',[value,options]);}
+        playPlinko(...args){return this.send('plinko',args);}
+        playDice(...args){return this.send('dice',args);}
         addUser(...args){return this.send('addUser',args,{admin:true});}
         deletePlayer(...args){return this.send('deletePlayer',args,{admin:true});}
         adminAdjust(...args){return this.send('adminAdjust',args,{admin:true});}

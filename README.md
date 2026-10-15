@@ -14,6 +14,14 @@ Administrators can add or remove whole chips with an optional reason recorded in
 
 ## Games
 
+### Plinko and three-dice table
+
+- Plinko uses a 3D board with 78 pegs over twelve rows and thirteen payout bins. Select a left, center or right launcher (44%, 50% or 56% right-branch probability per row), then choose low/medium/high risk for maximum returns of 8×/25×/100×. The full multiplier/probability table and theoretical return for the selected combination are visible in Rules. Payout includes the stake and rounds down to whole chips. Touch a top launcher or use the drop button.
+- The 3D dice table rolls three independent six-sided dice. Small (4–10), big (11–17), odd and even return 2× on a win, with any triple losing those four bets. Any triple returns 31×; exact totals 4–17 have the shown returns up to 61×. Exact-total bets are unaffected by the triple exclusion. Touch the table or use Roll.
+- Both games support whole-chip custom wagers, quick chips, All In, a focused Space shortcut and Left Shift + F for the best result of the selected bet. New games use the existing shared wallet, real-time debts and negative-mode net settlement. The ten-chip allowance works here too.
+- Hosted results and financial settlement are saved before the visual animation. Reloading does not replay a debit or grant another allowance. Each player retains thirty combined new-game results, with the latest six results for each game shown on its table. Server request receipts prevent repeated credit/debit. Animation locks prevent local table/profile changes until the result is revealed; reduced-motion mode settles the animation immediately.
+- Game scenes initialize lazily and pause rendering while hidden. Narrow screens adjust camera distance to fit the board. Missing WebGL disables the bet button without taking chips; a context loss finishes any already-paid animation and unlocks controls before showing the unavailable message.
+
 - Roulette: the supplied 24-pocket wheel; individual player stakes, history and rebet snapshots. Custom chips apply their exact amount to categories or numbers.
 - Lucky 777: directly touch physical bet buttons, tap SPIN or pull the red lever. Panels start hidden; Show controls restores camera and sound controls. Custom bet remains available with panels hidden. Triples return 50× for 777, 25× for diamonds, 20× for BAR, 15× for bells, 10× for clovers, 5× for cherries. Double sevens return 5×; one or two cherries return 1× or 2×. Outcomes, card consumption and wallet changes save before the animation completes.
 - Blackjack: six decks, dealer stands on all 17s, natural blackjack pays 3:2, ordinary wins pay 1:1 and pushes return the stake. Split equal-value cards once; double after split; split aces receive one card each. Odd natural wagers round half chips down. Pending hands and dealer turns resume after reload.

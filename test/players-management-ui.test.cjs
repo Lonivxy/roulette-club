@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 require('../src/club-core.js');
 require('../src/account-tools.js');
-function ui() {
+function ui(requestedView='players') {
     class Element {
         constructor(){this.children=[];this.events={};this.dataset={};this.style={removeProperty(){}};this.classList={add(){},remove(){}};this.value='';}
         addEventListener(type,fn){(this.events[type]??=[]).push(fn);}fire(type){return Promise.all((this.events[type]??[]).map(fn=>fn({preventDefault(){}})));}
@@ -9,14 +9,18 @@ function ui() {
         get options(){return this.children;}
     }
     const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);};
-    let club;const empty=()=>({render(){},tick(){}}),controller=()=>({update(){},setVisible(){},resetPlayer(){},pending:false,animating:false});
+    let club,shortcut;const jackpots=[];const empty=()=>({render(){},tick(){}}),controller=()=>({update(){},setVisible(){},resetPlayer(){},pending:false,animating:false});
     const context={CasinoEngine,CasinoAccounts:globalThis.CasinoAccounts,document:{getElementById:get,createElement:()=>new Element(),querySelectorAll:()=>[]},
-        window:{location:{hash:'#players'},history:{replaceState(){}},addEventListener(){}},setTimeout(){},clearTimeout(){},setInterval(){},
-        bindJackpotShortcut(){},bindCustomBet:()=>({update(){}}),createDistressUI:empty,createAccountUI:empty,createAdminUI:()=>({render(){},unlocked:true}),createEconomyUI:empty,createPlayerLoansUI:empty,createBlackjackTable:controller,createLucky777:controller,
+        window:{location:{hash:'#'+requestedView},history:{replaceState(){}},addEventListener(){}},setTimeout(){},clearTimeout(){},setInterval(){},
+        bindJackpotShortcut(win,fn){shortcut=fn;},bindCustomBet:()=>({update(){}}),createDistressUI:empty,createAccountUI:empty,createAdminUI:()=>({render(){},unlocked:true}),createEconomyUI:empty,createPlayerLoansUI:empty,createBlackjackTable:controller,createArcadeGame:kind=>({...controller(),forceJackpot(){jackpots.push(kind);}}),createLucky777:controller,
         updateBettingHUD:()=>club.refresh(),renderHistoryRibbon(){},renderNumberModalGrid(){},hideBanner(){}};
     vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/club-ui.js'),'utf8'),context);
-    club=context.createCasinoClub({});club.init();return {club,get};
+    club=context.createCasinoClub({});club.init();return {club,get,jackpots,shortcut:()=>shortcut()};
 }
+
+test('new game routes open their own panel and dispatch the jackpot shortcut to that game',()=>{
+    for(const kind of ['plinko','dice']){const t=ui(kind);assert.equal(t.club.view,kind);assert.equal(t.get(kind+'-view').hidden,false);assert.equal(t.get((kind==='plinko'?'dice':'plinko')+'-view').hidden,true);t.shortcut();assert.deepEqual(t.jackpots,[kind]);}
+});
 test('administrator search and pagination work for more than one page of players',async()=>{
     const t=ui();for(let i=3;i<43;i++)t.club.engine.addUser('Player '+i);t.club.render();
     assert.equal(t.get('club-player-list').children.length,20);assert.equal(t.get('admin-player-page').textContent,'1 / 3');
