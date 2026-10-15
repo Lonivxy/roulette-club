@@ -1,5 +1,15 @@
 function createEconomyUI(engine, callbacks) {
     const $ = id => document.getElementById(id), fmt = n => n.toLocaleString();
+    let buyButtons = [];
+    const remaining = ms => { const seconds = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0'); };
+    function tick() {
+        const user = engine.active, now = engine.now();
+        $('bank-interest-progress').textContent = user.debt > 0 ? `下次计息 ${remaining(user.bankInterestAt + 30 * 60000 - now)} · 每 30 分钟 0.5%。` : '无欠款，不计息。';
+        $('shark-progress').textContent = user.sharkDebt > 0 ? `下次计息 ${remaining(user.sharkInterestAt + 5 * 60000 - now)} · 每 5 分钟 10%。` : '每 5 分钟，未还欠款加 10%。';
+        const cooling = now < user.marketAvailableAt;
+        $('market-cooldown').textContent = cooling ? '商人进货中 · 下次购买还需 ' + remaining(user.marketAvailableAt - now) : '商人已到货 · 购买后冷却 15 分钟';
+        buyButtons.forEach(({button, blocked}) => { button.disabled = blocked || cooling; });
+    }
     function element(tag, text, className) {
         const node = document.createElement(tag); node.textContent = text;
         if (className) node.className = className;
@@ -12,23 +22,23 @@ function createEconomyUI(engine, callbacks) {
     function render() {
         const user = engine.active, locked = callbacks.locked(), stake = validStake();
         $('bank-borrow').disabled = locked || engine.availableCredit === 0;
-        $('bank-interest-progress').textContent = user.debt > 0 ? `再完成 ${10 - user.bankRounds} 局计息：当前欠款的 1%，向上取整。` : '无欠款，不计息。';
         $('shark-panel').hidden = !engine.canBorrowShark && user.sharkDebt === 0;
         $('shark-offer').hidden = !engine.canBorrowShark;
         $('shark-repayment').hidden = user.sharkDebt === 0;
         $('shark-debt').textContent = fmt(user.sharkDebt);
         $('shark-credit').textContent = fmt(engine.availableSharkCredit);
-        $('shark-progress').textContent = user.sharkDebt > 0 ? `再完成 ${10 - user.sharkRounds} 局，未还欠款加 10%（向上取整）。` : '每完成 10 局，未还欠款加 10%。';
         $('bank-total-debt').textContent = fmt(user.debt + user.sharkDebt);
         $('market-stake').disabled = locked;
         $('market-stake').setAttribute('aria-invalid', String(stake === null));
+        buyButtons = [];
         $('market-catalog').replaceChildren(...Object.entries(CasinoEngine.cards).map(([type, item]) => {
             const card = element('article', '', 'club-card market-product');
             card.append(element('div', item.symbol, 'market-symbols'), element('h3', item.name));
             card.append(element('p', stake === null ? '请输入 1–1,000,000 的整数下注。' : `卡价 ${fmt(stake * item.factor)} · 使用时另扣 ${fmt(stake)}`, 'market-price'));
-            card.append(element('p', stake === null ? '' : `保底返回 ${fmt(stake * item.multiplier)}（${item.multiplier}×，含下注）`, 'club-muted'));
+            card.append(element('p', stake === null ? '' : `保底返回 ${fmt(stake * item.multiplier)} · 扣除卡价与下注后净赚 ${fmt(stake * (item.multiplier - item.factor - 1))}`, 'club-muted'));
             const button = element('button', '购买此卡', 'club-action'); button.type = 'button';
             button.disabled = locked || stake === null || user.cards.length >= 50 || (stake !== null && stake * (item.factor + 1) > user.balance);
+            buyButtons.push({button, blocked: button.disabled});
             button.addEventListener('click', () => callbacks.transact(() => engine.buyCard(type, validStake()), '卡片已放入当前玩家的卡包。'));
             card.append(button); return card;
         }));
@@ -47,6 +57,7 @@ function createEconomyUI(engine, callbacks) {
         $('lucky-armed-card').hidden = !armed;
         $('lucky-card-label').textContent = armed ? `${CasinoEngine.cards[armed.type].name} · 下一次下注 ${fmt(armed.stake)}` : '';
         $('lucky-card-cancel').disabled = locked;
+        tick();
     }
     $('market-stake').addEventListener('input', render);
     $('shark-borrow-form').addEventListener('submit', event => {
@@ -58,5 +69,5 @@ function createEconomyUI(engine, callbacks) {
         if (callbacks.transact(() => engine.repayShark(Number($('shark-repay-amount').value)), '高利贷还款已入账。')) $('shark-repay-form').reset();
     });
     $('lucky-card-cancel').addEventListener('click', () => callbacks.transact(() => engine.armCard(null), '已取消装备。'));
-    return { render };
+    return { render, tick };
 }

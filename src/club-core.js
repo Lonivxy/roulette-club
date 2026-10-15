@@ -4,7 +4,7 @@
     const KEY = 'roulette-club-v1';
     const LIMIT = 100000;
     const SHARK_LIMIT = 1500000;
-    const INTEREST_ROUNDS = 10;
+    const BANK_PERIOD = 30 * 60000, SHARK_PERIOD = 5 * 60000, MARKET_COOLDOWN = 15 * 60000;
     const MAX = 1000000000;
     const symbols = ['7', '💎', 'BAR', '🔔', '🍀', '🍒'];
     const triples = [50, 25, 20, 15, 10, 5];
@@ -14,13 +14,19 @@
         + Object.values(bets.numbers).reduce((s, v) => s + v, 0);
     const integer = (n, max = MAX) => Number.isSafeInteger(n) && n >= 0 && n <= max;
     const cards = Object.freeze({
-        seven: Object.freeze({ name: '保底 777', factor: 60, multiplier: 50, reels: [0, 6, 0], symbol: '7 7 7' }),
-        diamonds: Object.freeze({ name: '保底三钻石', factor: 30, multiplier: 25, reels: [3, 11, 3], symbol: '💎 💎 💎' }),
-        bars: Object.freeze({ name: '保底三 BAR', factor: 24, multiplier: 20, reels: [5, 5, 5], symbol: 'BAR BAR BAR' })
+        seven: Object.freeze({ name: '保底 777', factor: 35, multiplier: 50, reels: [0, 6, 0], symbol: '7 7 7' }),
+        diamonds: Object.freeze({ name: '保底三钻石', factor: 18, multiplier: 25, reels: [3, 11, 3], symbol: '💎 💎 💎' }),
+        bars: Object.freeze({ name: '保底三 BAR', factor: 14, multiplier: 20, reels: [5, 5, 5], symbol: 'BAR BAR BAR' })
     });
-    const economyDefaults = () => ({ sharkDebt: 0, bankRounds: 0, sharkRounds: 0, cards: [], armedCardId: null });
+    const economyDefaults = () => ({ sharkDebt: 0, bankInterestAt: null, sharkInterestAt: null, marketAvailableAt: 0, cards: [], armedCardId: null });
+    const timestamp = value => value === null || (Number.isSafeInteger(value) && value >= 0);
+    function growDebt(balance, rateBps, periods) {
+        if (rateBps === 0) return balance;
+        for (let i = 0; i < periods && balance < MAX; i++) balance = Math.min(MAX, balance + Math.ceil(balance * rateBps / 10000));
+        return balance;
+    }
     function validEconomy(user) {
-        return integer(user.sharkDebt) && integer(user.bankRounds, 9) && integer(user.sharkRounds, 9)
+        return integer(user.sharkDebt) && timestamp(user.bankInterestAt) && timestamp(user.sharkInterestAt) && timestamp(user.marketAvailableAt)
             && Array.isArray(user.cards) && user.cards.length <= 50
             && user.cards.every(card => card && typeof card.id === 'string' && Object.hasOwn(cards, card.type)
                 && integer(card.stake, 1000000) && card.stake > 0)
@@ -37,8 +43,9 @@
         return { id, name, balance: 1000, debt: 0, bets: emptyBets(), lastBets: null, history: [], pendingRoulette: false, ...economyDefaults() };
     }
     class CasinoEngine {
-        constructor(storage, random) {
+        constructor(storage, random, clock = () => Date.now()) {
             this.storage = storage;
+            this.now = clock;
             this.random = random || (() => {
                 const a = new Uint32Array(1);
                 root.crypto.getRandomValues(a);
@@ -46,14 +53,15 @@
             });
             this.lock = null;
             this.storageWarning = '';
-            this.data = { version: 1, activeId: 'alex', users: [profile('alex', 'Alex'), profile('jamie', 'Jamie'), profile('taylor', 'Taylor')], ledger: [] };
+            this.data = { version: 1, activeId: 'alex', users: [profile('alex', 'Alex'), profile('jamie', 'Jamie'), profile('taylor', 'Taylor')], ledger: [], loans: [] };
             try {
                 const raw = storage && storage.getItem(KEY);
                 if (raw) {
                     const saved = JSON.parse(raw);
                     if (Array.isArray(saved.users)) saved.users = saved.users.map(user => ({ ...economyDefaults(), ...user }));
+                    saved.loans ??= [];
                     if (saved.version !== 1 || !Array.isArray(saved.users) || saved.users.length < 1 || saved.users.length > 12
-                        || !Array.isArray(saved.ledger) || !saved.users.some(u => u.id === saved.activeId)
+                        || !Array.isArray(saved.ledger) || !Array.isArray(saved.loans) || saved.loans.length > 200 || !saved.loans.every(loan => this.validLoan(loan, saved.users)) || new Set(saved.loans.map(loan => loan.id)).size !== saved.loans.length || !saved.users.some(u => u.id === saved.activeId)
                         || new Set(saved.users.map(u => u.id)).size !== saved.users.length
                         || !saved.users.every(u => typeof u.id === 'string' && typeof u.name === 'string'
                             && u.name.trim().length > 0 && u.name.length <= 24 && Number.isSafeInteger(u.balance) && Math.abs(u.balance) <= MAX
@@ -64,6 +72,7 @@
                     this.data = saved;
                     this.data.ledger = saved.ledger.filter(t => t && typeof t.text === 'string' && typeof t.time === 'string').slice(0, 100);
                     for (const u of saved.users) {
+                        delete u.bankRounds; delete u.sharkRounds;
                         u.history = u.history.filter(h => h && integer(h.num, 23) && ['GREEN', 'RED', 'BLACK'].includes(h.colorTag)).slice(0, 10);
                         if (u.pendingRoulette) {
                             u.balance += sumBets(u.bets);
@@ -76,6 +85,8 @@
             } catch {
                 this.storageWarning = 'Saved profiles could not be read. This session starts with fresh local profiles.';
             }
+            this.accrueInterest();
+            this.save();
         }
         get active() { return this.data.users.find(u => u.id === this.data.activeId); }
         get availableCredit() { return Math.max(0, LIMIT - this.active.debt); }
@@ -84,12 +95,14 @@
         get armedCard() { return this.active.cards.find(card => card.id === this.active.armedCardId) || null; }
         ensureIdle() {
             if (this.lock) throw new Error('Wait for the current spin to finish.');
+            if (this.accrueInterest()) this.save();
         }
         amount(value, maximum = 1000000) {
             if (!Number.isSafeInteger(value) || value <= 0 || value > maximum) throw new Error('Enter a whole number from 1 to ' + maximum.toLocaleString() + '.');
             return value;
         }
         save() {
+            this.accrueInterest();
             try { if (this.storage) this.storage.setItem(KEY, JSON.stringify(this.data)); }
             catch { this.storageWarning = 'Browser storage is unavailable. Keep this page open to retain this session.'; }
         }
@@ -116,6 +129,73 @@
             this.save();
             return u;
         }
+        validLoan(loan, users) {
+            return loan && typeof loan.id === 'string' && typeof loan.lenderId === 'string' && typeof loan.borrowerId === 'string'
+                && loan.lenderId !== loan.borrowerId && typeof loan.lenderName === 'string' && typeof loan.borrowerName === 'string'
+                && integer(loan.principal, 1000000) && loan.principal > 0 && integer(loan.balance)
+                && integer(loan.rateBps, 10000) && integer(loan.periodMs, 1440 * 60000) && loan.periodMs >= 60000 && loan.periodMs % 60000 === 0
+                && timestamp(loan.createdAt) && timestamp(loan.interestAt)
+                && ['pending', 'active', 'declined', 'cancelled', 'repaid'].includes(loan.status)
+                && (!['pending', 'active'].includes(loan.status) || [loan.lenderId, loan.borrowerId].every(id => users.some(user => user.id === id)))
+                && (loan.status !== 'active' || (loan.interestAt !== null && loan.balance > 0));
+        }
+        offerLoan(borrowerId, value, ratePercent, minutes = 10) {
+            this.ensureIdle();
+            const lender = this.active, borrower = this.data.users.find(user => user.id === borrowerId), principal = this.amount(value);
+            if (!borrower || borrower === lender) throw new Error('请选择另一位借款玩家。');
+            const rateBps = Math.round(ratePercent * 100);
+            if (!Number.isFinite(ratePercent) || !integer(rateBps, 10000) || Math.abs(ratePercent * 100 - rateBps) > .000001) throw new Error('利率需为 0–100%，最多两位小数。');
+            if (!integer(minutes, 1440) || minutes < 1) throw new Error('计息周期需为 1–1,440 分钟。');
+            if (principal > lender.balance) throw new Error('出借人的余额不足。');
+            this.data.loans = this.data.loans.filter(loan => ['pending', 'active'].includes(loan.status) || this.data.loans.indexOf(loan) < 100);
+            if (this.data.loans.length >= 200) throw new Error('借款协议数量已达上限，请先处理待确认协议。');
+            const loan = { id: root.crypto.randomUUID(), lenderId: lender.id, borrowerId, lenderName: lender.name, borrowerName: borrower.name,
+                principal, balance: principal, rateBps, periodMs: minutes * 60000, status: 'pending', createdAt: this.now(), interestAt: null };
+            this.data.loans.unshift(loan);
+            this.record(`${lender.name} → ${borrower.name}: 发起借款协议 ${principal.toLocaleString()}，每 ${minutes} 分钟 ${ratePercent}%，等待借款人确认。`);
+            this.save(); return loan;
+        }
+        respondLoan(id, accept) {
+            this.ensureIdle();
+            const loan = this.data.loans.find(item => item.id === id);
+            if (!loan || loan.status !== 'pending' || loan.borrowerId !== this.active.id) throw new Error('只有借款人能确认这份待处理协议。');
+            if (!accept) { loan.status = 'declined'; this.record(`${loan.borrowerName} 拒绝了 ${loan.lenderName} 的借款协议。`); this.save(); return; }
+            const lender = this.data.users.find(user => user.id === loan.lenderId), borrower = this.active;
+            if (!lender || lender.balance < loan.principal) throw new Error('出借人当前余额不足，尚未扣款。');
+            if (borrower.balance + loan.principal > MAX) throw new Error('借款人钱包已接近上限。');
+            lender.balance -= loan.principal; borrower.balance += loan.principal;
+            loan.status = 'active'; loan.interestAt = this.now();
+            this.record(`${loan.borrowerName} 已接受协议，${loan.lenderName} 转入 ${loan.principal.toLocaleString()}。`);
+            this.save();
+        }
+        cancelLoan(id) {
+            this.ensureIdle();
+            const loan = this.data.loans.find(item => item.id === id);
+            if (!loan || loan.status !== 'pending' || loan.lenderId !== this.active.id) throw new Error('只能撤销自己发起的待确认协议。');
+            loan.status = 'cancelled'; this.record(`${loan.lenderName} 撤销了给 ${loan.borrowerName} 的借款协议。`); this.save();
+        }
+        repayLoan(id, value) {
+            this.ensureIdle();
+            const loan = this.data.loans.find(item => item.id === id), amount = this.amount(value, MAX);
+            if (!loan || loan.status !== 'active' || loan.borrowerId !== this.active.id) throw new Error('只能偿还自己的有效借款。');
+            const lender = this.data.users.find(user => user.id === loan.lenderId), borrower = this.active;
+            if (amount > loan.balance || amount > borrower.balance) throw new Error('还款超过欠款或钱包余额。');
+            if (!lender || lender.balance + amount > MAX) throw new Error('出借人钱包已接近上限。');
+            borrower.balance -= amount; lender.balance += amount; loan.balance -= amount;
+            if (loan.balance === 0) { loan.status = 'repaid'; loan.interestAt = null; }
+            this.record(`${borrower.name} → ${lender.name}: 偿还玩家借款 ${amount.toLocaleString()}。`); this.save();
+        }
+        deletePlayer(id) {
+            this.ensureIdle();
+            const user = this.data.users.find(item => item.id === id);
+            if (!user) throw new Error('该玩家不存在。');
+            if (this.data.users.length === 1) throw new Error('至少保留一名玩家。');
+            if (user.debt || user.sharkDebt || sumBets(user.bets) || user.pendingRoulette || (user.blackjack && user.blackjack.phase !== 'settled')
+                || this.data.loans.some(loan => ['pending', 'active'].includes(loan.status) && [loan.lenderId, loan.borrowerId].includes(id))) throw new Error('请先结清欠款、借出款、待确认协议和游戏下注，再删除玩家。');
+            this.data.users = this.data.users.filter(item => item.id !== id);
+            if (this.data.activeId === id) this.data.activeId = this.data.users[0].id;
+            this.record(`已删除玩家 ${user.name}，其钱包和卡包已移除。`); this.save();
+        }
         transfer(id, value) {
             this.ensureIdle();
             const n = this.amount(value), from = this.active;
@@ -134,6 +214,7 @@
             if (n > this.availableCredit) throw new Error(`You can borrow up to ${this.availableCredit.toLocaleString()} more chips.`);
             if (u.balance + n > MAX) throw new Error('Your wallet has reached its chip limit.');
             u.balance += n;
+            if (u.debt === 0) u.bankInterestAt = this.now();
             u.debt += n;
             this.record(`Bank → ${u.name}: borrowed ${n.toLocaleString()} chips.`);
             this.save();
@@ -145,7 +226,7 @@
             if (n > u.balance) throw new Error('Your wallet does not have enough chips to repay that amount.');
             u.balance -= n;
             u.debt -= n;
-            if (u.debt === 0) u.bankRounds = 0;
+            if (u.debt === 0) u.bankInterestAt = null;
             this.record(`${u.name} → Bank: repaid ${n.toLocaleString()} chips.`);
             this.save();
         }
@@ -154,8 +235,9 @@
             const n = this.amount(value, SHARK_LIMIT), user = this.active;
             if (!this.canBorrowShark) throw new Error('高利贷仅在银行额度耗尽、钱包 ≤ 0 且没有未结算下注时开放。');
             if (n > this.availableSharkCredit) throw new Error('高利贷剩余额度不足。');
+            if (user.sharkDebt === 0) user.sharkInterestAt = this.now();
             user.balance += n; user.sharkDebt += n;
-            this.record(`高利贷 → ${user.name}: 借入 ${n.toLocaleString()}；每 10 局计息 10%。`);
+            this.record(`高利贷 → ${user.name}: 借入 ${n.toLocaleString()}；每 5 分钟计息 10%。`);
             this.save();
         }
         repayShark(value) {
@@ -164,31 +246,40 @@
             if (n > user.sharkDebt) throw new Error('还款不能超过高利贷欠款。');
             if (n > user.balance) throw new Error('钱包余额不足以还款。');
             user.balance -= n; user.sharkDebt -= n;
-            if (user.sharkDebt === 0) user.sharkRounds = 0;
+            if (user.sharkDebt === 0) user.sharkInterestAt = null;
             this.record(`${user.name} → 高利贷: 偿还 ${n.toLocaleString()}。`);
             this.save();
         }
-        completeRound() {
-            const user = this.active;
-            for (const [debt, rounds, rate, label] of [['debt', 'bankRounds', .01, '银行'], ['sharkDebt', 'sharkRounds', .10, '高利贷']]) {
-                if (user[debt] <= 0) { user[rounds] = 0; continue; }
-                user[rounds]++;
-                if (user[rounds] < INTEREST_ROUNDS) continue;
-                user[rounds] = 0;
-                const interest = Math.min(MAX - user[debt], Math.ceil(user[debt] * rate));
-                user[debt] += interest;
-                this.record(`${user.name} · ${label}利息 +${interest.toLocaleString()}；欠款 ${user[debt].toLocaleString()}。`);
+        completeRound() { this.accrueInterest(); }
+        accrueInterest() {
+            const now = this.now(); let changed = false;
+            const accrue = (target, debt, clock, period, rate, label) => {
+                if (target[debt] <= 0) { if (target[clock] !== null) { target[clock] = null; changed = true; } return; }
+                if (target[clock] === null) { target[clock] = now; changed = true; return; }
+                const periods = Math.floor((now - target[clock]) / period);
+                if (periods <= 0) return;
+                const before = target[debt]; target[debt] = growDebt(before, rate, periods);
+                target[clock] += periods * period; changed = true;
+                if (target[debt] !== before) this.record(`${label} · ${periods} 期利息 +${(target[debt] - before).toLocaleString()}，欠款 ${target[debt].toLocaleString()}。`);
+            };
+            for (const user of this.data.users) {
+                accrue(user, 'debt', 'bankInterestAt', BANK_PERIOD, 50, user.name + ' · 银行');
+                accrue(user, 'sharkDebt', 'sharkInterestAt', SHARK_PERIOD, 1000, user.name + ' · 高利贷');
             }
+            for (const loan of this.data.loans) if (loan.status === 'active') accrue(loan, 'balance', 'interestAt', loan.periodMs, loan.rateBps, loan.borrowerName + ' → ' + loan.lenderName);
+            return changed;
         }
         buyCard(type, value) {
             this.ensureIdle();
             const item = Object.hasOwn(cards, type) ? cards[type] : null;
             if (!item) throw new Error('请选择有效的黑市卡。');
             const stake = this.amount(value), price = stake * item.factor, user = this.active;
+            if (this.now() < user.marketAvailableAt) throw new Error('黑市进货中，请等待购买冷却结束。');
             if (user.cards.length >= 50) throw new Error('最多持有 50 张卡，请先使用已有卡。');
             if (price + stake > user.balance) throw new Error('余额不足：需支付卡价，并留足一次绑定下注的筹码。');
             const card = { id: root.crypto.randomUUID(), type, stake };
             user.balance -= price; user.cards.push(card);
+            user.marketAvailableAt = this.now() + MARKET_COOLDOWN;
             this.record(`${user.name} · 黑市购买${item.name}，价格 ${price.toLocaleString()}，绑定下注 ${stake.toLocaleString()}。`);
             this.save(); return card;
         }

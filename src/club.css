@@ -1,5 +1,14 @@
 /* Club navigation and account surfaces */
 :root { color-scheme: dark; }
+.loan-term-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.peer-loan-row { padding: 18px 0; border-top: 1px solid #ffffff18; }
+.peer-loan-row h4 { font-size: 14px; font-weight: 800; color: #f3d18b; margin: 0 0 8px; }
+.peer-repay-form { display: flex; align-items: center; gap: 10px; }
+.peer-repay-form input { max-width: 200px; }
+.club-action.danger { color: #fca5a5; border-color: #f8717155; }
+.club-player { flex-wrap: wrap; }
+.club-tabs { min-width: 0; }
+@media(max-width: 900px) { .club-tabs { overflow-x: auto; } #club-nav .club-tabs button { padding: 8px 5px; font-size: 10px; white-space: nowrap; } }
 .club-card[hidden], #shark-offer[hidden], #shark-repayment[hidden] { display: none !important; }
 .market-catalog { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 24px 0; }
 .market-product { background: linear-gradient(145deg, #211625, #12101a); border-color: #b985484d; }

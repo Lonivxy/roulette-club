@@ -13,23 +13,21 @@ test('legacy profiles migrate without losing balances, bank debts or roulette be
     assert.equal(restored.storageWarning,'');assert.equal(restored.active.balance,5963);assert.equal(restored.active.debt,5000);
     assert.equal(restored.availableCredit,95000);assert.equal(restored.active.bets.RED,37);assert.deepEqual(restored.active.cards,[]);
 });
-test('bank charges 1% only on the tenth completed round and compounds after the next ten', () => {
-    const {e,saved}=game();e.borrow(100000);
-    for(let i=0;i<9;i++){e.spinSlots(1);e.lock=null;}
-    assert.equal(e.active.debt,100000);assert.equal(e.active.bankRounds,9);
-    e.spinSlots(1);e.lock=null;assert.equal(e.active.debt,101000);assert.equal(e.active.bankRounds,0);assert.equal(e.availableCredit,0);
-    for(let i=0;i<10;i++){e.spinSlots(1);e.lock=null;}
-    assert.equal(e.active.debt,102010);
-    const restored=new Engine(saved);assert.equal(restored.active.debt,102010);assert.equal(restored.storageWarning,'');
-    assert.equal(restored.active.balance,e.active.balance);
+test('bank accrues 0.5% per real 30 minutes, compounds and never charges again on reload', () => {
+    const saved=storage();let now=1000000;const e=new Engine(saved,()=>0,()=>now);e.borrow(100000);
+    for(let i=0;i<20;i++){e.spinSlots(1);e.lock=null;}assert.equal(e.active.debt,100000);
+    now+=30*60000-1;e.save();assert.equal(e.active.debt,100000);
+    now++;e.save();assert.equal(e.active.debt,100500);
+    now+=30*60000;e.save();assert.equal(e.active.debt,101003);
+    const restored=new Engine(saved,()=>0,()=>now);assert.equal(restored.active.debt,101003);assert.equal(restored.storageWarning,'');
+    restored.save();assert.equal(restored.active.debt,101003);
 });
-test('interest progress survives reload without offline charges and stays isolated per player', () => {
-    const {e,saved}=game();e.borrow(101);e.active.bankRounds=9;e.save();
-    let restored=new Engine(saved);assert.equal(restored.active.debt,101);assert.equal(restored.active.bankRounds,9);
-    restored.switchUser('jamie');restored.spinSlots(1);restored.lock=null;restored.switchUser('alex');
-    assert.equal(restored.active.bankRounds,9);restored.spinSlots(1);restored.lock=null;
-    assert.equal(restored.active.debt,103);restored.repay(103);assert.equal(restored.active.bankRounds,0);
-    restored.borrow(100);assert.equal(restored.active.bankRounds,0);
+test('offline time charges all players; partial repayments keep time progress and full repayments reset it', () => {
+    const saved=storage();let now=1000000;const e=new Engine(saved,()=>0,()=>now);e.borrow(1000);e.switchUser('jamie');e.borrow(2000);
+    now+=60*60000;const restored=new Engine(saved,()=>0,()=>now);
+    assert.equal(restored.active.debt,2021);restored.switchUser('alex');assert.equal(restored.active.debt,1011);
+    const clock=restored.active.bankInterestAt;restored.repay(100);assert.equal(restored.active.bankInterestAt,clock);
+    restored.repay(911);assert.equal(restored.active.bankInterestAt,null);restored.borrow(100);assert.equal(restored.active.bankInterestAt,now);
 });
 test('loan shark rejects ordinary players, positive cash, reserved roulette stakes and active games', () => {
     const {e}=game();assert.equal(e.canBorrowShark,false);assert.throws(()=>e.borrowShark(1));
@@ -45,16 +43,13 @@ test('loan shark lends the full 1.5M once when eligible and prevents borrowing o
     assert.throws(()=>e.borrowShark(1));e.active.balance=0;assert.throws(()=>e.borrowShark(1));
     e.save();const restored=new Engine(saved);assert.equal(restored.active.sharkDebt,1500000);assert.equal(restored.availableSharkCredit,0);
 });
-test('negative saved wallets qualify, loan interest can exceed the cap, and repayments restore capacity', () => {
-    const {e,saved}=game();e.borrow(100000);e.active.balance=-50;e.save();
-    const restored=new Engine(saved);assert.equal(restored.storageWarning,'');assert.equal(restored.canBorrowShark,true);
-    restored.borrowShark(1500000);assert.equal(restored.active.balance,1499950);
-    restored.active.sharkRounds=9;restored.active.bankRounds=9;restored.spinSlots(1);restored.lock=null;
-    assert.equal(restored.active.sharkDebt,1650000);assert.equal(restored.active.debt,101000);
-    assert.equal(restored.availableSharkCredit,0);assert.equal(new Engine(saved).active.sharkDebt,1650000);
-    restored.active.balance=2000000;restored.repayShark(1650000);
-    assert.equal(restored.active.sharkDebt,0);assert.equal(restored.active.sharkRounds,0);
-    assert.throws(()=>restored.repayShark(1));
+test('negative wallets qualify and shark charges 10% per five minutes even while offline', () => {
+    const saved=storage();let now=1000000;const e=new Engine(saved,()=>0,()=>now);e.borrow(100000);e.active.balance=-50;e.save();
+    const restored=new Engine(saved,()=>0,()=>now);assert.equal(restored.canBorrowShark,true);restored.borrowShark(1500000);
+    assert.equal(restored.active.balance,1499950);now+=5*60000;restored.save();
+    assert.equal(restored.active.sharkDebt,1650000);assert.equal(restored.active.debt,100000);
+    assert.equal(restored.availableSharkCredit,0);assert.equal(new Engine(saved,()=>0,()=>now).active.sharkDebt,1650000);
+    restored.active.balance=2000000;restored.repayShark(1650000);assert.equal(restored.active.sharkInterestAt,null);assert.throws(()=>restored.repayShark(1));
 });
 test('all merchant cards charge their price and force the correct result for exactly one spin', () => {
     for(const type of Object.keys(Engine.cards)) {
@@ -88,16 +83,16 @@ test('loan and merchant transactions are locked during an active round', () => {
     for(const action of [()=>e.borrowShark(1),()=>e.repayShark(1),()=>e.buyCard('seven',1),()=>e.armCard(card.id)]) assert.throws(action);
     assert.equal(JSON.stringify(e.data),snapshot);
 });
-test('roulette counts only rounds with an actual stake toward bank interest', () => {
+test('roulette rounds do not advance real-time interest', () => {
     const html=fs.readFileSync(path.join(__dirname,'../dist/index.html'),'utf8');
     const source=html.slice(html.indexOf('        function evaluateSpinOutcome('),html.indexOf('        function showResultBanner('));
-    const {e}=game();e.borrow(1000);e.active.bankRounds=9;
+    const {e}=game();e.borrow(1000);
     const state={balance:e.active.balance,bets:Engine.emptyBets(),history:[]};
     const context={ state,casino:{engine:e},POCKETS:[{number:0}],getTotalActiveBet:()=>Engine.sumBets(state.bets),
         isRedPocket:()=>false,isBlackPocket:()=>false,renderHistoryRibbon(){},updateBettingHUD(){},renderNumberModalGrid(){},showResultBanner(){},document:{getElementById:()=>({})} };
     vm.createContext(context);vm.runInContext(source,context);context.evaluateSpinOutcome(0);
-    assert.equal(e.active.bankRounds,9);assert.equal(e.active.debt,1000);
-    state.bets.RED=1;context.evaluateSpinOutcome(0);assert.equal(e.active.debt,1010);assert.equal(e.active.bankRounds,0);
+    assert.equal(e.active.debt,1000);
+    state.bets.RED=1;context.evaluateSpinOutcome(0);assert.equal(e.active.debt,1000);
 });
 test('published game removes the free jackpot button and exposes merchant and loan controls', () => {
     const html=fs.readFileSync(path.join(__dirname,'../dist/index.html'),'utf8');

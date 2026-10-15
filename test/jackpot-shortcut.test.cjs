@@ -30,9 +30,9 @@ test('roulette maximizes the sum of number, color, parity and zero payouts',()=>
 test('slot shortcut pays 777 once at the selected wager and preserves equipped merchant cards',()=>{
     const engine=new CasinoEngine(null,()=>.3);engine.active.balance=10000;
     const card=engine.buyCard('diamonds',100);engine.armCard(card.id);
-    const result=engine.spinSlots(100,null,{jackpot:true});assert.equal(result.payout,5000);assert.equal(engine.active.balance,11900);
+    const result=engine.spinSlots(100,null,{jackpot:true});assert.equal(result.payout,5000);assert.equal(engine.active.balance,13100);
     assert.equal(engine.armedCard.id,card.id);assert.equal(engine.active.cards.length,1);
-    assert.throws(()=>engine.spinSlots(100,null,{jackpot:true}));assert.equal(engine.active.balance,11900);
+    assert.throws(()=>engine.spinSlots(100,null,{jackpot:true}));assert.equal(engine.active.balance,13100);
     engine.lock=null;assert.equal(engine.spinSlots(100).multiplier,25);assert.equal(engine.armedCard,null);
 });
 test('roulette shortcut places a selected chip if needed, targets the best existing bet and never places a duplicate during a spin',()=>{

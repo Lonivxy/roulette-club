@@ -8,7 +8,7 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy;
+    let view = 'roulette', toastTimer, lucky, blackjack, customRoulette, economy, playerLoans, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -52,7 +52,16 @@ function createCasinoClub(roulette) {
             button.textContent = p.id === u.id ? 'Playing' : 'Switch';
             button.disabled = p.id === u.id || viewLocked();
             button.addEventListener('click', () => switchPlayer(p.id));
-            row.append(avatar, data, button); return row;
+            const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'club-action secondary danger';
+            remove.textContent = pendingDelete === p.id ? '再次点击确认永久删除（含余额）' : '删除';
+            remove.disabled = viewLocked() || engine.data.users.length === 1;
+            remove.addEventListener('click', () => {
+                if (pendingDelete !== p.id) { pendingDelete = p.id; render(); return; }
+                if (transact(() => engine.deletePlayer(p.id), '玩家已删除。')) {
+                    pendingDelete = null; lucky.resetPlayer(); renderHistoryRibbon(); renderNumberModalGrid(); hideBanner(); render();
+                }
+            });
+            row.append(avatar, data, button, remove); return row;
         }));
         const entries = engine.data.ledger.slice(0, 40).map(t => {
             const li = document.createElement('li'); const text = document.createElement('span'); text.textContent = t.text;
@@ -69,12 +78,14 @@ function createCasinoClub(roulette) {
         blackjack?.update();
         document.querySelectorAll('#roulette-controls [data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
         economy?.render();
+        playerLoans?.render();
     }
     function refresh() { engine.save(); render(); }
     function paintView() {
         $('number-modal').classList.add('hidden'); $('number-modal').classList.remove('flex');
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
         $('market-view').hidden = view !== 'market';
+        $('players-view').hidden = view !== 'players';
         lucky.setVisible(view === 'slots');
         $('blackjack-view').hidden = view !== 'blackjack';
         blackjack.setVisible(view === 'blackjack');
@@ -85,7 +96,7 @@ function createCasinoClub(roulette) {
         render();
     }
     function setView(next) {
-        if (!['roulette', 'slots', 'blackjack', 'bank', 'market'].includes(next)) return;
+        if (!['roulette', 'slots', 'blackjack', 'bank', 'market', 'players'].includes(next)) return;
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
         paintView();
@@ -117,6 +128,7 @@ function createCasinoClub(roulette) {
             else toast('Wait for this spin to finish, then use the shortcut again.', true);
         });
         economy = createEconomyUI(engine, { locked: viewLocked, transact, playSlots: () => setView('slots') });
+        playerLoans = createPlayerLoansUI(engine, { locked: viewLocked, transact });
         customRoulette = bindCustomBet('roulette-custom', engine, {
             locked: viewLocked, notify: toast,
             apply(value) {
@@ -173,8 +185,14 @@ function createCasinoClub(roulette) {
         }));
         const requestedView = window.location.hash.slice(1);
         if (blackjack.pending) view = 'blackjack';
-        else if (['roulette', 'slots', 'blackjack', 'bank', 'market'].includes(requestedView)) view = requestedView;
+        else if (['roulette', 'slots', 'blackjack', 'bank', 'market', 'players'].includes(requestedView)) view = requestedView;
         paintView();
+        const tick = () => {
+            if (engine.accrueInterest()) { engine.save(); render(); }
+            else { economy?.tick(); playerLoans?.tick(); }
+        };
+        setInterval(tick, 1000);
+        window.addEventListener('focus', tick);
     }
     return { engine, get view() { return view; }, busy, refresh, render, init, toast };
 }

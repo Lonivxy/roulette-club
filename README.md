@@ -1,30 +1,50 @@
 # Roulette Club
 
-A standalone play-chip game extending the supplied 3D roulette page.
+A standalone local play-chip casino with roulette, Three.js Lucky 777, blackjack, players, bank and a black market. Open `dist/index.html` or the sibling `roulette.html`. Three.js, utility styles and fonts load from CDNs. Accounts stay in this browser; these are local profiles rather than authenticated or synchronized accounts.
 
-## Play
+## Games
 
-Open `dist/index.html`, or use the sibling `roulette.html` standalone copy. The 3D library, original utility styles, and fonts load from external CDNs and need an internet connection. Players and bank remain available if the 3D library fails to load; slots show a recovery message.
+- Roulette: the supplied 24-pocket wheel; individual player stakes, history and rebet snapshots. Custom chips apply their exact amount to categories or numbers.
+- Lucky 777: directly touch physical bet buttons, tap SPIN or pull the red lever. Panels start hidden; Show controls restores camera and sound controls. Custom bet remains available with panels hidden. Triples return 50× for 777, 25× for diamonds, 20× for BAR, 15× for bells, 10× for clovers, 5× for cherries. Double sevens return 5×; one or two cherries return 1× or 2×. Outcomes, card consumption and wallet changes save before the animation completes.
+- Blackjack: six decks, dealer stands on all 17s, natural blackjack pays 3:2, ordinary wins pay 1:1 and pushes return the stake. Split equal-value cards once; double after split; split aces receive one card each. Odd natural wagers round half chips down. Pending hands and dealer turns resume after reload.
+- All games support custom whole-chip wagers from 1 to 1,000,000, with wallet and payout caps. Empty wallets require gifts or borrowing; no automatic refill.
 
-- **Roulette:** the supplied 24-pocket wheel, with each player's own balance, bets, rebet snapshot, and result history.
-- **777 Slots:** the latest supplied Three.js cabinet with chrome and gold materials, curved drums, physical bet buttons, spring-return red lever, LED readouts, sound and coin effects. Panels start hidden: tap the cabinet's bet buttons or SPIN, or drag/tap the lever. Show controls restores keyboard-accessible controls, camera views, mute and the black market. Bet tiers are 10, 50, 100, 500, 1,000 and All In; a tier larger than the wallet wagers the remaining balance. Triple sevens return 50 times the wager and double sevens return 5 times. Empty wallets require transfer or bank borrowing; there are no automatic free refills. Open `#slots` directly. A cancelled touch never spins, and an active pull locks profile and game changes.
-- **Blackjack:** an actual Three.js table with textured green felt, walnut and leather rail, warm lighting and shadows, physical card meshes, stacked chips, animated dealing and hole-card flips, player and overhead cameras, sound, and accessible card summaries. Hit, stand, double, and split share the player's casino wallet. A six-deck shoe is reshuffled below 52 remaining cards. Blackjack pays 3:2; other wins pay 1:1, pushes return the stake, and the dealer stands on all 17s. Split equal-value cards once, double after splitting, and draw one card to each split ace. No insurance or surrender. Custom wagers: 1–1,000,000 whole chips. Open `#blackjack` to enter this table directly.
-- **Players & Bank:** three initial profiles (Alex, Jamie, Taylor), up to 12 profiles, direct chip transfers, borrowing, repayments, and a table activity log. Each player starts with 1,000 chips and has a 100,000-chip bank credit limit. Bank debt accrues 1% interest every ten wagered rounds completed by that player, rounded up and compounded. Interest is added to debt; offline time never accrues interest.
+Left Shift + F is a hidden jackpot shortcut on game tabs. Roulette targets the highest combined payout among the current bets (or first places the selected chip on zero); 777 spins a paid jackpot without consuming an equipped merchant card; blackjack deals a paid natural or settles existing hands at the maximum standard return for their existing stakes. The shortcut ignores text fields, right Shift, extra modifiers, repeat keys and stale key state after blur. Slots and blackjack reject duplicate requests during animations.
 
-These are local profiles in the current browser, without sign-in or synchronization between devices. All balances represent play chips. Browser storage persists profiles, debts, pending bets, and the latest 100 activity entries. Clearing browser storage removes them. Transfers cannot spend chips already placed as roulette bets. Active rounds lock account changes and financial operations. Interrupted roulette rounds refund their stake on reload; slot outcomes save before their animation completes. Blackjack persists every move, the remaining shoe, ownership, and payouts, and resumes an unfinished player or dealer turn after reload. Its payouts are credited once. A browser without WebGL can play using the semantic card summaries and controls below the table.
+## Players
 
-## Black market and emergency credit
+The Players tab manages local profiles, gifts and loans. Each new player receives 1,000 starter chips; there can be up to 12 players. Gifts transfer immediately. A lender proposes an amount, rate and period; the period defaults to ten minutes and the editable rate starts at 1%. Switch to the borrower to accept or decline. No chips move and no interest accrues before acceptance. Acceptance rechecks both wallets, then transfers once and starts the clock. The lender can cancel a pending offer. The borrower may make partial or full repayments directly into the lender's wallet.
 
-The Black Market tab sells single-use guarantees bound to a purchased stake: 777 costs 60 times the stake and returns 50 times; three diamonds cost 30 times and return 25 times; three BARs cost 24 times and return 20 times. Card prices exclude the spin stake. Purchasing requires enough wallet chips for both price and stake. Equip a card from the inventory; the next successful 777 spin uses its exact stake and result, consumes the card, and persists payout before animation. Failed spins keep the card. Unequip to change the wager. Each player can hold 50 cards. The previous free Force 777 control is replaced by the merchant.
+Deletion requires two clicks and removes the selected player's wallet and cards. It cannot remove the last profile or a player with bank/shark debt, pending/active peer loans (as lender or borrower), outstanding roulette stakes or an unfinished blackjack hand. Completed loan receipts retain party names even after an account is deleted.
 
-The loan shark offers up to 1,500,000 outstanding borrowed chips only while bank credit is exhausted, the wallet is zero or negative, and there are no unsettled roulette stakes or active rounds. After borrowing makes the wallet positive, the borrowing offer disappears; repayment remains available. Shark debt accrues 10% interest every ten completed wagered rounds, separately from bank debt. Interest can raise either debt above its borrowing ceiling, with further borrowing blocked until repayments restore room. Interest progress, debt and inventory are local and belong to each player; older saves migrate with zero new interest progress.
+## Bank and real-time interest
 
-## Develop
+The separate Bank tab belongs to the selected player:
 
-Hidden keyboard shortcut: hold Left Shift and press F on a game tab. It ignores repeat keys, text inputs, IME composition, extra Ctrl/Alt/Meta modifiers and stale key state after blur. Roulette targets the pocket with the highest combined payout for current bets; with no bets it first places the selected chip on zero. It can retarget a running wheel and aligns the rendered ball with the paid pocket. 777 immediately spins a paid 50× jackpot, preserving equipped merchant cards. Blackjack deals a paid natural when idle, or settles the existing hand(s) at their maximum standard return without another debit; split and doubled hands retain their existing stakes and standard payout rules. Slots and blackjack block repeated requests during animation. Bank and merchant tabs do not handle this shortcut.
+| Loan | Borrowing ceiling | Compound interest |
+| --- | --- | --- |
+| Bank | 100,000 | 0.5% per complete 30 minutes |
+| Loan shark | 1,500,000 | 10% per complete five minutes |
+| Player loan | 1,000,000 per agreement | Lender's agreed rate; ten-minute default period |
 
-All three games accept custom whole-chip wagers from 1 to 1,000,000, subject to wallet balance and payout limits. Roulette's Custom bet form selects the exact chip amount for the next category or number placement. The 777 Custom bet button stays available when panels are hidden; applying an amount arms that exact wager for the lever. Blackjack's wager field accepts direct entry, including odd amounts; natural 3:2 payouts round half chips down so saved wallets remain whole numbers. Custom amounts never silently shrink to the available balance. Financial and wager controls lock during active rounds.
+Interest uses actual wall time, including offline time and time spent on other profiles. Every completed period rounds its interest up to a whole chip and adds it to the outstanding debt. Borrowing into an existing bank/shark balance preserves that account's current period; partial repayment also preserves its clock. Paying off the balance clears its clock. Reload settles elapsed periods once and persists the new boundary. Debt is capped at 1,000,000,000 per account/agreement. A backwards clock adjustment does not charge periods twice. Existing round-based saves retain their debts and begin the new timer when first opened after this update.
 
-No dependency installation is needed. `npm run build` assembles the source into `dist/index.html` and the sibling `roulette.html`. `npm test` runs accounting, persistence, reel payout, and compiled-script checks with Node's built-in test runner.
+Loan-shark borrowing appears only when bank credit is exhausted, cash is zero or negative, and there are no unsettled roulette stakes or active games. Repayment remains available while a shark balance exists. Interest may push debt above its borrowing ceiling; repay to restore room.
 
-The supplied pages are retained in `src/roulette.html` and `src/lucky-reference.html`. The build applies focused integration changes, scopes the cabinet's CSS to the slots view, wraps its script to avoid roulette name collisions, and embeds the club account controls into the downloadable page. `.openai/hosting.json` retains this site's private hosting identity.
+## Black market
+
+Cards remain guaranteed, single-use outcomes with a stake fixed at purchase. Prices exclude the spin stake:
+
+| Card | Price | Return | Net after price and stake |
+| --- | --- | --- | --- |
+| 777 | 35× stake | 50× stake | +14× stake |
+| Three diamonds | 18× stake | 25× stake | +6× stake |
+| Three BARs | 14× stake | 20× stake | +5× stake |
+
+Buying requires enough cash for price plus the bound stake. Each player has a fifteen-minute cooldown after any card purchase, saved across reloads, and can hold 50 cards. Equip from the inventory to use on the next successful 777 spin. Failed spins keep the card; unequip to change the wager. Old inventory retains its outcomes and stakes.
+
+## Development and validation
+
+No dependency installation is needed. `npm run build` assembles embedded source into `dist/index.html` and the standalone sibling. `npm test` uses Node's test runner for accounting, interest boundaries and offline catch-up with injected clocks, mutual loan consent, repayments, deletion, merchant profit and cooldown, game rules, controls, storage migration and compiled script checks. These checks do not establish rendered browser appearance.
+
+Original supplied artwork is retained in `src/roulette.html` and `src/lucky-reference.html`; integration remains in build helpers and the shared source modules. `.openai/hosting.json` preserves the existing private Site identity.

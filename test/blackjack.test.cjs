@@ -117,17 +117,17 @@ test('custom split and doubled wagers survive reload and keep exact stakes',()=>
     assert.equal(restored.active.balance,589);assert.equal(restored.storageWarning,'');
 });
 
-test('a settled blackjack hand charges due interest once and reload never charges it again',()=>{
-    const t=table([1,9,13,7]);t.engine.borrow(1000);t.engine.active.bankRounds=9;
-    t.game.start(10);assert.equal(t.engine.active.debt,1010);assert.equal(t.engine.active.bankRounds,0);
+test('a settled blackjack hand does not advance the real-time interest clock',()=>{
+    const t=table([1,9,13,7]);t.engine.borrow(1000);
+    t.game.start(10);assert.equal(t.engine.active.debt,1000);
     const restored=new Engine(t.saved);new Blackjack(restored);
-    assert.equal(restored.active.debt,1010);assert.equal(restored.active.bankRounds,0);
+    assert.equal(restored.active.debt,1000);
 });
 
 test('jackpot shortcut deals a natural, debits its wager and pays 3:2 once with safe reload',()=>{
-    const t=table([10,1,5,13]);t.engine.borrow(1000);t.engine.active.bankRounds=9;
+    const t=table([10,1,5,13]);t.engine.borrow(1000);
     t.game.forceJackpot(137);assert.equal(t.game.round.result.payout,342);assert.equal(t.engine.active.balance,2205);
-    assert.equal(t.engine.active.debt,1010);assert.equal(t.engine.active.bankRounds,0);
+    assert.equal(t.engine.active.debt,1000);
     const restored=new Engine(t.saved),game=new Blackjack(restored);assert.equal(restored.active.balance,2205);assert.equal(game.round.phase,'settled');assert.equal(restored.storageWarning,'');
 });
 test('jackpot shortcut settles an existing split or double with the maximum standard return and no redebit',()=>{

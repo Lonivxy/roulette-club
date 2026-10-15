@@ -32,7 +32,7 @@ test('loan offer appears only with exhausted bank and empty wallet, while repaym
 test('merchant purchase, equip, player switch and cancellation update visible inventory and armed banner',()=>{
     const t=ui();t.engine.active.balance=10000;t.controller.render();
     const product=t.get('market-catalog').children[0],buy=product.children.at(-1);assert.equal(buy.disabled,false);buy.fire('click');
-    assert.equal(t.engine.active.balance,4000);assert.equal(t.engine.active.cards.length,1);
+    assert.equal(t.engine.active.balance,6500);assert.equal(t.engine.active.cards.length,1);
     t.get('market-inventory').children[0].children.at(-1).fire('click');
     assert.equal(t.played,true);assert.equal(t.get('lucky-armed-card').hidden,false);assert.match(t.get('lucky-card-label').textContent,/777.*100/);
     t.engine.switchUser('jamie');t.controller.render();assert.equal(t.get('lucky-armed-card').hidden,true);

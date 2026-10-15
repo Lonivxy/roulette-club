@@ -133,8 +133,8 @@ test('equipped merchant card overrides selected wager, drives real reel stops an
     const m=machineFixture();m.engine.active.balance=10000;
     const card=m.engine.buyCard('diamonds',137);m.engine.armCard(card.id);m.machine.update();
     m.click('setBetMode(500)');assert.match(m.notices.at(-1),/取消装备/);
-    m.click('QuickPullAndSpin()');assert.equal(m.machine.displayBalance,5753);
-    assert.equal(m.engine.active.balance,9178);assert.equal(m.engine.active.cards.length,0);
+    m.click('QuickPullAndSpin()');assert.equal(m.machine.displayBalance,7397);
+    assert.equal(m.engine.active.balance,10822);assert.equal(m.engine.active.cards.length,0);
     m.finish();assert.equal(m.get('uiWin').textContent,'3,425');
     m.click('QuickPullAndSpin()');m.finish();assert.equal(m.get('uiWin').textContent,'5,000');
 });
