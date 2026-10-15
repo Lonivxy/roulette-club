@@ -53,6 +53,23 @@ test('genuine ES256 WebAuthn enrollment unlocks HttpOnly admin session; logout r
     assert.equal((await t.cmd('addUser',['New player'])).status,200);
     await t.request('/api/admin/logout',{body:{}});assert.equal((await t.cmd('adminAdjust',['jamie','add',1])).status,403);
 });
+test('database persists one hundred players across service reloads with administrator-only creation',async()=>{
+    const t=await fixture();await t.enroll();let last;
+    for(let i=3;i<100;i++){
+        const response=await t.cmd('addUser',['Database player '+i]);assert.equal(response.status,200);
+        last=(await response.json()).result;
+    }
+    const {createService}=await import('../worker/service.mjs'),restarted=createService();
+    const response=await restarted.fetch(new Request(t.ORIGIN+'/api/state',{headers:{'oai-authenticated-user-id':'owner-site-user'}}),{DB:t.DB});
+    const state=await response.json();assert.equal(state.data.users.length,100);
+    assert.equal(state.data.users.find(player=>player.id===last.id).balance,1000);
+    assert.equal(JSON.parse(t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot).users.length,100);
+    const gift=await t.cmd('gift',['alex',100],{playerId:last.id});assert.equal(gift.status,200);
+    const after=(await gift.json()).data;
+    assert.equal(after.users.find(player=>player.id===last.id).balance,900);assert.equal(after.users[0].balance,1100);
+    await t.request('/api/admin/logout',{body:{}});assert.equal((await t.cmd('addUser',['Unauthorized'])).status,403);
+});
+
 test('passkey login verifies real signatures, consumes the challenge and binds sessions to the platform identity',async()=>{
     const t=await fixture();await t.enroll();await t.request('/api/admin/logout',{body:{}});
     const options=await (await t.request('/api/admin/authenticate/options',{body:{}})).json(),assertion=await t.assertion(options);
@@ -88,8 +105,12 @@ test('server keeps roulette stakes until play, chooses the outcome and credits a
     assert.equal((await t.cmd('roulette.rig',['not-a-round'])).status,400);
 });
 test('legacy import requires passkey admin and refuses to overwrite subsequent server activity',async()=>{
-    const t=await fixture();await t.enroll();const legacy=new globalThis.CasinoEngine(null).data;legacy.users[0].balance=12345;
-    const imported=await t.cmd('import',[legacy]);assert.equal(imported.status,200);assert.equal((await imported.json()).data.users[0].balance,12345);
+    const t=await fixture();await t.enroll();const legacyEngine=new globalThis.CasinoEngine(null);
+    for(let i=3;i<30;i++)legacyEngine.addUser('Imported player '+i);
+    const legacy=legacyEngine.data;legacy.users[0].balance=12345;
+    const imported=await t.cmd('import',[legacy]);assert.equal(imported.status,200);const data=(await imported.json()).data;
+    assert.equal(data.users[0].balance,12345);assert.equal(data.users.length,30);
+    assert.equal((await (await t.request('/api/state')).json()).data.users.length,30);
     assert.equal((await t.cmd('import',[legacy])).status,409);
 });
 test('PLAYER contains player finance while management forms are confined to ADMIN',async()=>{

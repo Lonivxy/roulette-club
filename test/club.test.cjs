@@ -45,11 +45,18 @@ test('players retain separate roulette stakes, history, and rebet snapshots', ()
     e.switchUser('jamie'); assert.equal(Engine.sumBets(e.active.bets), 0); assert.equal(e.active.lastBets, null);
     e.switchUser('alex'); assert.equal(Engine.sumBets(e.active.bets), 100); assert.equal(e.active.history[0].num, 1);
 });
-test('new players validate names and table capacity', () => {
-    const e = engine(); assert.throws(() => e.addUser('Alex')); assert.throws(() => e.addUser('  '));
+test('new players validate names and persist beyond the former twelve-player cap', () => {
+    const storage = memory(), e = new Engine(storage); assert.throws(() => e.addUser('Alex')); assert.throws(() => e.addUser('  '));
     assert.throws(() => e.addUser('x'.repeat(25)));
-    for (let i = 3; i < 12; i++) { const u = e.addUser('Player ' + i); assert.equal(u.balance, 1000); }
-    assert.equal(e.data.users.length, 12); assert.throws(() => e.addUser('Player 13'));
+    for (let i = 3; i < 100; i++) { const u = e.addUser('Player ' + i); assert.equal(u.balance, 1000); }
+    assert.equal(e.data.users.length, 100);
+    const restored = new Engine(storage);
+    assert.equal(restored.storageWarning, ''); assert.equal(restored.data.users.length, 100);
+    assert.equal(restored.active.name, 'Player 99');
+    assert.throws(() => restored.addUser('player 99'));
+    restored.transfer('alex', 100);
+    const reloaded = new Engine(storage);
+    assert.equal(reloaded.active.balance, 900); assert.equal(reloaded.data.users[0].balance, 1100);
 });
 test('new 777 jackpot returns 50 times stake once and persists before animation ends', () => {
     const storage = memory(), e = new Engine(storage, () => 0);

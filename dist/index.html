@@ -579,7 +579,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
           <label for="admin-adjust-reason" class="club-field">备注（可选）</label><input id="admin-adjust-reason" class="club-input" type="text" maxlength="120" placeholder="例如奖励、修正余额">
           <div class="club-actions"><button type="submit" class="club-action" data-admin-action>确认调整并记录</button></div>
         </form>
-        <form id="player-form" class="club-card"><h3>添加玩家</h3><p class="club-muted">新玩家初始 1,000 筹码；可再通过余额调整修改。最多 12 位玩家。</p><label class="club-field" for="player-name">新玩家名称</label><input id="player-name" class="club-input" type="text" maxlength="24" required placeholder="玩家名称"><div class="club-actions"><button type="submit" class="club-action" data-admin-action>添加玩家</button></div></form>
+        <form id="player-form" class="club-card"><h3>添加玩家</h3><p class="club-muted">新玩家初始 1,000 筹码；可再通过余额调整修改。玩家保存到数据库，无固定人数上限。</p><label class="club-field" for="player-name">新玩家名称</label><input id="player-name" class="club-input" type="text" maxlength="24" required placeholder="玩家名称"><div class="club-actions"><button type="submit" class="club-action" data-admin-action>添加玩家</button></div></form>
         <div class="club-card club-wide"><h3>玩家列表</h3><p class="club-muted">删除需要再次确认。存在未清欠款、借出款、待确认协议或未结算游戏时须先处理，最后一名玩家不能删除。</p><div class="club-account-list" id="club-player-list"></div></div>
       </div>
     </div>
@@ -907,7 +907,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
                     const saved = JSON.parse(raw);
                     if (Array.isArray(saved.users)) saved.users = saved.users.map(user => ({ ...economyDefaults(), ...user }));
                     saved.loans ??= [];
-                    if (saved.version !== 1 || !Array.isArray(saved.users) || saved.users.length < 1 || saved.users.length > 12
+                    if (saved.version !== 1 || !Array.isArray(saved.users) || saved.users.length < 1
                         || !Array.isArray(saved.ledger) || !Array.isArray(saved.loans) || saved.loans.length > 200 || !saved.loans.every(loan => this.validLoan(loan, saved.users)) || new Set(saved.loans.map(loan => loan.id)).size !== saved.loans.length || !saved.users.some(u => u.id === saved.activeId)
                         || new Set(saved.users.map(u => u.id)).size !== saved.users.length
                         || !saved.users.every(u => typeof u.id === 'string' && typeof u.name === 'string'
@@ -967,7 +967,6 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             this.ensureIdle();
             name = String(name).trim();
             if (!name || name.length > 24) throw new Error('Use a player name with 1–24 characters.');
-            if (this.data.users.length >= 12) throw new Error('This table has room for 12 players.');
             if (this.data.users.some(u => u.name.toLowerCase() === name.toLowerCase())) throw new Error('That player name is already taken.');
             const u = profile(root.crypto.randomUUID(), name);
             this.data.users.push(u);

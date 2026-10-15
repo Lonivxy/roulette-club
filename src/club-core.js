@@ -60,7 +60,7 @@
                     const saved = JSON.parse(raw);
                     if (Array.isArray(saved.users)) saved.users = saved.users.map(user => ({ ...economyDefaults(), ...user }));
                     saved.loans ??= [];
-                    if (saved.version !== 1 || !Array.isArray(saved.users) || saved.users.length < 1 || saved.users.length > 12
+                    if (saved.version !== 1 || !Array.isArray(saved.users) || saved.users.length < 1
                         || !Array.isArray(saved.ledger) || !Array.isArray(saved.loans) || saved.loans.length > 200 || !saved.loans.every(loan => this.validLoan(loan, saved.users)) || new Set(saved.loans.map(loan => loan.id)).size !== saved.loans.length || !saved.users.some(u => u.id === saved.activeId)
                         || new Set(saved.users.map(u => u.id)).size !== saved.users.length
                         || !saved.users.every(u => typeof u.id === 'string' && typeof u.name === 'string'
@@ -120,7 +120,6 @@
             this.ensureIdle();
             name = String(name).trim();
             if (!name || name.length > 24) throw new Error('Use a player name with 1–24 characters.');
-            if (this.data.users.length >= 12) throw new Error('This table has room for 12 players.');
             if (this.data.users.some(u => u.name.toLowerCase() === name.toLowerCase())) throw new Error('That player name is already taken.');
             const u = profile(root.crypto.randomUUID(), name);
             this.data.users.push(u);
