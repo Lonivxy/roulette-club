@@ -1,0 +1,8 @@
+{
+  "accepted": true,
+  "exitCode": 0,
+  "commands": ["npm run build", "npm test", "git diff --check"],
+  "results": "201 tests passed; build and diff checks passed. DOM controller checks cover profile/privacy submissions, ADMIN visibility, XP dashboard, collection, achievement notifications and daily calendar. HTTP checks cover private profile projection and formal settled-round progression.",
+  "logs": ["P2-tests.log", "P2-build.log"],
+  "limitations": "Real-browser desktop/tablet/mobile and visual acceptance belong to P7. Browser connection retried and failed: plugin browser-service.mjs missing. No production V2 migration or deployment."
+}

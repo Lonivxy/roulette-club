@@ -10,12 +10,12 @@ Generated from issue Status fields. Update with scripts/task-board.cjs. Never ti
   - [x] [04 — 原子提交、永久流水、结构化事件](issues/04.md) — done
   - [x] [05 — 独立游戏锁和管理员沙盒](issues/05.md) — done
   - [x] [06 — 增量迁移、期初记录及旧数据校验](issues/06.md) — done
-- [ ] **P2 — 导航、资料与成长基础**
-  - [ ] [07 — 分组导航、资料及隐私设置](issues/07.md) — in-progress
-  - [ ] [08 — XP、等级、对局统计](issues/08.md) — pending
-  - [ ] [09 — 成就、称号及物品所有权](issues/09.md) — pending
+- [x] **P2 — 导航、资料与成长基础**
+  - [x] [07 — 分组导航、资料及隐私设置](issues/07.md) — done
+  - [x] [08 — XP、等级、对局统计](issues/08.md) — done
+  - [x] [09 — 成就、称号及物品所有权](issues/09.md) — done
 - [ ] **P3 — 签到与任务**
-  - [ ] [10 — 七日签到与断签](issues/10.md) — pending
+  - [ ] [10 — 七日签到与断签](issues/10.md) — in-progress
   - [ ] [11 — 版本化任务及原子领取](issues/11.md) — pending
   - [ ] [12 — 重试、并发、到期和版本验收](issues/12.md) — pending
 - [ ] **P4 — 收藏与装备界面**
