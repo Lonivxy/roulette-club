@@ -51,7 +51,9 @@ export function clubView(p,id,now){
  const incoming=Object.values(p.invitations).filter(i=>i.targetId===id&&i.status==='pending'&&i.expiresAt>now&&!p.clubs[i.clubId]?.archived).map(i=>({...i,clubName:p.clubs[i.clubId].name}));
  if(!club)return {club:null,incoming};
  const members=Object.values(p.memberships).filter(m=>m.clubId===clubId),contributions=Object.values(p.contributions).filter(c=>c.clubId===clubId&&c.week===week);
+ const leaderboard=members.map(m=>({playerId:m.id,rounds:contributions.filter(c=>c.playerId===m.id).length})).sort((a,b)=>b.rounds-a.rounds||a.playerId.localeCompare(b.playerId));
+ leaderboard.forEach((entry,index)=>entry.rank=index&&leaderboard[index-1].rounds===entry.rounds?leaderboard[index-1].rank:index+1);
  return {club,members,incoming,outgoing:club.ownerId===id?Object.values(p.invitations).filter(i=>i.clubId===clubId&&i.status==='pending'&&i.expiresAt>now):[],
   challenge:{week,target:50,progress:contributions.length,participated:contributions.some(c=>c.playerId===id),claimed:Boolean(p.claims[id+':club:'+clubId+':'+week])},
-  leaderboard:members.map(m=>({playerId:m.id,rounds:contributions.filter(c=>c.playerId===m.id).length})).sort((a,b)=>b.rounds-a.rounds||a.playerId.localeCompare(b.playerId))};
+  leaderboard};
 }

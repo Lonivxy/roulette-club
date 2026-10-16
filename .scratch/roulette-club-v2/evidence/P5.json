@@ -1,0 +1,8 @@
+{
+  "accepted": true,
+  "exitCode": 0,
+  "commands": ["npm run build", "npm test"],
+  "results": "209 tests passed. Exact huge wallet sorting, competition ties, search rank preservation, privacy removal; concurrent cross-club invitation accepts, revocation, expiry, owner transfer, single membership and unauthorized club reads; 50 formal rounds, concurrent team claims, preserved contributions and leave/rejoin claim denial. Clubs receive settled-round activity and ranked member contributions.",
+  "logs": ["P5-tests.log", "P5-build.log"],
+  "limitations": "Real-browser visual/responsive acceptance remains in P7."
+}

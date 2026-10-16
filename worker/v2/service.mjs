@@ -127,7 +127,7 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
     return json({format:2,createdAt:clock(),records});
    }
   }
-  if(extensions.read){const value=await extensions.read(request,db,p,row,await stepUp(request,db));if(value!==undefined)return json(value);}
+  if(extensions.read){const value=await extensions.read(request,db,p,row,await stepUp(request,db),clock());if(value!==undefined)return json(value);}
   fail('接口不存在。',404);
  }
  return {async fetch(request,env){try{

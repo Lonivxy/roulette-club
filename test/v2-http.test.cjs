@@ -122,3 +122,36 @@ test('collection ownership, disabled items and all equipment slots enforce exact
  await t.command('admin.item',[{id:badges[0],name:'Paused',description:'retained',kind:'badge',rarity:'rare',enabled:false}],{step:true});
  assert.equal((await t.command('inventory.equip',['badges',[badges[0]]])).status,403);const state=await (await t.request('/api/state')).json();assert.ok(state.platform.inventory.some(i=>i.itemId===badges[0]));
 });
+test('leaderboards sort arbitrarily large amounts exactly and retain competition ranks after search and privacy filtering',async()=>{
+ const t=await fixture();await t.owner();for(const [actor,id]of [['friend','jamie'],['other','taylor']]){await t.request('/api/state',{actor});await t.command('admin.bind',[actor,id],{step:true});}
+ for(const id of ['alex','jamie'])assert.equal((await t.command('adminAdjust',[id,'add','10000000000000000000000000000000001','ranking fixture'],{step:true})).status,200);
+ let rank=await (await t.request('/api/leaderboards?metric=wallet')).json();assert.deepEqual(rank.rows.map(r=>[r.id,r.rank]),[['alex',1],['jamie',1],['taylor',3]]);
+ rank=await (await t.request('/api/leaderboards?metric=wallet&query=Taylor')).json();assert.equal(rank.rows[0].rank,3);
+ await t.command('profile.settings',[{walletVisible:false}],{actor:'friend'});rank=await (await t.request('/api/leaderboards?metric=wallet')).json();assert.deepEqual(rank.rows.map(r=>r.rank),[1,2]);
+ assert.equal((await (await t.request('/api/leaderboards?page=1.5')).json()).page,1);
+ assert.equal((await t.request('/api/transactions?playerId=jamie')).status,200);const privateRows=await (await t.request('/api/transactions?playerId=jamie')).json();assert.ok(privateRows.rows.every(r=>r.playerId==='alex'));
+});
+test('private clubs handle concurrent invite acceptance, revocation, expiry, transfer and leaving without leaking other clubs',async()=>{
+ let now=Date.parse('2026-10-16T04:00:00Z');const t=await fixture({clock:()=>now});await t.owner();for(const [actor,id]of [['friend','jamie'],['other','taylor']]){await t.request('/api/state',{actor});await t.command('admin.bind',[actor,id],{step:true});}
+ await t.command('club.create',[{name:'Owner Club'}]);const club=(await (await t.request('/api/clubs')).json()).club;
+ await t.command('club.create',[{name:'Other Club'}],{actor:'other'});const other=(await (await t.request('/api/clubs',{actor:'other'})).json()).club;
+ assert.equal((await t.request('/api/clubs/'+other.id)).status,403);
+ const a=await (await t.command('club.invite',['jamie'])).json(),b=await (await t.command('club.invite',['jamie'],{actor:'other'})).json();
+ const races=await Promise.all([t.command('club.respond',[a.result.id,true],{actor:'friend'}),t.command('club.respond',[b.result.id,true],{actor:'friend'})]);assert.equal(races.filter(r=>r.status===200).length,1);
+ const joined=await (await t.request('/api/clubs',{actor:'friend'})).json();assert.ok([club.id,other.id].includes(joined.club.id));
+ await t.command('club.leave',[],{actor:'friend'});const invite=await (await t.command('club.invite',['jamie'])).json();
+ await t.command('club.revoke',[invite.result.id]);assert.equal((await t.command('club.respond',[invite.result.id,true],{actor:'friend'})).status,403);
+ const fresh=await (await t.command('club.invite',['jamie'])).json();now+=7*86400000;assert.equal((await t.command('club.respond',[fresh.result.id,true],{actor:'friend'})).status,403);
+ now-=7*86400000;await t.command('club.respond',[fresh.result.id,true],{actor:'friend'});assert.equal((await t.command('club.leave')).status,400);assert.equal((await t.command('club.transfer',['jamie'])).status,200);assert.equal((await t.command('club.leave')).status,200);
+});
+test('weekly club challenge counts formal activity only and prevents duplicate claims after leaving and rejoining',async()=>{
+ const t=await fixture();await t.owner();await t.request('/api/state',{actor:'friend'});await t.command('admin.bind',['friend','jamie'],{step:true});
+ await t.command('club.create',[{name:'Challenge'}]);let invite=await (await t.command('club.invite',['jamie'])).json();await t.command('club.respond',[invite.result.id,true],{actor:'friend'});
+ assert.equal((await t.command('club.claim',[],{actor:'friend'})).status,400);
+ for(let i=0;i<49;i++)assert.equal((await t.command('dice',[1,'small',null])).status,200);
+ assert.equal((await t.command('dice',[1,'small',null],{actor:'friend'})).status,200);
+ const club=await (await t.request('/api/clubs',{actor:'friend'})).json();assert.equal(club.challenge.progress,50);assert.ok(club.feed.length);
+ const race=await Promise.all([t.command('club.claim',[],{actor:'friend'}),t.command('club.claim',[],{actor:'friend'})]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
+ await t.command('club.leave',[],{actor:'friend'});invite=await (await t.command('club.invite',['jamie'])).json();await t.command('club.respond',[invite.result.id,true],{actor:'friend'});
+ assert.equal((await t.command('club.claim',[],{actor:'friend'})).status,409);assert.equal((await (await t.request('/api/clubs')).json()).challenge.progress,50);
+});

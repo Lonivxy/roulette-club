@@ -79,7 +79,7 @@ export function settledRound(p,id,game,roundId,now){
  grant(p,id,'round:'+roundId,'round',xp,[],now);prog.day.gameXP+=xp;prog.games++;prog.gameTypes[game]=true;
  for(const kind of ['day','week','month']){prog[kind].games++;prog[kind].types[game]=true;}
  const keys=periods(now);for(const kind of ['week','month','all']){const period=kind==='all'?'all':keys[kind],key=id+':'+kind+':'+period;const stats=p.stats[key]??={id:key,playerId:id,period:kind+':'+period,xp:0,games:0};stats.games++;}
- event(p,roundId,id,'game.settled',now,{game});
+ event(p,roundId,id,'game.settled',now,{game,...(p.memberships[id]?{clubId:p.memberships[id].clubId}:{})});
  const member=p.memberships[id];if(member){const key=member.clubId+':'+keys.week+':'+roundId;p.contributions[key]={id:key,playerId:id,clubId:member.clubId,week:keys.week,createdAt:now,roundId};}
  refreshAchievements(p,id,now);return true;
 }
