@@ -298,3 +298,46 @@ test('remote engine hydrates 100-digit bootstrap and API results and sends exact
     engine.lock=null;const game=new window.CasinoBlackjack(engine);const round=await game.forceJackpot(H);
     assert.equal(round.result.payout,H*5n/2n);assert.equal(M.valid(engine.active.balance),true);
 });
+
+
+test('lottery purchases are saved in D1 once, preserve fixed prices and cannot inject a payout',async()=>{
+    const t=await fixture();await t.enroll();const M=globalThis.CasinoMoney;
+    assert.equal((await t.cmd('adminAdjust',['alex','add','10000000000000000000000000000000000000000'])).status,200);
+    let balance=M.hydrate(await (await t.request('/api/state')).json()).data.users[0].balance;
+    for(const price of [1000,10000,1000000]){
+        const id=crypto.randomUUID(),response=await t.cmd('lottery',[price,{jackpot:true,payout:999999999999} ],{id});assert.equal(response.status,200);
+        const data=M.hydrate(await response.json());balance=M.add(balance,price*99);
+        assert.equal(data.result.payout,price*100);assert.equal(data.data.users[0].balance,balance);assert.equal(data.data.users[0].lotteryHistory.length,[1000,10000,1000000].indexOf(price)+1);
+        const replay=M.hydrate(await (await t.cmd('lottery',[price,{jackpot:true,payout:999999999999}],{id})).json());
+        assert.equal(replay.result.id,data.result.id);assert.equal(replay.revision,data.revision);assert.equal(replay.data.users[0].balance,balance);
+    }
+    for(const args of [[1001],[0],[1.5],[1000001],[1000,null],[1000,[]],[1000,true],[1000,{},{}]])assert.equal((await t.cmd('lottery',args)).status,400);
+    const snapshot=M.parseJSON(t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot);assert.equal(snapshot.users[0].balance,balance);assert.equal(snapshot.users[0].lotteryHistory.length,3);
+    const saved=snapshot.users[0].lotteryHistory[0];assert.equal(globalThis.CasinoLottery.validHistory(saved),true);
+    const {createService}=await import('../worker/service.mjs'),service=createService();
+    const loaded=await service.fetch(new Request(t.ORIGIN+'/api/state',{headers:{'oai-authenticated-user-id':'owner-site-user'}}),{DB:t.DB});
+    assert.equal(M.hydrate(await loaded.json()).data.users[0].balance,balance);
+});
+
+test('lottery draws retain server-determined outcomes and respect funds, player isolation and pending blackjack',async()=>{
+    const t=await fixture(),M=globalThis.CasinoMoney;
+    assert.equal((await t.cmd('lottery',[10000])).status,400);
+    const response=await t.cmd('lottery',[1000]);assert.equal(response.status,200);const data=M.hydrate(await response.json());
+    assert.equal(globalThis.CasinoLottery.validHistory(data.result),true);assert.equal(data.data.users[0].balance,data.result.payout);assert.equal(data.data.users[1].lotteryHistory,undefined);
+    const e=new globalThis.CasinoEngine(null,()=>.5),shoe=globalThis.CasinoBlackjack.makeShoe(()=>.5),sequence=[10,10,7,9].map(rank=>shoe.splice(shoe.findIndex(c=>c.rank===rank),1)[0]);
+    new globalThis.CasinoBlackjack(e,{shoeFactory:()=>[...shoe,...sequence.toReversed()]}).start(1);
+    const snapshot=data.data;snapshot.users[0].blackjack=e.active.blackjack;snapshot.users[0].balance=10000;
+    t.sql.prepare('UPDATE casino_state SET snapshot=? WHERE id=?').run(M.stringify(snapshot),'club');
+    assert.equal((await t.cmd('lottery',[1000])).status,400);assert.equal((await t.cmd('lottery',[1000],{playerId:'jamie'})).status,409);
+});
+
+test('remote lottery bootstrap, paid jackpot and server history survive browser synchronization',async()=>{
+    const t=await fixture(),bootstrap=await (await t.request('/api/state')).json(),vm=require('node:vm');
+    const window={__CASINO_BOOTSTRAP__:bootstrap},sandbox={window,CasinoEngine:globalThis.CasinoEngine,CasinoBlackjack:globalThis.CasinoBlackjack,
+        crypto,AbortSignal,Date,sessionStorage:{getItem(){},setItem(){}},localStorage:{getItem(){return null;}},fetch:async(url,options={})=>t.request(url,options.body?{body:JSON.parse(options.body)}:{})};
+    vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/remote-engine.js'),'utf8'),sandbox);
+    const e=new window.CasinoEngine(),ticket=await e.buyLottery(1000,{jackpot:true});assert.equal(ticket.payout,100000);assert.equal(e.active.balance,100000);
+    await e.sync();assert.equal(e.active.lotteryHistory[0].id,ticket.id);assert.equal(e.active.balance,100000);
+    const worker=(await import('../dist/server/index.js')).default,page=await worker.fetch(new Request(t.ORIGIN+'/player',{headers:{'oai-authenticated-user-id':'owner-site-user'}}),{DB:t.DB});
+    assert.equal(page.status,200);const html=await page.text();for(const id of ['tab-lottery','lottery-view','lottery-buy','lottery-odds','lottery-history'])assert.ok(html.includes('id="'+id+'"'));
+});

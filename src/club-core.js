@@ -375,6 +375,18 @@
             this.active.armedCardId = id;
             this.save();
         }
+        buyLottery(value, { jackpot = false } = {}) {
+            this.ensureIdle();
+            const price = root.CasinoLottery.price(value), user = this.active;
+            if (price > user.balance) throw new Error('钱包余额不足以购买这档彩票。');
+            const result = root.CasinoLottery.draw(price, this.random, jackpot);
+            result.id = root.crypto.randomUUID(); result.time = new Date(this.now()).toISOString();
+            result.walletAfterWager = M.sub(user.balance, price);
+            user.balance = M.add(user.balance, result.net);
+            user.lotteryHistory = [result, ...(Array.isArray(user.lotteryHistory) ? user.lotteryHistory.filter(root.CasinoLottery.validHistory) : [])].slice(0,30);
+            this.record(`${user.name} · 彩票 · ${root.CasinoLottery.tiers[result.tier].name}: 票价 ${price.toLocaleString()}，返还 ${result.payout.toLocaleString()}（${result.multiplier}×），净输赢 ${result.net >= 0 ? '+' : ''}${result.net.toLocaleString()}。`);
+            this.completeRound(result.net); this.lock = 'lottery'; this.save(); return result;
+        }
         playPlinko(value, risk = 'medium', lane = 'center', { jackpot = false } = {}) {
             this.ensureIdle();const n=this.amount(value),user=this.active;
             root.CasinoArcade.plinkoSettings(risk,lane);

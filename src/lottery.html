@@ -1,0 +1,27 @@
+<section id="lottery-view" class="club-view lottery-view" role="tabpanel" aria-labelledby="tab-lottery" hidden>
+  <div class="lottery-shell">
+    <header class="lottery-heading"><div><p class="club-eyebrow">LUCKY LOTTERY · 即买即开</p><h2>幸运彩票</h2><p class="club-muted">选一张票，让幸运揭晓。每张独立开奖，最高返还票价的 100 倍。</p></div><div class="lottery-top-prize">本档最高奖金<strong id="lottery-top-prize">100,000</strong></div></header>
+    <div class="lottery-layout">
+      <div class="lottery-purchase club-card">
+        <h3>选择票价</h3><div id="lottery-prices" class="lottery-prices" role="group" aria-label="彩票票价">
+          <button type="button" data-lottery-price="1000" aria-pressed="true"><span>经典票</span><strong>1,000</strong><small>最高 100,000</small></button>
+          <button type="button" data-lottery-price="10000" aria-pressed="false"><span>黄金票</span><strong>10,000</strong><small>最高 1,000,000</small></button>
+          <button type="button" data-lottery-price="1000000" aria-pressed="false"><span>至尊票</span><strong>1,000,000</strong><small>最高 100,000,000</small></button>
+        </div>
+        <p id="lottery-cost" class="club-muted">本次票价 1,000 筹码 · 购票后立即结算</p>
+        <button id="lottery-buy" type="button" class="club-action lottery-buy">购票并开奖 · 1,000</button>
+        <p id="lottery-status" class="lottery-status" role="status" aria-live="polite">选择票价，准备开奖。</p>
+        <div id="lottery-ticket" class="lottery-ticket" aria-busy="false" data-state="ready">
+          <p class="club-eyebrow">LUCKY LOTTERY</p><h3 id="lottery-prize-name">你的下一份幸运</h3><strong id="lottery-multiplier" class="lottery-multiplier">最高 100×</strong>
+          <p id="lottery-result" class="lottery-result" role="status" aria-live="polite">所有票价使用相同中奖概率。</p>
+          <p id="lottery-ticket-id" class="lottery-ticket-id"></p><button id="lottery-reveal" type="button" class="club-action secondary" hidden>立即揭晓</button>
+        </div>
+      </div>
+      <aside class="club-card lottery-rules"><h3>中奖概率 & 本档返还</h3><p class="club-muted">倍数包含票价。每次购票只命中一档，各档概率固定，不随票价改变。</p>
+        <div class="lottery-table-wrap"><table><thead><tr><th scope="col">返还倍数</th><th scope="col">概率</th><th scope="col">到账筹码</th></tr></thead><tbody id="lottery-odds"></tbody></table></div>
+        <p id="lottery-theory" class="lottery-theory"></p><p class="club-muted">59.875% 未中奖：返还 0，损失整张票价。1× 为回本。负数模式的 10 筹码不足以购买最低档彩票。</p>
+      </aside>
+    </div>
+    <section class="club-card lottery-history"><h3>当前玩家的彩票记录</h3><p class="club-muted">保留最近 30 张，刷新后仍可查看。奖金已自动计入钱包。</p><ol id="lottery-history"></ol></section>
+  </div>
+</section>

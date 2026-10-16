@@ -498,6 +498,29 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 .club-tabs button { white-space: nowrap; }
 @media(min-width:901px) { #club-nav { gap: 10px; padding-left: 16px; padding-right: 16px; } .club-tabs button { padding-left: 9px; padding-right: 9px; } }
 @media(max-width:780px) { .arcade-layout { grid-template-columns: 1fr; } .arcade-heading { gap: 10px; } .arcade-heading h2 span { display: block; margin: 10px 0 0; } .arcade-max strong { font-size: 24px; } .arcade-mount { height: min(70vh,560px); min-height: 350px; } .arcade-controls { padding: 20px; } .club-tabs button { flex: 0 0 auto; } }
+.lottery-view { background:radial-gradient(ellipse at 15% 10%,#3c284d,#181522 60%,#100e17); }
+.lottery-shell { max-width:1180px; margin:auto; padding-bottom:50px; }
+.lottery-heading { display:flex; justify-content:space-between; align-items:center; gap:24px; margin-bottom:26px; }
+.lottery-heading h2 { color:#f5e5bd; font-size:clamp(30px,5vw,48px); font-weight:900; margin:10px 0; }
+.lottery-top-prize { color:#c2a96f; font-size:12px; text-align:right; }
+.lottery-top-prize strong { display:block; color:#f3d58e; font:800 clamp(20px,3vw,32px) Orbitron,sans-serif; margin-top:8px; }
+.lottery-layout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(320px,1fr); gap:24px; align-items:start; }
+.lottery-prices { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:20px 0; }
+.lottery-prices button { padding:16px 5px; border:1px solid #bc985f45; border-radius:12px; background:#241c2d; color:#dacba7; cursor:pointer; min-width:0; }
+.lottery-prices button[aria-pressed="true"] { border-color:#f4cd77; background:#59402880; box-shadow:0 0 24px #d7a84b12; }
+.lottery-prices span,.lottery-prices strong,.lottery-prices small { display:block; }
+.lottery-prices span { font-size:12px; }.lottery-prices strong { font-size:clamp(14px,2.2vw,22px); margin:10px 0; }.lottery-prices small { font-size:10px; color:#b6a78e; }
+.lottery-buy { width:100%; padding:15px; }.lottery-status { color:#bdb0cd; font-size:13px; line-height:1.7; min-height:44px; margin:16px 0; }
+.lottery-ticket { padding:28px 20px; border:1px solid #d0ab664d; border-radius:16px; background:linear-gradient(135deg,#302037,#1c1626); text-align:center; overflow-wrap:anywhere; }
+.lottery-ticket h3 { color:#e8d3a5; margin:12px 0; }.lottery-multiplier { display:block; font:900 clamp(32px,6vw,60px) Orbitron,sans-serif; color:#f0d18c; margin:24px 0; }
+.lottery-result { color:#c4b6d4; line-height:1.8; font-size:14px; min-height:50px; }.lottery-ticket-id { color:#a091ae; font-size:10px; }
+.lottery-ticket[data-state="drawing"] { animation:lottery-glow 1s ease-in-out infinite alternate; }.lottery-ticket[data-state="profit"] { border-color:#d6ba72; box-shadow:inset 0 0 40px #e0b34d12; }.lottery-ticket[data-state="loss"] .lottery-multiplier { color:#e9a0ad; }
+#lottery-reveal[hidden] { display:none; }.lottery-rules table { width:100%; border-collapse:collapse; font-size:12px; font-variant-numeric:tabular-nums; }.lottery-rules th,.lottery-rules td { padding:11px 6px; text-align:right; border-bottom:1px solid #ffffff0d; }.lottery-rules th:first-child,.lottery-rules td:first-child { text-align:left; }.lottery-table-wrap { overflow-x:auto; }.lottery-rules th { color:#a79bb3; font-weight:500; }.lottery-rules tbody tr:first-child { color:#f0d18c; }.lottery-theory { color:#dbc99d; font-size:12px; line-height:1.8; margin-top:18px; }
+.lottery-history { margin-top:24px; }.lottery-history ol { list-style:none; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:10px; }.lottery-history li { border:1px solid #d6ba7226; border-radius:10px; padding:14px; font-size:12px; color:#ddcba4; line-height:1.9; overflow-wrap:anywhere; }.lottery-history li[data-loss="true"] { color:#dca6b5; }.lottery-history time { display:block; color:#a698b3; font-size:10px; }
+.lottery-prices button:focus-visible,.lottery-buy:focus-visible,#lottery-reveal:focus-visible { outline:3px solid #f0d18c; outline-offset:4px; }.lottery-prices button:disabled { opacity:.45; cursor:not-allowed; }
+@keyframes lottery-glow { from { box-shadow:inset 0 0 20px #edca7a09; } to { box-shadow:inset 0 0 50px #edca7a25; } }
+@media(max-width:800px) { .lottery-layout { grid-template-columns:1fr; }.lottery-heading { align-items:flex-start; }.lottery-top-prize { max-width:42%; }.lottery-prices strong { font-size:16px; } }
+@media(prefers-reduced-motion:reduce) { .lottery-ticket[data-state="drawing"] { animation:none; } }
 
     </style>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
@@ -511,6 +534,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         <button id="tab-blackjack" type="button" role="tab" aria-controls="blackjack-view" aria-selected="false" data-view="blackjack">Blackjack</button>
         <button id="tab-plinko" type="button" role="tab" aria-controls="plinko-view" aria-selected="false" data-view="plinko">Plinko 弹珠</button>
         <button id="tab-dice" type="button" role="tab" aria-controls="dice-view" aria-selected="false" data-view="dice">骰宝</button>
+        <button id="tab-lottery" type="button" role="tab" aria-controls="lottery-view" aria-selected="false" data-view="lottery">彩票</button>
         <button id="tab-bank" type="button" role="tab" aria-controls="bank-view" aria-selected="false" data-view="bank">银行</button>
         <button id="tab-players" type="button" role="tab" aria-controls="players-view" aria-selected="false" data-view="players">玩家</button>
         <button id="tab-market" type="button" role="tab" aria-controls="market-view" aria-selected="false" data-view="market">黑市商人</button>
@@ -656,6 +680,34 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         <button id="dice-play" type="submit" class="club-action arcade-play">掷骰</button></form><p id="dice-status" class="arcade-status" role="status">准备掷骰。</p><div id="dice-result" class="arcade-result" aria-live="polite"></div>
         <details class="arcade-rules"><summary>本桌规则</summary><p>每枚骰子 1–6 点，三枚独立投掷。大小、单双遇到任意围骰均输；指定总点数只看总和。每局选择一种下注。</p><p>倍率为含本金的总返还：大小／单双 2×，任意围骰 31×；指定总点数的倍率显示在选项中。</p></details>
       </div></div><div class="arcade-recent"><h3>最近的骰子</h3><ol id="dice-history"></ol></div>
+  </div>
+</section>
+
+<section id="lottery-view" class="club-view lottery-view" role="tabpanel" aria-labelledby="tab-lottery" hidden>
+  <div class="lottery-shell">
+    <header class="lottery-heading"><div><p class="club-eyebrow">LUCKY LOTTERY · 即买即开</p><h2>幸运彩票</h2><p class="club-muted">选一张票，让幸运揭晓。每张独立开奖，最高返还票价的 100 倍。</p></div><div class="lottery-top-prize">本档最高奖金<strong id="lottery-top-prize">100,000</strong></div></header>
+    <div class="lottery-layout">
+      <div class="lottery-purchase club-card">
+        <h3>选择票价</h3><div id="lottery-prices" class="lottery-prices" role="group" aria-label="彩票票价">
+          <button type="button" data-lottery-price="1000" aria-pressed="true"><span>经典票</span><strong>1,000</strong><small>最高 100,000</small></button>
+          <button type="button" data-lottery-price="10000" aria-pressed="false"><span>黄金票</span><strong>10,000</strong><small>最高 1,000,000</small></button>
+          <button type="button" data-lottery-price="1000000" aria-pressed="false"><span>至尊票</span><strong>1,000,000</strong><small>最高 100,000,000</small></button>
+        </div>
+        <p id="lottery-cost" class="club-muted">本次票价 1,000 筹码 · 购票后立即结算</p>
+        <button id="lottery-buy" type="button" class="club-action lottery-buy">购票并开奖 · 1,000</button>
+        <p id="lottery-status" class="lottery-status" role="status" aria-live="polite">选择票价，准备开奖。</p>
+        <div id="lottery-ticket" class="lottery-ticket" aria-busy="false" data-state="ready">
+          <p class="club-eyebrow">LUCKY LOTTERY</p><h3 id="lottery-prize-name">你的下一份幸运</h3><strong id="lottery-multiplier" class="lottery-multiplier">最高 100×</strong>
+          <p id="lottery-result" class="lottery-result" role="status" aria-live="polite">所有票价使用相同中奖概率。</p>
+          <p id="lottery-ticket-id" class="lottery-ticket-id"></p><button id="lottery-reveal" type="button" class="club-action secondary" hidden>立即揭晓</button>
+        </div>
+      </div>
+      <aside class="club-card lottery-rules"><h3>中奖概率 & 本档返还</h3><p class="club-muted">倍数包含票价。每次购票只命中一档，各档概率固定，不随票价改变。</p>
+        <div class="lottery-table-wrap"><table><thead><tr><th scope="col">返还倍数</th><th scope="col">概率</th><th scope="col">到账筹码</th></tr></thead><tbody id="lottery-odds"></tbody></table></div>
+        <p id="lottery-theory" class="lottery-theory"></p><p class="club-muted">59.875% 未中奖：返还 0，损失整张票价。1× 为回本。负数模式的 10 筹码不足以购买最低档彩票。</p>
+      </aside>
+    </div>
+    <section class="club-card lottery-history"><h3>当前玩家的彩票记录</h3><p class="club-muted">保留最近 30 张，刷新后仍可查看。奖金已自动计入钱包。</p><ol id="lottery-history"></ol></section>
   </div>
 </section>
 
@@ -1011,6 +1063,64 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         abs:value => value < 0 ? sub(0,value) : value,
         tryParse:value => {try {return parse(value);} catch {return null;}},
         stringify, parseJSON:decode, hydrate:value => decode(stringify(value)) };
+})(globalThis);
+
+(function (root) {
+    'use strict';
+    if (!root.CasinoMoney && typeof require === 'function') require('./money.js');
+    const M = root.CasinoMoney, total = 10000000;
+    const prices = Object.freeze([1000, 10000, 1000000]);
+    // Ten million equally likely tickets represent every supplied percentage exactly.
+    const tiers = Object.freeze([
+        {weight:500, numerator:200, name:'特等奖'},
+        {weight:2000, numerator:100, name:'一等奖'},
+        {weight:30000, numerator:20, name:'二等奖'},
+        {weight:60000, numerator:16, name:'三等奖'},
+        {weight:120000, numerator:10, name:'四等奖'},
+        {weight:250000, numerator:8, name:'五等奖'},
+        {weight:350000, numerator:5, name:'六等奖'},
+        {weight:450000, numerator:4, name:'七等奖'},
+        {weight:750000, numerator:3, name:'八等奖'},
+        {weight:2000000, numerator:2, name:'保本末等奖'},
+        {weight:5987500, numerator:0, name:'未中奖'}
+    ].map(Object.freeze));
+    function price(value) {
+        const amount = M.positive(value);
+        if (!prices.includes(amount)) throw new Error('彩票票价只能选择 1,000、10,000 或 1,000,000 筹码。');
+        return amount;
+    }
+    function fromTicket(value, ticket) {
+        const wager = price(value);
+        if (!Number.isInteger(ticket) || ticket < 0 || ticket >= total) throw new Error('彩票开奖结果无效。');
+        let end = 0;
+        const tier = tiers.findIndex(item => ticket < (end += item.weight)), item = tiers[tier];
+        const payout = M.ratio(wager, item.numerator, 2);
+        return {game:'lottery', ticket, tier, wager, multiplier:item.numerator / 2, payout, net:M.sub(payout,wager)};
+    }
+    function drawTicket(random) {
+        // Rejection sampling avoids rounding/modulo bias for the rarest prizes.
+        const range = 4294967296, limit = Math.floor(range / total) * total;
+        for (let attempt = 0; attempt < 64; attempt++) {
+            const roll = random();
+            if (typeof roll !== 'number' || !(roll >= 0 && roll < 1)) throw new Error('无法生成有效彩票，请重试。');
+            const value = Math.floor(roll * range);
+            if (value < limit) return value % total;
+        }
+        throw new Error('无法生成有效彩票，请重试。');
+    }
+    function draw(value, random, jackpot = false) {
+        const amount = price(value);
+        return fromTicket(amount, jackpot ? 0 : drawTicket(random));
+    }
+    function validHistory(result) {
+        try {
+            if (!result || result.game !== 'lottery' || typeof result.id !== 'string' || typeof result.time !== 'string') return false;
+            const expected = fromTicket(result.wager, result.ticket);
+            return ['tier','multiplier','payout','net'].every(key => result[key] === expected[key]);
+        } catch { return false; }
+    }
+    const expectedNumerator = tiers.reduce((sum,item) => sum + item.weight * item.numerator, 0);
+    root.CasinoLottery = {prices, tiers, total, expectedNumerator, price, fromTicket, drawTicket, draw, validHistory};
 })(globalThis);
 
 (function(root) {
@@ -1463,6 +1573,18 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             if (card && card.stake > this.active.balance) throw new Error('余额不足以支付该卡绑定的下注。');
             this.active.armedCardId = id;
             this.save();
+        }
+        buyLottery(value, { jackpot = false } = {}) {
+            this.ensureIdle();
+            const price = root.CasinoLottery.price(value), user = this.active;
+            if (price > user.balance) throw new Error('钱包余额不足以购买这档彩票。');
+            const result = root.CasinoLottery.draw(price, this.random, jackpot);
+            result.id = root.crypto.randomUUID(); result.time = new Date(this.now()).toISOString();
+            result.walletAfterWager = M.sub(user.balance, price);
+            user.balance = M.add(user.balance, result.net);
+            user.lotteryHistory = [result, ...(Array.isArray(user.lotteryHistory) ? user.lotteryHistory.filter(root.CasinoLottery.validHistory) : [])].slice(0,30);
+            this.record(`${user.name} · 彩票 · ${root.CasinoLottery.tiers[result.tier].name}: 票价 ${price.toLocaleString()}，返还 ${result.payout.toLocaleString()}（${result.multiplier}×），净输赢 ${result.net >= 0 ? '+' : ''}${result.net.toLocaleString()}。`);
+            this.completeRound(result.net); this.lock = 'lottery'; this.save(); return result;
         }
         playPlinko(value, risk = 'medium', lane = 'center', { jackpot = false } = {}) {
             this.ensureIdle();const n=this.amount(value),user=this.active;
@@ -3668,6 +3790,7 @@ if (window.__CASINO_BOOTSTRAP__) {
         buyCard(...args){return this.send('buyCard',args);}
         armCard(...args){return this.send('armCard',args);}
         spinSlots(value, _forced, options={}){return this.send('slots',[value,options]);}
+        buyLottery(...args){return this.send('lottery',args);}
         playPlinko(...args){return this.send('plinko',args);}
         playDice(...args){return this.send('dice',args);}
         addUser(...args){return this.send('addUser',args,{admin:true});}
@@ -4196,6 +4319,86 @@ function createArcadeGame(kind,engine,callbacks) {
     };
 }
 
+function createLotteryGame(engine, callbacks) {
+    'use strict';
+    const $ = name => document.getElementById('lottery-' + name), rules = CasinoLottery, M = engine.money;
+    const prices = [...document.querySelectorAll('[data-lottery-price]')], fmt = value => value.toLocaleString();
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
+    let selected = rules.prices[0], visible = false, pending = false, animating = false, player = null, timer = null, runningId = null, visualBalance = null;
+    function element(tag, text) { const node = document.createElement(tag); node.textContent = text; return node; }
+    function describe(result) {
+        return `票价 ${fmt(result.wager)} · ${result.multiplier}× · 返还 ${fmt(result.payout)} · 净输赢 ${result.net >= 0 ? '+' : ''}${fmt(result.net)}`;
+    }
+    function update() {
+        if (player !== engine.active.id) { player = engine.active.id; selected = rules.prices[0]; $('status').textContent = '选择票价，准备开奖。'; }
+        const locked = callbacks.locked() || pending || animating, affordable = engine.active.balance >= selected;
+        prices.forEach(button => { button.disabled = locked; button.setAttribute('aria-pressed', String(Number(button.dataset.lotteryPrice) === selected)); });
+        $('buy').disabled = locked || !affordable;
+        $('buy').textContent = '购票并开奖 · ' + fmt(selected);
+        $('cost').textContent = '本次票价 ' + fmt(selected) + ' 筹码 · 购票后立即结算';
+        $('top-prize').textContent = fmt(M.mul(selected,100));
+        $('odds').replaceChildren(...rules.tiers.map(item => {
+            const row = document.createElement('tr'), probability = (item.weight * 100 / rules.total).toFixed(5).replace(/\.?0+$/, '');
+            row.append(element('td', item.numerator / 2 + '×'), element('td', probability + '%'), element('td', fmt(M.ratio(selected,item.numerator,2)))); return row;
+        }));
+        $('theory').textContent = '理论平均返还率 ' + (rules.expectedNumerator * 100 / (rules.total * 2)).toFixed(4).replace(/\.?0+$/, '') + '% · 每张独立随机，结果不会因之前输赢改变。';
+        const history = (Array.isArray(engine.active.lotteryHistory) ? engine.active.lotteryHistory : []).filter(rules.validHistory).slice(0,30);
+        const drawing = pending || animating, latest = history[0];
+        $('ticket').setAttribute('aria-busy', String(drawing));
+        $('reveal').hidden = !animating;
+        if (drawing) {
+            $('ticket').dataset.state = 'drawing'; $('prize-name').textContent = '幸运正在揭晓'; $('multiplier').textContent = '开奖中…';
+            $('result').textContent = '结果已提交，请稍候。'; $('ticket-id').textContent = '';
+        } else if (latest) {
+            $('ticket').dataset.state = latest.net > 0 ? 'profit' : latest.net < 0 ? 'loss' : 'even';
+            $('prize-name').textContent = rules.tiers[latest.tier].name; $('multiplier').textContent = latest.multiplier + '×';
+            $('result').textContent = describe(latest); $('ticket-id').textContent = '票号 ' + latest.id;
+        } else {
+            $('ticket').dataset.state = 'ready'; $('prize-name').textContent = '你的下一份幸运'; $('multiplier').textContent = '最高 100×';
+            $('result').textContent = '所有票价使用相同中奖概率。'; $('ticket-id').textContent = '';
+        }
+        const recent = pending ? history.slice(1) : history.filter(result => result.id !== runningId);
+        $('history').replaceChildren(...(recent.length ? recent.map(result => {
+            const row = element('li', rules.tiers[result.tier].name + ' · ' + describe(result)); row.dataset.loss = String(result.net < 0);
+            const time = element('time', new Date(result.time).toLocaleString()); time.dateTime = result.time; row.append(time); return row;
+        }) : [element('li','还没有彩票记录。')]));
+        if (!locked && !affordable) $('status').textContent = engine.active.recovery ? '负数模式每局只有 10 筹码，暂时无法购买最低 1,000 的彩票。' : '当前余额不足，请选择更低票价或前往银行。';
+    }
+    function reveal() {
+        if (!animating) return;
+        if (timer !== null) clearTimeout(timer); timer = null;
+        animating = false; runningId = null; visualBalance = null; engine.lock = null;
+        $('status').textContent = '开奖完成，奖金已自动计入当前玩家钱包。';
+        update(); callbacks.changed();
+    }
+    async function buy(jackpot = false) {
+        if (!visible || pending || animating || callbacks.locked()) return;
+        if (selected > engine.active.balance) { callbacks.notify('钱包余额不足以购买这档彩票。',true); return; }
+        pending = true; visualBalance = M.sub(engine.active.balance,selected); $('status').textContent = '正在购票，请稍候…'; update(); callbacks.changed();
+        let result;
+        try {
+            result = await engine.buyLottery(selected,{jackpot}); pending = false; animating = true; runningId = result.id; engine.lock = 'lottery';
+            $('status').textContent = '彩票已购买，即将揭晓…'; update(); callbacks.changed();
+            if (reduced) reveal(); else timer = setTimeout(reveal,1800);
+        } catch (error) {
+            pending = false; animating = false; visualBalance = null; runningId = null;
+            if (result) engine.lock = null;
+            update(); callbacks.notify(result ? '本张彩票已结算，请查看彩票记录。' : error.message,true); callbacks.changed();
+        }
+    }
+    prices.forEach(button => button.addEventListener('click', () => {
+        if (callbacks.locked() || pending || animating) return;
+        selected = rules.price(Number(button.dataset.lotteryPrice)); $('status').textContent = '已选择 ' + fmt(selected) + ' 筹码彩票。'; update();
+    }));
+    $('buy').addEventListener('click', () => buy()); $('reveal').addEventListener('click', reveal);
+    window.addEventListener('keydown', event => {
+        if (!visible || event.repeat || event.code !== 'Space' || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.target?.closest?.('input,select,textarea,button,[contenteditable]')) return;
+        event.preventDefault(); event.stopImmediatePropagation(); if (animating) reveal(); else buy();
+    });
+    return {update, forceJackpot:() => buy(true), setVisible(value) { visible = value; update(); },
+        get animating() { return pending || animating; }, get displayBalance() { return visualBalance; }};
+}
+
 function createEconomyUI(engine, callbacks) {
     const $ = id => document.getElementById(id), fmt = n => n.toLocaleString();
     let buyButtons = [];
@@ -4501,11 +4704,11 @@ function createCasinoClub(roulette) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, plinko, dice, customRoulette, economy, playerLoans, accounts, admin, distress, adminPage = 1, recoveryPlayer = null, pendingDelete = null;
+    let view = 'roulette', toastTimer, lucky, blackjack, plinko, dice, lottery, customRoulette, economy, playerLoans, accounts, admin, distress, adminPage = 1, recoveryPlayer = null, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
-    const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret || Boolean(blackjack?.animating) || Boolean(lucky?.dragging) || Boolean(plinko?.animating) || Boolean(dice?.animating);
+    const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret || Boolean(blackjack?.animating) || Boolean(lucky?.dragging) || Boolean(plinko?.animating) || Boolean(dice?.animating) || Boolean(lottery?.animating);
     function toast(message, error = false) {
         clearTimeout(toastTimer);
         $('club-toast').textContent = message;
@@ -4533,7 +4736,7 @@ function createCasinoClub(roulette) {
         $('club-user').disabled = viewLocked();
         $('transfer-user').replaceChildren(...engine.data.users.filter(p => p.id !== u.id).map(option));
         if ([...$('transfer-user').options].some(o => o.value === selectedRecipient)) $('transfer-user').value = selectedRecipient;
-        const visualWallet = (view === 'plinko' ? plinko?.displayBalance : view === 'dice' ? dice?.displayBalance : lucky?.displayBalance) ?? u.balance;
+        const visualWallet = (view === 'plinko' ? plinko?.displayBalance : view === 'dice' ? dice?.displayBalance : view === 'lottery' ? lottery?.displayBalance : lucky?.displayBalance) ?? u.balance;
         $('club-wallet').textContent = u.recovery ? `-${fmt(u.recovery.deficit)} · 可用 ${fmt(visualWallet)} ₵` : `${fmt(visualWallet)} ₵`;
         $('bank-greeting').textContent = `${u.name}’s wallet & bank`;
         $('bank-wallet').textContent = fmt(u.balance);
@@ -4576,7 +4779,7 @@ function createCasinoClub(roulette) {
         lucky?.update(viewLocked());
         customRoulette?.update(viewLocked());
         blackjack?.update();
-        plinko?.update();dice?.update();
+        plinko?.update();dice?.update();lottery?.update();
         document.querySelectorAll('#roulette-controls [data-bet], .chip-btn, #clear-bets-btn, #rebet-btn, #open-number-modal-btn, #spin-btn').forEach(el => { el.disabled = busy(); });
         economy?.render();
         playerLoans?.render();
@@ -4596,6 +4799,7 @@ function createCasinoClub(roulette) {
         blackjack.setVisible(view === 'blackjack');
         $('plinko-view').hidden = view !== 'plinko';$('dice-view').hidden = view !== 'dice';
         plinko.setVisible(view === 'plinko');dice.setVisible(view === 'dice');
+        $('lottery-view').hidden = view !== 'lottery'; lottery.setVisible(view === 'lottery');
         document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === view)));
         document.querySelectorAll('.club-roulette-hud, #roulette-controls, #hint-pill, #status-banner, #canvas-container').forEach(el => {
             if (view === 'roulette') el.style.removeProperty('display'); else el.style.display = 'none';
@@ -4603,7 +4807,7 @@ function createCasinoClub(roulette) {
         render();
     }
     function setView(next) {
-        if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'bank', 'market', 'players', 'admin'].includes(next)) return;
+        if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(next)) return;
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
         paintView();
@@ -4628,11 +4832,12 @@ function createCasinoClub(roulette) {
     function init() {
         bindJackpotShortcut(window, () => {
             if (distress?.blocking) return false;
-            if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice'].includes(view)) return false;
+            if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery'].includes(view)) return false;
             if (roulette.isChargingSpin || roulette.isDraggingTurret || lucky?.dragging) { toast('Release the controls before using the shortcut.', true); return; }
             if (view === 'blackjack') blackjack.forceJackpot();
             else if (view === 'plinko') plinko.forceJackpot();
             else if (view === 'dice') dice.forceJackpot();
+            else if (view === 'lottery') lottery.forceJackpot();
             else if (view === 'roulette') forceRouletteJackpot();
             else if (!busy()) lucky.forceJackpot();
             else toast('Wait for this spin to finish, then use the shortcut again.', true);
@@ -4651,6 +4856,7 @@ function createCasinoClub(roulette) {
         blackjack = createBlackjackTable(engine, { changed: () => updateBettingHUD(), notify: toast });
         plinko = createArcadeGame('plinko',engine,{locked:viewLocked,changed:()=>updateBettingHUD(),notify:toast});
         dice = createArcadeGame('dice',engine,{locked:viewLocked,changed:()=>updateBettingHUD(),notify:toast});
+        lottery = createLotteryGame(engine,{locked:viewLocked,changed:()=>updateBettingHUD(),notify:toast});
         lucky = createLucky777(engine, {bank: () => setView('bank'), market: () => setView('market'),
             locked: viewLocked,
             changed: () => updateBettingHUD(),
@@ -4706,7 +4912,7 @@ function createCasinoClub(roulette) {
         const requestedView = window.location.pathname === '/admin' ? 'admin' : window.location.hash.slice(1);
         if (requestedView === 'admin') view = 'admin';
         else if (blackjack.pending) view = 'blackjack';
-        else if (['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'bank', 'market', 'players', 'admin'].includes(requestedView)) view = requestedView;
+        else if (['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(requestedView)) view = requestedView;
         paintView();
         let lastSync = 0;
         const tick = () => {

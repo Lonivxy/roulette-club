@@ -18,6 +18,26 @@ Money uses integer arithmetic: safe small values remain ordinary numbers for leg
 
 ## Games
 
+### Instant lottery
+
+The Lottery tab offers exactly 1,000, 10,000 and 1,000,000 chips per ticket. Each draw returns one mutually exclusive tier; multipliers include the ticket price. The user-specified prize table is unchanged:
+
+| Probability | Total return |
+| --- | --- |
+| 0.005% | 100x |
+| 0.02% | 50x |
+| 0.30% | 10x |
+| 0.60% | 8x |
+| 1.20% | 5x |
+| 2.50% | 4x |
+| 3.50% | 2.5x |
+| 4.50% | 2x |
+| 7.50% | 1.5x |
+| 20.00% | 1x |
+| 59.875% | 0x (entire ticket price lost) |
+
+These weights total 100%; theoretical gross return is 74.3%. The draw uses ten million equally likely integer outcomes with rejection sampling from cryptographic 32-bit randomness, preserving even the rarest tier without modulo bias. Hosted purchases, payouts and the last thirty tickets per player are stored before the reveal; operation receipts prevent duplicate settlement. A reload displays saved results. Prices remain fixed even though wallets are uncapped. Ten-chip recovery wallets cannot afford the minimum ticket. A losing last ticket uses the existing shark/negative-mode rules. Left Shift + F buys a paid 100x ticket at the selected price, respecting funds and game locks; Space buys/reveals only on the visible lottery tab and outside focused controls. Reduced-motion users reveal immediately.
+
 ### Plinko and three-dice table
 
 - Plinko uses a 3D board with 78 pegs over twelve rows and thirteen payout bins. Select a left, center or right launcher (44%, 50% or 56% right-branch probability per row), then choose low/medium/high risk for maximum returns of 8×/25×/100×. The full multiplier/probability table and theoretical return for the selected combination are visible in Rules. Payout includes the stake and rounds down to whole chips. Touch a top launcher or use the drop button.
