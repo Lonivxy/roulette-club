@@ -527,6 +527,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 @media(max-width:900px){.v2-nav summary { padding:9px 7px; font-size:11px; }.v2-nav summary::after { margin-left:4px; }.v2-nav details:last-child .v2-nav-menu { left:auto; right:0; }#club-nav:has(.v2-nav) { flex-wrap:wrap; gap:8px; }.v2-day-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }.v2-heading { flex-wrap:wrap; }.v2-table td,.v2-table th { padding:12px 8px; }}
 @media(prefers-reduced-motion:reduce){.v2-shell * { animation:none!important; transition:none!important; }}body[data-reduced-motion="true"] * { animation:none!important; transition:none!important; }
 
+.v2-maintenance-banner { position:relative;z-index:70;margin:90px 20px 0; } .v2-maintenance-banner[hidden] { display:none; }
+
     </style>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
 </head>
@@ -755,7 +757,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </div>
   </div>
 </section>
-<aside id="v2-sandbox-banner" class="v2-sandbox-banner" hidden><strong>ADMIN SANDBOX · 独立测试余额</strong><span>测试不会改变正式钱包、奖励或排行榜。</span><button id="v2-sandbox-exit" type="button" class="club-action secondary">退出沙盒</button></aside>
+<aside id="v2-sandbox-banner" class="v2-sandbox-banner" hidden><strong>ADMIN SANDBOX · 独立测试余额</strong><span>测试不会改变正式钱包、奖励或排行榜。</span><button id="v2-sandbox-reset" type="button" class="club-action secondary">重置测试余额</button><button id="v2-sandbox-exit" type="button" class="club-action secondary">退出沙盒</button></aside>
+<div id="v2-maintenance-banner" class="v2-notice v2-maintenance-banner" role="status" hidden>只读维护中 · 旧余额已保留，暂不能下注、转账或领取奖励。管理员请核对账号绑定和一致性备份，再到 ADMIN 恢复服务。</div>
 <div id="v2-feature-panels"></div>
 <section id="v2-admin-tools" class="v2-admin-tools" hidden></section>
 <dialog id="v2-confirm" class="v2-dialog" aria-labelledby="v2-confirm-title"><h2 id="v2-confirm-title">确认操作</h2><p id="v2-confirm-text"></p><div class="club-actions"><button id="v2-confirm-cancel" type="button" class="club-action secondary">取消</button><button id="v2-confirm-yes" type="button" class="club-action">确认</button></div></dialog>
@@ -1257,9 +1260,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         return { id, name, balance: 1000, debt: 0, bets: emptyBets(), lastBets: null, history: [], pendingRoulette: false, ...economyDefaults() };
     }
     class CasinoEngine {
-        constructor(storage, random, clock = () => Date.now(), { recoverRoulette = true } = {}) {
+        constructor(storage, random, clock = () => Date.now(), { recoverRoulette = true, freezeEconomy = false } = {}) {
             this.storage = storage;
             this.now = clock;
+            this.freezeEconomy = freezeEconomy;
             this.random = random || (() => {
                 const a = new Uint32Array(1);
                 root.crypto.getRandomValues(a);
@@ -1310,6 +1314,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         get canBorrowShark() { return !this.lock && !this.active.recovery && this.availableCredit === 0 && this.active.balance <= 0 && sumBets(this.active.bets) === 0 && this.availableSharkCredit > 0; }
         get armedCard() { return this.active.cards.find(card => card.id === this.active.armedCardId) || null; }
         prepareRecovery(user = this.active) {
+            if (this.freezeEconomy) return false;
             if (!user || user.recovery || user.balance > 0 || !(user.sharkDebt > 0)
                 || sumBets(user.bets) || user.pendingRoulette || (user.blackjack && user.blackjack.phase !== 'settled')) return false;
             user.recovery = { deficit: M.max(0, M.sub(0, user.balance)) }; user.balance = 10;
@@ -1533,6 +1538,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
             } else this.prepareRecovery(user);
         }
         accrueInterest() {
+            if (this.freezeEconomy) return false;
             const now = this.now(); let changed = false;
             const accrue = (target, debt, clock, period, rate, label, ceiling = DEBT_CAP) => {
                 if (target[debt] <= 0) { if (target[clock] !== null) { target[clock] = null; changed = true; } return; }
@@ -3793,7 +3799,8 @@ if (window.__CASINO_BOOTSTRAP__) {
             const value=this.money.hydrate(await response.json());if(!response.ok)throw new Error(value.error||'请求失败。');return value;
         }
         async setSandbox(enabled) {
-            this.ensureIdle();this.requestBusy=true;this.onChange?.();
+            if(enabled||this.mode!=='sandbox')this.ensureIdle();else if(this.requestBusy||this.animationLock)throw new Error('请先等待当前操作完成。');
+            this.requestBusy=true;this.onChange?.();
             try{const snapshot=await this.api('/api/state?mode='+(enabled?'sandbox':'formal'));this.applySnapshot(snapshot);}
             finally{this.requestBusy=false;this.onChange?.();}
         }
@@ -4554,7 +4561,7 @@ function createPlayerLoansUI(engine, callbacks) {
     }
     $('peer-loan-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (await callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, $('peer-loan-amount').value, Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), '协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
+        if (await callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, $('peer-loan-amount').value, Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), engine.platform?'协议已发出，请借款人登录自己的账号确认。':'协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
     });
     return { render, tick };
 }
@@ -4565,7 +4572,7 @@ function createDistressUI(engine, callbacks) {
     const inertNodes = new Map();
     function render(view) {
         const user = engine.active, recovery = user.recovery;
-        const eligible = !recovery && engine.availableCredit === 0 && user.balance <= 0
+        const eligible = !engine.platform?.maintenance && engine.platform?.mode !== 'sandbox' && !recovery && engine.availableCredit === 0 && user.balance <= 0
             && CasinoEngine.sumBets(user.bets) === 0 && engine.availableSharkCredit > 0;
         const crisis = eligible && !callbacks.locked();
         if (!eligible || bankAcknowledged !== user.id || view !== 'bank') bankAcknowledged = null;
@@ -4590,7 +4597,7 @@ function createDistressUI(engine, callbacks) {
     go.addEventListener('click', () => {
         bankAcknowledged = engine.active.id;
         callbacks.openBank();
-        $('shark-panel').scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+        $('shark-panel').scrollIntoView?.({ block: 'center', behavior: globalThis.CasinoPreferences?.reducedMotion ? 'auto' : 'smooth' });
         $('shark-borrow-amount').focus();
     });
     overlay.addEventListener('keydown', event => {
@@ -4829,7 +4836,7 @@ function createAdminUI(engine, callbacks) {
    const feed=card('俱乐部动态');for(const event of result.feed||[])row(feed,event.kind,new Date(event.createdAt).toLocaleString());if(!result.feed?.length)message(feed,'还没有活动记录。');parent.append(feed);
   }
   async function loadAdmin(){if(adminLoading||!engine.auth?.admin)return;adminLoading=true;try{adminData=await engine.api('/api/admin/overview');adminRevision=engine.revision;engine.adminPlayers=adminData.players;lastKey='';renderAdmin();callbacks.changed();}catch(error){callbacks.notify(error.message,true);}finally{adminLoading=false;}}
-  function renderAdmin(){adminRoot.hidden=!engine.auth?.admin;if(!adminData||!engine.auth?.admin)return;adminRoot.replaceChildren();const head=card('ADMIN V2 · 权限与系统');message(head,'敏感操作需要角色权限和 Windows Hello。旧玩家由管理员绑定，不开放自行认领。');head.append(button('进入独立沙盒',async()=>{try{await engine.setSandbox(true);callbacks.setView('slots');callbacks.changed();}catch(e){callbacks.notify(e.message,true);}}));
+  function renderAdmin(){adminRoot.hidden=!engine.auth?.admin;if(!adminData||!engine.auth?.admin)return;adminRoot.replaceChildren();const head=card('ADMIN V2 · 权限与系统');message(head,'敏感操作需要角色权限和 Windows Hello。旧玩家由管理员绑定，不开放自行认领。');head.append(button('进入独立沙盒',async()=>{try{await engine.setSandbox(true);callbacks.setView(engine.active.blackjack&&engine.active.blackjack.phase!=='settled'?'blackjack':'slots');callbacks.changed();}catch(e){callbacks.notify(e.message,true);}}));
    head.append(button(adminData.maintenance?'恢复服务':'开启只读维护',()=>action('admin.maintenance',[!adminData.maintenance,adminData.maintenance?'owner resumes service':'owner starts maintenance'],'维护状态已更新。','确认切换维护状态？')));
    head.append(button('下载一致性备份',async()=>{try{const backup=await engine.api('/api/admin/backup');download(backup,'roulette-club-v2-backup-'+new Date().toISOString().slice(0,10)+'.json');callbacks.notify('备份已下载，请保存在私密位置。');}catch(error){callbacks.notify(error.message,true);}}));message(head,'导出前必须开启只读维护。备份包含私人资料，请勿公开分享。');adminRoot.append(head);
    const accounts=card('账号与旧玩家绑定');message(accounts,'先通过站点共享功能邀请朋友。朋友首次登录后，会显示为待绑定账号。');for(const a of adminData.accounts){const box=card(a.email||a.actor);message(box,`${a.role} · ${a.status} · ${adminData.players.find(p=>p.id===a.playerId)?.name||'未绑定'}`);
@@ -4846,7 +4853,7 @@ function createAdminUI(engine, callbacks) {
    const logs=card('系统健康与事件');message(logs,`V2 · revision ${adminData.health.revision} · 数据准备 ${adminData.health.ready?'完成':'进行中'}`);const eventList=el('ol','','v2-log');for(const event of adminData.events)eventList.append(el('li',`${new Date(event.createdAt).toLocaleString()} · ${event.kind} · ${event.actor||event.playerId||'system'}`));logs.append(eventList);logs.append(button('查看近 30 日统计',async()=>{try{const stats=await engine.api('/api/admin/analytics');const panel=card('近 30 日统计');message(panel,'24 小时活跃玩家 '+stats.activePlayers24h);row(panel,'完成对局',fmt(stats.gameSettlements));row(panel,'累计下注 / 返还',fmt(stats.wagered)+' / '+fmt(stats.returned));message(panel,stats.accounting);message(panel,`筹码增加 ${fmt(stats.cashIncreases)} · 减少 ${fmt(stats.cashDecreases)}`);for(const x of stats.events)row(panel,x.kind,String(x.count));for(const x of stats.claims)row(panel,'奖励 '+x.kind,x.count+' 次 · '+fmt(x.xp)+' XP');for(const x of stats.items)row(panel,'装饰品 '+x.kind,fmt(x.count));logs.append(panel);}catch(e){callbacks.notify(e.message,true);}}));adminRoot.append(logs);
   }
   function tick(){for(const node of rootNode.querySelectorAll('[data-countdown]')){const seconds=Math.max(0,Math.ceil((Number(node.dataset.countdown)-engine.now())/1000));node.textContent=`重置 / 到期还剩 ${Math.floor(seconds/3600)} 时 ${Math.floor(seconds%3600/60)} 分 ${seconds%60} 秒`;}}
-  function render(){const p=data();for(const link of document.querySelectorAll('a[href="/admin"]'))link.hidden=!['owner','admin'].includes(engine.auth?.role);$('v2-sandbox-banner').hidden=p.mode!=='sandbox';if(!engine.auth?.admin){adminRoot.hidden=true;adminData=null;engine.adminPlayers=[];}if(!p.progress)return;for(const id of Object.keys(p.progress.achievements))if(!seen.has(id)){seen.add(id);callbacks.notify('成就解锁：'+(p.definitions.find(d=>d.id===id)?.name||id));}root.CasinoPreferences=p.profile?.settings||{};document.body.dataset.reducedMotion=String(Boolean(p.profile?.settings.reducedMotion));$('v2-sandbox-banner').hidden=p.mode!=='sandbox';
+  function render(){const p=data();$('v2-maintenance-banner').hidden=!p.maintenance;for(const link of document.querySelectorAll('a[href="/admin"]'))link.hidden=!['owner','admin'].includes(engine.auth?.role);$('v2-sandbox-banner').hidden=p.mode!=='sandbox';if(!engine.auth?.admin){adminRoot.hidden=true;adminData=null;engine.adminPlayers=[];}if(!p.progress)return;for(const id of Object.keys(p.progress.achievements))if(!seen.has(id)){seen.add(id);callbacks.notify('成就解锁：'+(p.definitions.find(d=>d.id===id)?.name||id));}root.CasinoPreferences=p.profile?.settings||{};document.body.dataset.reducedMotion=String(Boolean(p.profile?.settings.reducedMotion));$('v2-sandbox-banner').hidden=p.mode!=='sandbox';
    for(const d of $('club-player-tabs').querySelectorAll('details'))d.dataset.active=String(groups.find(g=>g.id===d.dataset.group)?.items.some(i=>i[0]===view));
    if(view==='admin'&&engine.auth.admin&&adminRevision!==engine.revision&&!adminLoading)loadAdmin();
    const key=engine.money.stringify([view,publicId,p,remote,inventoryKind,inventoryRarity,inventoryOwned,itemPreview,questFilter]);if(key===lastKey)return;lastKey=key;
@@ -4855,6 +4862,7 @@ function createAdminUI(engine, callbacks) {
    ({dashboard,profile,settings,rewards,quests,achievements,inventory,leaderboard,clubs})[view]?.(parent);tick();
    if(selection){const field=parent.querySelectorAll('input,textarea,select')[selection.index];if(field){field.value=selection.value;field.focus({preventScroll:true});if(typeof field.setSelectionRange==='function'&&selection.start!==null)try{field.setSelectionRange(selection.start,selection.end);}catch{}}}
   }
+  $('v2-sandbox-reset').addEventListener('click',()=>action('sandbox.reset',[100000],'测试余额已重置。','确认重置独立测试余额和未结束的测试牌局？'));
   $('v2-sandbox-exit').addEventListener('click',async()=>{if(callbacks.locked())return;try{await engine.setSandbox(false);lastKey='';callbacks.changed();}catch(e){callbacks.notify(e.message,true);}});
   let seen=new Set(Object.keys(data().progress?.achievements||{}));
   return {render,tick,confirm:confirmAction,paint(next,route){const prior=view,priorId=publicId;view=next;publicId=next==='profile'?route?.split('/')[1]||null:null;for(const [name,shell]of Object.entries(sections))shell.parentElement.hidden=name!==view;if(prior!==view||priorId!==publicId){lastKey='';remote=null;if(['leaderboard','clubs','profile'].includes(view))load();}render();},get views(){return views;}};
@@ -4879,6 +4887,7 @@ function createCasinoClub(roulette) {
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
     const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret || Boolean(blackjack?.animating) || Boolean(lucky?.dragging) || Boolean(plinko?.animating) || Boolean(dice?.animating) || Boolean(lottery?.animating);
+    const navigationLocked = () => v2 ? Boolean(engine.requestBusy || engine.animationLock || roulette.isChargingSpin || roulette.isDraggingTurret || blackjack?.animating || lucky?.dragging || plinko?.animating || dice?.animating || lottery?.animating) : viewLocked();
     function toast(message, error = false) {
         clearTimeout(toastTimer);
         $('club-toast').textContent = message;
@@ -4945,7 +4954,7 @@ function createCasinoClub(roulette) {
         if (!adminSelection.total) { const empty = document.createElement('p'); empty.textContent = '没有匹配的玩家，请更换搜索名称。'; empty.className = 'club-muted'; $('club-player-list').append(empty); }
         document.querySelectorAll('[data-idle-only]').forEach(el => { el.disabled = viewLocked(); });
         document.querySelectorAll('#transfer-form button, #peer-loan-form button, #bank-form button, #shark-repay-form button').forEach(el => { el.disabled = viewLocked() || Boolean(u.recovery); });
-        document.querySelectorAll('[data-view]').forEach(el => { el.disabled = viewLocked(); });
+        document.querySelectorAll('[data-view]').forEach(el => { el.disabled = navigationLocked(); });
         lucky?.update(viewLocked());
         customRoulette?.update(viewLocked());
         blackjack?.update();
@@ -4982,7 +4991,7 @@ function createCasinoClub(roulette) {
         const route = next; next = next.split('/')[0];
         if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(next) && !(v2 && CasinoV2.views.includes(next))) return;
         if (engine.platform?.mode === 'sandbox' && !['roulette','slots','blackjack','plinko','dice','lottery','admin'].includes(next)) { toast('请先退出管理员沙盒。',true); return; }
-        if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
+        if (navigationLocked()) { toast('Finish the current animation before changing tables.', true); return; }
         view = next;
         paintView(route);
         try { window.history.replaceState(null, '', '#' + route); } catch { /* Local file previews still work. */ }
@@ -5004,7 +5013,7 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
-        if (v2) features = CasinoV2.createFeatures(engine,{locked:viewLocked,changed:()=>updateBettingHUD(),notify:toast,setView});
+        if (v2) features = CasinoV2.createFeatures(engine,{locked:navigationLocked,changed:()=>updateBettingHUD(),notify:toast,setView});
         bindJackpotShortcut(window, () => {
             if (distress?.blocking) return false;
             if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery'].includes(view)) return false;

@@ -4,7 +4,7 @@ function createDistressUI(engine, callbacks) {
     const inertNodes = new Map();
     function render(view) {
         const user = engine.active, recovery = user.recovery;
-        const eligible = !recovery && engine.availableCredit === 0 && user.balance <= 0
+        const eligible = !engine.platform?.maintenance && engine.platform?.mode !== 'sandbox' && !recovery && engine.availableCredit === 0 && user.balance <= 0
             && CasinoEngine.sumBets(user.bets) === 0 && engine.availableSharkCredit > 0;
         const crisis = eligible && !callbacks.locked();
         if (!eligible || bankAcknowledged !== user.id || view !== 'bank') bankAcknowledged = null;
@@ -29,7 +29,7 @@ function createDistressUI(engine, callbacks) {
     go.addEventListener('click', () => {
         bankAcknowledged = engine.active.id;
         callbacks.openBank();
-        $('shark-panel').scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+        $('shark-panel').scrollIntoView?.({ block: 'center', behavior: globalThis.CasinoPreferences?.reducedMotion ? 'auto' : 'smooth' });
         $('shark-borrow-amount').focus();
     });
     overlay.addEventListener('keydown', event => {

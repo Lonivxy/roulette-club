@@ -102,8 +102,8 @@ export async function applyCommand(engine, command, args, admin) {
     fail('未知操作。',404);
 }
 
-export function createService({page='',webauthn={generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse},v2=false,bootstrapOwnerPrivate=false,clock,credentialKey='owner',extensions={}}={}) {
-    if(v2)return createV2Service({page,applyCommand,bootstrapOwnerPrivate,clock,origin:ORIGIN,extensions:{action:clubAction,clubView,read:platformRead,...extensions},legacyFactory:options=>createService({webauthn,...options})});
+export function createService({page='',webauthn={generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse},v2=false,bootstrapOwnerPrivate=false,initialMaintenance=false,clock,credentialKey='owner',extensions={}}={}) {
+    if(v2)return createV2Service({page,applyCommand,bootstrapOwnerPrivate,initialMaintenance,clock,origin:ORIGIN,extensions:{action:clubAction,clubView,read:platformRead,...extensions},legacyFactory:options=>createService({webauthn,...options})});
     async function readState(db) {
         let row=await db.prepare('SELECT snapshot, revision FROM casino_state WHERE id = ?').bind('club').first();
         if(!row){const e=engineFrom(M.stringify(new Engine(null).data));await db.prepare('INSERT OR IGNORE INTO casino_state (id,snapshot,revision,last_op) VALUES (?,?,0,?)').bind('club',M.stringify(e.data),'initial').run();row=await db.prepare('SELECT snapshot, revision FROM casino_state WHERE id = ?').bind('club').first();}

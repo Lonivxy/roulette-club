@@ -54,7 +54,7 @@ function createPlayerLoansUI(engine, callbacks) {
     }
     $('peer-loan-form').addEventListener('submit', async event => {
         event.preventDefault();
-        if (await callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, $('peer-loan-amount').value, Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), '协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
+        if (await callbacks.transact(() => engine.offerLoan($('peer-loan-user').value, $('peer-loan-amount').value, Number($('peer-loan-rate').value), Number($('peer-loan-minutes').value)), engine.platform?'协议已发出，请借款人登录自己的账号确认。':'协议已发出，请切换到借款玩家确认。')) $('peer-loan-amount').value = '';
     });
     return { render, tick };
 }

@@ -15,6 +15,7 @@ function createCasinoClub(roulette) {
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
     const viewLocked = () => busy() || roulette.isChargingSpin || roulette.isDraggingTurret || Boolean(blackjack?.animating) || Boolean(lucky?.dragging) || Boolean(plinko?.animating) || Boolean(dice?.animating) || Boolean(lottery?.animating);
+    const navigationLocked = () => v2 ? Boolean(engine.requestBusy || engine.animationLock || roulette.isChargingSpin || roulette.isDraggingTurret || blackjack?.animating || lucky?.dragging || plinko?.animating || dice?.animating || lottery?.animating) : viewLocked();
     function toast(message, error = false) {
         clearTimeout(toastTimer);
         $('club-toast').textContent = message;
@@ -81,7 +82,7 @@ function createCasinoClub(roulette) {
         if (!adminSelection.total) { const empty = document.createElement('p'); empty.textContent = '没有匹配的玩家，请更换搜索名称。'; empty.className = 'club-muted'; $('club-player-list').append(empty); }
         document.querySelectorAll('[data-idle-only]').forEach(el => { el.disabled = viewLocked(); });
         document.querySelectorAll('#transfer-form button, #peer-loan-form button, #bank-form button, #shark-repay-form button').forEach(el => { el.disabled = viewLocked() || Boolean(u.recovery); });
-        document.querySelectorAll('[data-view]').forEach(el => { el.disabled = viewLocked(); });
+        document.querySelectorAll('[data-view]').forEach(el => { el.disabled = navigationLocked(); });
         lucky?.update(viewLocked());
         customRoulette?.update(viewLocked());
         blackjack?.update();
@@ -118,7 +119,7 @@ function createCasinoClub(roulette) {
         const route = next; next = next.split('/')[0];
         if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(next) && !(v2 && CasinoV2.views.includes(next))) return;
         if (engine.platform?.mode === 'sandbox' && !['roulette','slots','blackjack','plinko','dice','lottery','admin'].includes(next)) { toast('请先退出管理员沙盒。',true); return; }
-        if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
+        if (navigationLocked()) { toast('Finish the current animation before changing tables.', true); return; }
         view = next;
         paintView(route);
         try { window.history.replaceState(null, '', '#' + route); } catch { /* Local file previews still work. */ }
@@ -140,7 +141,7 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
-        if (v2) features = CasinoV2.createFeatures(engine,{locked:viewLocked,changed:()=>updateBettingHUD(),notify:toast,setView});
+        if (v2) features = CasinoV2.createFeatures(engine,{locked:navigationLocked,changed:()=>updateBettingHUD(),notify:toast,setView});
         bindJackpotShortcut(window, () => {
             if (distress?.blocking) return false;
             if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery'].includes(view)) return false;

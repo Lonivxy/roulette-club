@@ -1,0 +1,10 @@
+V2 local SQLite contention: {"accounts":8,"simultaneous":8,"commands":160,"success":160,"p95Ms":168,"maximumMs":202,"scope":"local adapter; not production network latency"}
+✔ eight invited accounts can issue simultaneous transfers without losing chips, receipts or journal entries (4426.5171ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4826.056

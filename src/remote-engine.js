@@ -58,7 +58,8 @@ if (window.__CASINO_BOOTSTRAP__) {
             const value=this.money.hydrate(await response.json());if(!response.ok)throw new Error(value.error||'请求失败。');return value;
         }
         async setSandbox(enabled) {
-            this.ensureIdle();this.requestBusy=true;this.onChange?.();
+            if(enabled||this.mode!=='sandbox')this.ensureIdle();else if(this.requestBusy||this.animationLock)throw new Error('请先等待当前操作完成。');
+            this.requestBusy=true;this.onChange?.();
             try{const snapshot=await this.api('/api/state?mode='+(enabled?'sandbox':'formal'));this.applySnapshot(snapshot);}
             finally{this.requestBusy=false;this.onChange?.();}
         }

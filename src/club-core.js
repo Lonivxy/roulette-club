@@ -49,9 +49,10 @@
         return { id, name, balance: 1000, debt: 0, bets: emptyBets(), lastBets: null, history: [], pendingRoulette: false, ...economyDefaults() };
     }
     class CasinoEngine {
-        constructor(storage, random, clock = () => Date.now(), { recoverRoulette = true } = {}) {
+        constructor(storage, random, clock = () => Date.now(), { recoverRoulette = true, freezeEconomy = false } = {}) {
             this.storage = storage;
             this.now = clock;
+            this.freezeEconomy = freezeEconomy;
             this.random = random || (() => {
                 const a = new Uint32Array(1);
                 root.crypto.getRandomValues(a);
@@ -102,6 +103,7 @@
         get canBorrowShark() { return !this.lock && !this.active.recovery && this.availableCredit === 0 && this.active.balance <= 0 && sumBets(this.active.bets) === 0 && this.availableSharkCredit > 0; }
         get armedCard() { return this.active.cards.find(card => card.id === this.active.armedCardId) || null; }
         prepareRecovery(user = this.active) {
+            if (this.freezeEconomy) return false;
             if (!user || user.recovery || user.balance > 0 || !(user.sharkDebt > 0)
                 || sumBets(user.bets) || user.pendingRoulette || (user.blackjack && user.blackjack.phase !== 'settled')) return false;
             user.recovery = { deficit: M.max(0, M.sub(0, user.balance)) }; user.balance = 10;
@@ -325,6 +327,7 @@
             } else this.prepareRecovery(user);
         }
         accrueInterest() {
+            if (this.freezeEconomy) return false;
             const now = this.now(); let changed = false;
             const accrue = (target, debt, clock, period, rate, label, ceiling = DEBT_CAP) => {
                 if (target[debt] <= 0) { if (target[clock] !== null) { target[clock] = null; changed = true; } return; }

@@ -5,8 +5,8 @@ export function periods(now){
  const midnight=Date.parse(day+'T00:00:00Z'),monday=new Date(midnight-((date.getUTCDay()+6)%7)*86400000).toISOString().slice(0,10);
  return {day,week:monday,month,nextDay:midnight+86400000-28800000,nextWeek:Date.parse(monday+'T00:00:00Z')+7*86400000-28800000,nextMonth:Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,1)-28800000};
 }
-export function initialPlatform(owner,now){
- const p=emptyPlatform();p.meta={ownerActor:owner,startedAt:now,maintenance:false,version:2};
+export function initialPlatform(owner,now,maintenance=false){
+ const p=emptyPlatform();p.meta={ownerActor:owner,startedAt:now,maintenance,version:2};
  const items=[['frame-starter','frame','初见金边','common'],['badge-week','badge','七日纪念','rare'],['title-newcomer','title','Newcomer','common'],['title-explorer','title','Game Explorer','rare'],['badge-veteran','badge','百局旅人','epic'],['background-night','background','紫夜','rare'],['souvenir-club','souvenir','朋友俱乐部纪念','legendary']];
  for(const [id,kind,name,rarity] of items)p.items[id]={id,kind,name,rarity,description:name+' · 仅限站内装饰，无现金价值。',enabled:true};
  const definitions=[

@@ -179,3 +179,35 @@ test('sensitive endpoints rate-limit and retain security events visible only to 
  const overview=await (await t.request('/api/admin/overview',{step:true})).json();assert.ok(overview.events.some(e=>e.kind==='security.denied'&&e.actor==='friend'));assert.ok(overview.events.some(e=>e.kind==='security.rate-limited'));
  assert.equal((await t.request('/api/admin/overview',{actor:'friend'})).status,403);
 });
+test('first V2 activation freezes old interest even during owner binding and rejects other maintenance writes',async()=>{
+ const t=await fixture({initialMaintenance:true}),e=new CasinoEngine(null);e.active.debt=1000;e.active.bankInterestAt=Date.now()-3600000;e.active.bankInterestPolicy=2;
+ const old=CasinoMoney.stringify(e.data);t.sql.prepare('INSERT INTO casino_state VALUES (?,?,0,?)').run('club',old,'legacy');
+ await t.owner();const response=await (await t.request('/api/state')).json();assert.equal(response.platform.maintenance,true);assert.equal(response.data.users[0].debt,1000);
+ assert.equal((await t.command('reward.claim')).status,503);assert.equal((await t.command('dice',[1,'small',null])).status,503);
+ const backup=await (await t.request('/api/admin/backup',{step:true})).json();assert.equal(CasinoMoney.parseJSON(backup.records.casino_state[0].snapshot).users[0].debt,1000);
+ assert.equal((await t.command('admin.maintenance',[false,'verified export ready'],{step:true})).status,200);
+ assert.ok((await (await t.request('/api/state')).json()).data.users[0].debt>1000);
+});
+test('maintenance backup restores through the full migration chain with exact old funds, cards, debts and history',async()=>{
+ const {createDatabase,importBackup,inspectBackup}=require('../scripts/backup-tools.cjs'),t=await fixture({initialMaintenance:true}),e=new CasinoEngine(null);
+ e.active.balance=10n**100n+123n;e.active.debt=1234;e.active.bankInterestAt=Date.now()-3600000;e.active.bankInterestPolicy=2;e.active.cards=[{id:'preserved-card',type:'seven',stake:1000}];e.active.history=[{num:7,colorTag:'RED'}];
+ const raw=CasinoMoney.stringify(e.data);t.sql.prepare('INSERT INTO casino_state VALUES (?,?,10,?)').run('club',raw,'legacy');await t.owner();
+ const backup=await (await t.request('/api/admin/backup',{step:true})).json(),summary=inspectBackup(backup),restored=createDatabase();
+ const result=importBackup(restored,backup);assert.deepEqual(result,summary);assert.equal(restored.prepare('SELECT snapshot FROM casino_state').get().snapshot,backup.records.casino_state[0].snapshot);
+ assert.equal(restored.prepare('SELECT public_key FROM admin_credential').all().length,0);assert.equal(restored.prepare('SELECT COUNT(*) AS n FROM admin_sessions').get().n,0);
+ const data=CasinoMoney.parseJSON(restored.prepare('SELECT snapshot FROM casino_state').get().snapshot);assert.equal(data.users[0].balance,10n**100n+123n);assert.equal(data.users[0].debt,1234);assert.deepEqual(data.users[0].cards,e.active.cards);assert.deepEqual(data.users[0].history,e.active.history);
+ assert.throws(()=>importBackup(restored,backup),/empty/);const missing=structuredClone(backup);delete missing.records.v2_journal;assert.throws(()=>importBackup(createDatabase(),missing),/Incomplete/);
+ restored.close();
+});
+test('eight invited accounts can issue simultaneous transfers without losing chips, receipts or journal entries',{timeout:30000},async()=>{
+ const t=await fixture(),e=new CasinoEngine(null);for(let i=3;i<16;i++)e.addUser('Load Player '+i);t.sql.prepare('INSERT INTO casino_state VALUES (?,?,0,?)').run('club',CasinoMoney.stringify(e.data),'load-legacy');
+ for(let i=0;i<5;i++){const r=await t.request('/api/state');if(r.status===200)break;assert.equal(r.status,503);}await t.owner();
+ const users=e.data.users.slice(0,8),actors=['owner',...users.slice(1).map((_,i)=>'friend-'+i)];
+ for(let i=1;i<8;i++){await t.request('/api/state',{actor:actors[i]});assert.equal((await t.command('admin.bind',[actors[i],users[i].id],{step:true})).status,200);}
+ const timings=[];for(let wave=0;wave<20;wave++){
+  const responses=await Promise.all(actors.map(async(actor,i)=>{const start=performance.now(),r=await t.command('gift',[users[(i+1)%8].id,1],{actor});timings.push(performance.now()-start);return r;}));assert.ok(responses.every(r=>r.status===200));
+ }
+ const state=CasinoMoney.parseJSON(t.sql.prepare('SELECT snapshot FROM casino_state').get().snapshot);assert.ok(state.users.every(u=>u.balance===1000));
+ assert.equal(t.sql.prepare("SELECT COUNT(*) AS n FROM v2_events WHERE kind='gift'").get().n,160);assert.equal(t.sql.prepare("SELECT COUNT(*) AS n FROM v2_journal WHERE kind='gift'").get().n,320);
+ timings.sort((a,b)=>a-b);console.log('V2 local SQLite contention: '+JSON.stringify({accounts:8,simultaneous:8,commands:160,success:160,p95Ms:Math.round(timings[Math.floor(timings.length*.95)]),maximumMs:Math.round(timings.at(-1)),scope:'local adapter; not production network latency'}));
+});

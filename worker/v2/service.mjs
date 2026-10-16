@@ -9,7 +9,7 @@ const json=(body,status=200,headers={})=>new Response(M.stringify(body),{status,
 const digest=async text=>{const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)));return btoa(String.fromCharCode(...bytes)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');};
 const cookie=request=>request.headers.get('cookie')?.split(';').map(x=>x.trim()).find(x=>x.startsWith('__Host-club-admin='))?.slice(18)||'';
 const who=request=>request.headers.get('oai-authenticated-user-id')||fail('请先登录。',401);
-function engine(snapshot,now){const e=new E({getItem:()=>snapshot,setItem(){}},undefined,()=>now,{recoverRoulette:false});if(e.storageWarning)fail('存档校验失败，未修改旧数据。',500);e.isolatedPlayer=true;return e;}
+function engine(snapshot,now,freezeEconomy=false){const e=new E({getItem:()=>snapshot,setItem(){}},undefined,()=>now,{recoverRoulette:false,freezeEconomy});if(e.storageWarning)fail('存档校验失败，未修改旧数据。',500);e.isolatedPlayer=true;return e;}
 function fields(user){return {cash:user.balance,bank:user.debt,shark:user.sharkDebt,negative:user.recovery?.deficit||0,reserved:M.add(E.sumBets(user.bets),user.blackjack&&user.blackjack.phase!=='settled'?user.blackjack.hands.reduce((sum,h)=>M.add(sum,h.bet),0):0)};}
 function accountJournal(p,before,after,operation,actor,kind,now,reason=''){
  for(const user of after.users){const old=before.users.find(x=>x.id===user.id),a=old?fields(old):{cash:0,bank:0,shark:0,negative:0,reserved:0},b=fields(user);
@@ -18,7 +18,7 @@ function accountJournal(p,before,after,operation,actor,kind,now,reason=''){
  for(const user of before.users)if(!after.users.some(u=>u.id===user.id))fail('不能物理删除有历史的玩家。');
 }
 function indexes(p,data){for(const user of data.users){if(!p.profiles[user.id])continue;const amount=user.recovery?0:user.balance,negative=amount<0,digits=String(M.abs(amount));p.wallets[user.id]={id:user.id,visible:p.profiles[user.id].walletVisible&&!p.profiles[user.id].archived?1:0,sign:amount===0?0:negative?-1:1,magnitude:digits.length,digits,name:user.name};}}
-export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwnerPrivate=false,clock=()=>Date.now(),origin,extensions={}}){
+export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwnerPrivate=false,initialMaintenance=false,clock=()=>Date.now(),origin,extensions={}}){
  async function security(request,db,status){
   if(!db||![401,403,429].includes(status))return;
   const event={id:crypto.randomUUID(),playerId:null,kind:status===429?'security.rate-limited':'security.denied',createdAt:clock(),actor:request.headers.get('oai-authenticated-user-id')||'anonymous',path:new URL(request.url).pathname.slice(0,160),status};
@@ -36,7 +36,7 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
   for(let attempt=0;attempt<8;attempt++){
    const now=clock(),scope={actor:who(request),week:periods(now).week},row=await wallet(db),previous=await loadPlatform(db,scope);let next=structuredClone(previous);
    if(!next.meta){const old=await db.prepare('SELECT actor FROM admin_credential WHERE id=?').bind('owner').first();const owner=old?.actor||(bootstrapOwnerPrivate?who(request):null);if(!owner)fail('请先由所有者完成初始化。',503);
-    next=initialPlatform(owner,now);next.accounts[owner]={id:owner,actor:owner,playerId:null,email:owner===who(request)?request.headers.get('oai-authenticated-user-email')||'':'',role:'owner',status:'active',createdAt:now};
+    next=initialPlatform(owner,now,initialMaintenance);next.accounts[owner]={id:owner,actor:owner,playerId:null,email:owner===who(request)?request.headers.get('oai-authenticated-user-email')||'':'',role:'owner',status:'active',createdAt:now};
     next.backups.push({id:'pre-v2:'+crypto.randomUUID(),createdAt:now,kind:'pre-v2',legacy:{snapshot:row.snapshot,revision:row.revision}});
    }
    const data=M.parseJSON(row.snapshot),missing=data.users.filter(u=>!next.profiles[u.id]).slice(0,5);
@@ -74,11 +74,11 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
   for(let attempt=0;attempt<12;attempt++){
    const {p:before,row}=await initialize(request,db),p=structuredClone(before),now=clock(),elevated=await stepUp(request,db),privileged=isAdminCommand(operation)||mode==='sandbox';
    const account=authorize(p,who(request),playerId,privileged,elevated);
-   if(p.meta.maintenance&&operation!=='admin.maintenance'&&operation!=='admin.bind')fail('维护期间暂停状态修改。',503);
+   if(p.meta.maintenance&&operation!=='admin.maintenance'&&!(operation==='admin.bind'&&account.role==='owner'&&!account.playerId&&args[0]===account.actor))fail('维护期间暂停状态修改。',503);
    if(mode==='formal'&&!privileged&&!account.playerId)fail('请先绑定自己的玩家。',403);
    const prior=await db.prepare('SELECT actor,payload,response FROM casino_operations WHERE id=?').bind(id).first();
    if(prior){if(prior.actor!==who(request)||prior.payload!==payload)fail('操作编号已被使用。',409);return json({...await snapshot(request,db,p,row,mode),result:M.parseJSON(prior.response).result});}
-   const original=M.parseJSON(row.snapshot),e=engine(mode==='sandbox'?M.stringify(p.sandbox[who(request)]?.data||sandboxData()):row.snapshot,now);
+   const original=M.parseJSON(row.snapshot),e=engine(mode==='sandbox'?M.stringify(p.sandbox[who(request)]?.data||sandboxData()):row.snapshot,now,p.meta.maintenance);
    if(mode==='formal'&&account.playerId)e.data.activeId=account.playerId;
    let result;
    if(mode==='sandbox'){
