@@ -1,0 +1,16 @@
+{
+  "exitCode": 0,
+  "accepted": true,
+  "tests": 196,
+  "checks": [
+    "npm run build succeeded",
+    "npm test passed 196/196",
+    "V2 HTTP privacy, actor binding and step-up",
+    "atomic retry and concurrent daily claim",
+    "100-digit transfer and durable journal",
+    "sandbox no formal effects",
+    "36-player additive initialization preserves original snapshot",
+    "blackjack player locks",
+    "maintenance backup export and compensation"
+  ]
+}

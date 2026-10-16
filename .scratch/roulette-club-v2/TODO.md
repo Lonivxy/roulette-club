@@ -5,13 +5,13 @@ Generated from issue Status fields. Update with scripts/task-board.cjs. Never ti
 - [x] **P0 — 可交接工作台与基线**
   - [x] [01 — 建立总 TODO、任务卡、决策记录和交接说明](issues/01.md) — done
   - [x] [02 — 保存测试基线和备份恢复流程](issues/02.md) — done
-- [ ] **P1 — 身份、权限与可靠提交**
-  - [ ] [03 — 账号绑定、角色与私有响应过滤](issues/03.md) — in-progress
-  - [ ] [04 — 原子提交、永久流水、结构化事件](issues/04.md) — pending
-  - [ ] [05 — 独立游戏锁和管理员沙盒](issues/05.md) — pending
-  - [ ] [06 — 增量迁移、期初记录及旧数据校验](issues/06.md) — pending
+- [x] **P1 — 身份、权限与可靠提交**
+  - [x] [03 — 账号绑定、角色与私有响应过滤](issues/03.md) — done
+  - [x] [04 — 原子提交、永久流水、结构化事件](issues/04.md) — done
+  - [x] [05 — 独立游戏锁和管理员沙盒](issues/05.md) — done
+  - [x] [06 — 增量迁移、期初记录及旧数据校验](issues/06.md) — done
 - [ ] **P2 — 导航、资料与成长基础**
-  - [ ] [07 — 分组导航、资料及隐私设置](issues/07.md) — pending
+  - [ ] [07 — 分组导航、资料及隐私设置](issues/07.md) — in-progress
   - [ ] [08 — XP、等级、对局统计](issues/08.md) — pending
   - [ ] [09 — 成就、称号及物品所有权](issues/09.md) — pending
 - [ ] **P3 — 签到与任务**

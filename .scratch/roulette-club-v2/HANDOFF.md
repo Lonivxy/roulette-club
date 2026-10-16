@@ -11,24 +11,25 @@ Browser runtime previously cannot load browser-service.mjs; retry supported brow
 
 ## Automatic checkpoint
 
-Updated: 2026/10/16 14:13:09 Asia/Shanghai
+Updated: 2026/10/16 14:23:45 Asia/Shanghai
 
-Completed tasks: 2/25
+Completed tasks: 6/25
 
-Next/current: [03 — 账号绑定、角色与私有响应过滤](issues/03.md) — in-progress
+Next/current: [07 — 分组导航、资料及隐私设置](issues/07.md) — in-progress
 
-HEAD: 4fdc3201e3cefbea5e93543fe0d1891359af9a28
+HEAD: 156a118c938863f213cbe7ce772096217a2a4b41
 
 Working tree (inspect before resuming):
 ```
+ M .scratch/roulette-club-v2/HANDOFF.md
+ M .scratch/roulette-club-v2/TODO.md
  M .scratch/roulette-club-v2/issues/03.md
- M db/schema.ts
- M drizzle/meta/_journal.json
- M src/blackjack-core.js
-?? drizzle/0001_little_calypso.sql
-?? drizzle/meta/0001_snapshot.json
-?? test/v2-growth.test.cjs
-?? test/v2-http.test.cjs
-?? test/v2-identity.test.cjs
-?? worker/v2/
+ M .scratch/roulette-club-v2/issues/04.md
+ M .scratch/roulette-club-v2/issues/05.md
+ M .scratch/roulette-club-v2/issues/06.md
+ M .scratch/roulette-club-v2/issues/07.md
+ M dist/index.html
+ M dist/server/index.js
+?? .scratch/roulette-club-v2/P1-gate.json
+?? .scratch/roulette-club-v2/evidence/P1.json
 ```
