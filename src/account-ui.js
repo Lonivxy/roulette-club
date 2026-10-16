@@ -20,7 +20,8 @@ function createAccountUI(engine, callbacks) {
         $('forecast-growth').textContent = `未来 ${minutes} 分钟预计增加 ${fmt(engine.money.sub(later.total,now.total))} 筹码欠款。`;
     }
     function render() {
-        const rows = CasinoAccounts.summaries(engine.data), current = rows.find(row => row.id === engine.active.id), locked = callbacks.locked();
+        const summaries = CasinoAccounts.summaries(engine.data), current = summaries.find(row => row.id === engine.active.id), locked = callbacks.locked();
+        const v2 = Boolean(engine.platform), rows = v2 ? engine.directory.map(p => ({id:p.id,name:p.name,cash:p.balance??0,privateBalance:p.balance===undefined})) : summaries;
         const selection = CasinoAccounts.selectPlayers(rows,{query:$('directory-search').value,sort:$('directory-sort').value,page});
         page = selection.page;
         $('directory-count').textContent = `${selection.total} 位匹配 · 共 ${rows.length} 位玩家`;
@@ -28,14 +29,14 @@ function createAccountUI(engine, callbacks) {
         $('directory-page').textContent = `${selection.page} / ${selection.pages}`;
         $('directory-prev').disabled = page === 1; $('directory-next').disabled = page === selection.pages;
         $('directory-rows').replaceChildren(...selection.rows.map(player => {
-            const row = document.createElement('tr'), name = element('td',player.name), cash = element('td',player.recovery ? '-'+fmt(player.negative) : fmt(player.cash));
+            const row = document.createElement('tr'), name = element('td',player.name), cash = element('td',player.privateBalance ? '未公开' : player.recovery ? '-'+fmt(player.negative) : fmt(player.cash));
             if (player.recovery) { cash.dataset.negative = 'true'; cash.append(element('small',`可用 ${fmt(player.allowance)} · 负数模式`)); }
             else if (player.reserved) cash.append(element('small',`另有 ${fmt(player.reserved)} 下注中`));
-            const debt = element('td',fmt(player.debt)), net = element('td',fmt(player.net)), actions = document.createElement('td');
-            net.dataset.negative = String(player.net < 0); net.append(element('small',`应收 ${fmt(player.receivable)}`));
-            const button = element('button',player.id===current.id?'当前玩家':'切换','club-action secondary');
-            button.type = 'button'; button.disabled = locked || player.id === current.id;
-            button.addEventListener('click',()=>callbacks.switchPlayer(player.id)); actions.append(button);
+            const debt = element('td',v2?'仅本人可见':fmt(player.debt)), net = element('td',v2?'仅本人可见':fmt(player.net)), actions = document.createElement('td');
+            if(!v2){net.dataset.negative = String(player.net < 0); net.append(element('small',`应收 ${fmt(player.receivable)}`));}
+            const button = element('button',v2?'查看资料':player.id===current.id?'当前玩家':'切换','club-action secondary');
+            button.type = 'button'; button.disabled = locked || !v2 && player.id === current.id;
+            button.addEventListener('click',()=>v2?callbacks.profile(player.id):callbacks.switchPlayer(player.id)); actions.append(button);
             row.append(name,cash,debt,net,actions); return row;
         }));
         $('summary-net').textContent = fmt(current.net); $('summary-net').dataset.negative = String(current.net < 0);
@@ -55,6 +56,7 @@ function createAccountUI(engine, callbacks) {
         tick();
     }
     for (const id of ['directory-search','directory-sort']) $(id).addEventListener(id.endsWith('search')?'input':'change',()=>{page=1;render();});
+    if(engine.platform)for(const option of $('directory-sort').children)if(['net','debt'].includes(option.value))option.disabled=true;
     $('directory-prev').addEventListener('click',()=>{page--;render();}); $('directory-next').addEventListener('click',()=>{page++;render();});
     $('activity-search').addEventListener('input',render); $('forecast-minutes').addEventListener('change',tick);
     $('bank-repay-all').addEventListener('click',()=>callbacks.transact(()=>engine.repayAll('bank'),'银行欠款已全部还清。'));

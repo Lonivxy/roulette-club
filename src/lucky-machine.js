@@ -6,7 +6,7 @@ function createLuckyMachine(engine, callbacks, host) {
     const BET_TIERS = [10, 50, 100, 500, 1000, 'ALL_IN'];
     let credits = engine.active.balance;
     let visible = false, visualBalance = null, spinResult = null, frame = null;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion = Boolean(window.CasinoPreferences?.reducedMotion) || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let selectedBetMode = 100;
     let customBet = 100;
     let lastWinAmount = 0;
@@ -31,7 +31,7 @@ function createLuckyMachine(engine, callbacks, host) {
     }
 
     function playSynthTone(freq, type = 'triangle', duration = 0.08, gainVal = 0.12) {
-      if (isMuted || !visible) return;
+      if (isMuted || !visible || window.CasinoPreferences?.sound === false) return;
       try {
         const ctx = getAudioCtx();
         const osc = ctx.createOscillator();

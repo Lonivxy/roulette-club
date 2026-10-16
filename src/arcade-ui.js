@@ -31,7 +31,7 @@ function createArcadeGame(kind,engine,callbacks) {
         try {
             result=kind==='plinko'?await engine.playPlinko(wager,$('risk').value,$('lane').value,{jackpot}):await engine.playDice(wager,$('kind').value,$('kind').value==='sum'?Number($('target').value):null,{jackpot});
             pending=false;animating=true;visualBalance=result.walletAfterWager;runningId=result.id;engine.lock=kind;$('status').textContent=kind==='plinko'?'弹珠正在穿过钉阵…':'骰子正在滚动…';$('result').textContent='';update();callbacks.changed();
-            scene.play(result,reduced?0:kind==='plinko'?4200:2300,()=>{
+            scene.play(result,reduced||window.CasinoPreferences?.reducedMotion?0:kind==='plinko'?4200:2300,()=>{
                 animating=false;visualBalance=null;runningId=null;engine.lock=null;$('result').textContent=describe(result);$('result').dataset.loss=String(result.net<0);
                 $('status').textContent=engine.active.recovery?`负数记录 -${fmt(engine.active.recovery.deficit)} · 下一局可用 10。`:'本局已结算，可以继续下注。';
                 update();callbacks.changed();

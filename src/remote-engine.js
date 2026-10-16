@@ -15,25 +15,28 @@ if (window.__CASINO_BOOTSTRAP__) {
         accrueInterest() { return false; }
         applySnapshot(snapshot) {
             snapshot = this.money.hydrate(snapshot);
+            this.platform = snapshot.platform; this.directory = snapshot.directory;
+            this.mode = snapshot.platform?.mode || 'formal';
             if (this.revision !== undefined && snapshot.revision < this.revision) return;
             const selected = this.revision !== undefined ? this.data?.activeId : null;
-            if (selected && snapshot.data.users.some(user => user.id === selected)) snapshot.data.activeId = selected;
+            if (!snapshot.platform && selected && snapshot.data.users.some(user => user.id === selected)) snapshot.data.activeId = selected;
             const pending = snapshot.data.users.find(user => user.blackjack && user.blackjack.phase !== 'settled');
             if (pending) snapshot.data.activeId = pending.id;
             this.data = snapshot.data; this.revision = snapshot.revision; this.offset = snapshot.now - Date.now();
             if (this.revision > 0) this.legacyPending = false;
             this.now = () => Date.now() + this.offset;
             if (snapshot.auth) this.auth = snapshot.auth;
+            if (!this.auth?.admin) this.adminPlayers = [];
         }
         async send(command, args = [], {admin = false} = {}) {
             if (this.legacyPending && command !== 'import') throw new Error('检测到旧存档，请先进入 ADMIN，通过 Windows Hello 验证并导入后继续。');
             if (this.requestBusy) throw new Error('上一项操作仍在处理，请稍后再试。');
-            const id = crypto.randomUUID(), body = this.money.stringify({id,command,args,playerId:this.data.activeId});
+            const id = crypto.randomUUID(), body = this.money.stringify({id,command,args,playerId:this.data.activeId,...(this.platform?{mode:this.mode||'formal'}:{})});
             this.requestBusy = true; this.onChange?.();
             try {
                 let response;
                 for(let attempt=0;attempt<2;attempt++) {
-                    try { response = await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body,credentials:'same-origin',signal:AbortSignal.timeout(15000)}); break; }
+                    try { response = await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json',...(this.platform?{'X-Club-Protocol':'2'}:{})},body,credentials:'same-origin',signal:AbortSignal.timeout(15000)}); break; }
                     catch(error) { if(attempt===1) throw new Error('无法连接服务器。请刷新以确认余额，操作不会重复入账。'); }
                 }
                 const data = this.money.hydrate(await response.json());
@@ -44,11 +47,19 @@ if (window.__CASINO_BOOTSTRAP__) {
         }
         async sync() {
             if(this.requestBusy||this.animationLock)return;
-            const response=await fetch('/api/state?playerId='+encodeURIComponent(this.data.activeId),{credentials:'same-origin',cache:'no-store'});
+            const response=await fetch('/api/state?playerId='+encodeURIComponent(this.data.activeId)+'&mode='+(this.mode||'formal'),{credentials:'same-origin',cache:'no-store'});
             const value=await response.json();if(!response.ok)throw new Error(value.error||'账户同步失败。');
             this.applySnapshot(value);this.onChange?.();
         }
+        async api(path) {
+            const response=await fetch(path,{credentials:'same-origin',cache:'no-store'});
+            const value=this.money.hydrate(await response.json());if(!response.ok)throw new Error(value.error||'请求失败。');return value;
+        }
+        async setSandbox(enabled) {
+            this.ensureIdle();const snapshot=await this.api('/api/state?mode='+(enabled?'sandbox':'formal'));this.applySnapshot(snapshot);this.onChange?.();
+        }
         switchUser(id) {
+            if(this.platform && id!==this.active.id)throw new Error('独立账号只能操作自己的玩家。');
             this.ensureIdle(); if(!this.data.users.some(user=>user.id===id))throw new Error('请选择有效玩家。');this.data.activeId=id;
             try {sessionStorage.setItem('club-selected-player',id);} catch {}
         }

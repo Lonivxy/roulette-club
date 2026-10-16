@@ -521,6 +521,11 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 @keyframes lottery-glow { from { box-shadow:inset 0 0 20px #edca7a09; } to { box-shadow:inset 0 0 50px #edca7a25; } }
 @media(max-width:800px) { .lottery-layout { grid-template-columns:1fr; }.lottery-heading { align-items:flex-start; }.lottery-top-prize { max-width:42%; }.lottery-prices strong { font-size:16px; } }
 @media(prefers-reduced-motion:reduce) { .lottery-ticket[data-state="drawing"] { animation:none; } }
+.v2-nav { overflow:visible; display:flex; gap:5px; min-width:0; }.v2-nav details { position:relative; }.v2-nav summary { padding:10px 12px; color:#c4b8d0; font-size:12px; cursor:pointer; border-radius:8px; list-style:none; white-space:nowrap; }.v2-nav summary::after { content:'⌄'; margin-left:8px; color:#a08c67; }.v2-nav details[data-active="true"] summary { color:#f4d995; background:#4a352d66; }.v2-nav .v2-nav-menu { position:absolute; top:100%; left:0; z-index:100; min-width:190px; padding:8px; background:#211b2d; border:1px solid #d9c18e33; border-radius:12px; box-shadow:0 18px 40px #0008; display:grid; gap:4px; }.v2-nav .v2-nav-menu button { width:100%; text-align:left; padding:11px 12px; }.v2-nav details:not([open]) .v2-nav-menu { display:none; }.v2-nav summary:focus-visible,.v2-nav button:focus-visible { outline:2px solid #e4ca8b; outline-offset:2px; }
+.v2-shell { max-width:1160px; margin:auto; padding-bottom:60px; }.v2-heading { display:flex; justify-content:space-between; gap:20px; align-items:center; margin-bottom:26px; }.v2-heading h2 { color:#f5e6c7; font-size:clamp(27px,5vw,40px); font-weight:800; margin:10px 0; }.v2-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr)); gap:18px; }.v2-card { min-width:0; }.v2-card h3 { color:#e4ce9b; }.v2-number { font-size:30px; font-weight:800; color:#f2d48b; overflow-wrap:anywhere; margin:16px 0; }.v2-muted { color:#aaa0b9; font-size:12px; line-height:1.9; }.v2-progress { width:100%; height:10px; margin:15px 0; accent-color:#d5b777; }.v2-row { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid #ffffff0e; }.v2-row:last-child { border-bottom:0; }.v2-row small { display:block; color:#a99bb4; font-size:11px; margin-top:6px; }.v2-card input,.v2-card select,.v2-card textarea { margin:7px 0 13px; }.v2-card label { display:block; color:#b6aac4; font-size:12px; line-height:1.8; }.v2-card textarea { min-height:90px; width:100%; resize:vertical; }.v2-card button:disabled { opacity:.4; cursor:not-allowed; }.v2-filters { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0; }.v2-filters .club-input,.v2-filters .club-select { width:auto; flex:1 1 150px; }.v2-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0; }.v2-pill { font-size:10px; padding:5px 8px; border:1px solid #a88f5e44; border-radius:20px; color:#ddc38d; }.v2-pill[data-rarity="epic"] { color:#d7adf3; border-color:#b88cce66; }.v2-pill[data-rarity="legendary"] { color:#f2cf77; border-color:#e4b95f99; }.v2-item { display:flex; flex-direction:column; gap:14px; }.v2-item .v2-actions { margin-top:auto; }.v2-item-preview { min-height:88px; display:grid; place-items:center; background:#130f1e; border:1px solid #d4b77944; border-radius:14px; color:#e8d3a2; font-size:19px; }.v2-item[data-rarity="epic"] .v2-item-preview { border-color:#b384cb66; }.v2-item[data-rarity="legendary"] .v2-item-preview { border-color:#edcd7e99; box-shadow:inset 0 0 25px #b9913520; }
+.v2-profile-avatar { display:grid; place-items:center; width:88px; height:88px; margin:16px 0; border:3px solid #d9bd7b66; border-radius:22px; color:#f4de9f; font-size:36px; background:#2a2036; }.v2-profile-avatar[data-frame] { border-color:#e1c174; box-shadow:0 0 0 5px #d3ae5920; }.v2-profile[data-background] { background:radial-gradient(at top,#392345,#171120); }.v2-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }.v2-table-wrap { overflow-x:auto; }.v2-table { width:100%; border-collapse:collapse; font-size:12px; }.v2-table td,.v2-table th { text-align:left; padding:14px 12px; border-bottom:1px solid #ffffff10; overflow-wrap:anywhere; }.v2-table tr[data-self="true"] { background:#5c472b33; }.v2-table th { color:#a99cb5; font-weight:500; }.v2-table a { color:#e2c78b; }.v2-notice { padding:16px 20px; margin:18px 0; border:1px solid #d8b66d44; border-radius:12px; color:#dfc799; background:#35271e55; line-height:1.8; font-size:12px; }.v2-empty { text-align:center; padding:35px 20px; color:#a89ab7; font-size:13px; }.v2-sandbox-banner { position:fixed; z-index:80; bottom:18px; left:20px; right:20px; display:flex; align-items:center; flex-wrap:wrap; gap:10px 20px; padding:14px 20px; background:#3d2337f5; border:1px solid #dd99b7; border-radius:12px; color:#f0cfdf; font-size:12px; }.v2-sandbox-banner[hidden],.v2-admin-tools[hidden] { display:none; }.v2-dialog { width:min(90vw,440px); padding:28px; border:1px solid #d1b77466; border-radius:18px; background:#211a2c; color:#eee1cc; }.v2-dialog::backdrop { background:#05030bd4; backdrop-filter:blur(4px); }.v2-dialog h2 { font-size:20px; font-weight:800; }.v2-dialog p { font-size:14px; line-height:1.9; margin:18px 0; }.v2-log { max-height:380px; overflow:auto; font-size:11px; color:#b6aac5; line-height:1.9; }.v2-log li { padding:9px 0; border-bottom:1px solid #ffffff10; overflow-wrap:anywhere; }.v2-day-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:7px; margin:20px 0; }.v2-day { text-align:center; border:1px solid #a38c6433; border-radius:10px; padding:14px 4px; color:#ad9fbd; font-size:11px; }.v2-day strong { display:block; color:#e3cb95; font-size:17px; margin-top:8px; }.v2-day[data-current="true"] { border-color:#e2c17a; background:#6b542c33; }.v2-admin-tools { margin-top:22px; }.v2-setup-screen { position:fixed; inset:0; overflow:auto; z-index:20000; background:radial-gradient(at top,#39283f,#100e19 65%); color:#eee4d7; display:grid; align-items:center; padding:30px 18px; }.v2-setup-screen .v2-shell { width:min(100%,700px); }.v2-setup-screen h1 { font-size:34px; color:#f1d79a; margin:14px 0; }.v2-setup-mode > :not(.v2-setup-screen):not(script) { display:none!important; }.v2-check { display:flex!important; gap:10px; align-items:center; }.v2-check input { width:18px; height:18px; margin:0; }
+@media(max-width:900px){.v2-nav summary { padding:9px 7px; font-size:11px; }.v2-nav summary::after { margin-left:4px; }.v2-nav details:last-child .v2-nav-menu { left:auto; right:0; }#club-nav:has(.v2-nav) { flex-wrap:wrap; gap:8px; }.v2-day-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }.v2-heading { flex-wrap:wrap; }.v2-table td,.v2-table th { padding:12px 8px; }}
+@media(prefers-reduced-motion:reduce){.v2-shell * { animation:none!important; transition:none!important; }}body[data-reduced-motion="true"] * { animation:none!important; transition:none!important; }
 
     </style>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
@@ -741,7 +746,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
           <label for="admin-adjust-player" class="club-field">目标玩家</label><select id="admin-adjust-player" class="club-select" required></select>
           <label for="admin-adjust-mode" class="club-field">调整方式</label><select id="admin-adjust-mode" class="club-select"><option value="add">增加筹码</option><option value="remove">扣除筹码</option></select>
           <label for="admin-adjust-amount" class="club-field">金额 / 筹码</label><input id="admin-adjust-amount" type="text" pattern="[0-9]+" class="club-input" inputmode="numeric" required>
-          <label for="admin-adjust-reason" class="club-field">备注（可选）</label><input id="admin-adjust-reason" class="club-input" type="text" maxlength="120" placeholder="例如奖励、修正余额">
+          <label for="admin-adjust-reason" class="club-field">调整原因（V2 必填）</label><input id="admin-adjust-reason" class="club-input" type="text" maxlength="120" placeholder="例如奖励、修正余额">
           <div class="club-actions"><button type="submit" class="club-action" data-admin-action>确认调整并记录</button></div>
         </form>
         <form id="player-form" class="club-card"><h3>添加玩家</h3><p class="club-muted">新玩家初始 1,000 筹码；可再通过余额调整修改。玩家保存到数据库，无固定人数上限。</p><label class="club-field" for="player-name">新玩家名称</label><input id="player-name" class="club-input" type="text" maxlength="24" required placeholder="玩家名称"><div class="club-actions"><button type="submit" class="club-action" data-admin-action>添加玩家</button></div></form>
@@ -750,6 +755,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </div>
   </div>
 </section>
+<aside id="v2-sandbox-banner" class="v2-sandbox-banner" hidden><strong>ADMIN SANDBOX · 独立测试余额</strong><span>测试不会改变正式钱包、奖励或排行榜。</span><button id="v2-sandbox-exit" type="button" class="club-action secondary">退出沙盒</button></aside>
+<div id="v2-feature-panels"></div>
+<section id="v2-admin-tools" class="v2-admin-tools" hidden></section>
+<dialog id="v2-confirm" class="v2-dialog" aria-labelledby="v2-confirm-title"><h2 id="v2-confirm-title">确认操作</h2><p id="v2-confirm-text"></p><div class="club-actions"><button id="v2-confirm-cancel" type="button" class="club-action secondary">取消</button><button id="v2-confirm-yes" type="button" class="club-action">确认</button></div></dialog>
 
 <section id="players-view" class="club-view" role="tabpanel" aria-labelledby="tab-players" hidden>
   <div class="club-shell"><div class="club-eyebrow">Players · 玩家</div><h2 id="players-greeting" class="club-title">玩家往来</h2>
@@ -1797,7 +1806,7 @@ function createLuckyMachine(engine, callbacks, host) {
     const BET_TIERS = [10, 50, 100, 500, 1000, 'ALL_IN'];
     let credits = engine.active.balance;
     let visible = false, visualBalance = null, spinResult = null, frame = null;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion = Boolean(window.CasinoPreferences?.reducedMotion) || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let selectedBetMode = 100;
     let customBet = 100;
     let lastWinAmount = 0;
@@ -1822,7 +1831,7 @@ function createLuckyMachine(engine, callbacks, host) {
     }
 
     function playSynthTone(freq, type = 'triangle', duration = 0.08, gainVal = 0.12) {
-      if (isMuted || !visible) return;
+      if (isMuted || !visible || window.CasinoPreferences?.sound === false) return;
       try {
         const ctx = getAudioCtx();
         const osc = ctx.createOscillator();
@@ -3586,13 +3595,14 @@ function createLucky777(engine, callbacks) {
         constructor(engine, options = {}) {
             this.engine = engine;
             this.shoeFactory = options.shoeFactory || (() => makeShoe(() => engine.random()));
-            for (const user of engine.data.users) {
+            const scopedUsers = engine.isolatedPlayer ? [engine.active] : engine.data.users;
+            for (const user of scopedUsers) {
                 if (user.blackjack && !validRound(user.blackjack, user.id)) {
                     user.blackjack = null;
                     engine.storageWarning = 'An unreadable saved blackjack hand was cleared. Your wallet and bank records were kept.';
                 }
             }
-            const pending = engine.data.users.find(u => u.blackjack && u.blackjack.phase !== 'settled');
+            const pending = scopedUsers.find(u => u.blackjack && u.blackjack.phase !== 'settled');
             if (pending) { engine.data.activeId = pending.id; engine.lock = 'blackjack'; }
         }
         get round() { return this.engine.active.blackjack || null; }
@@ -3740,25 +3750,28 @@ if (window.__CASINO_BOOTSTRAP__) {
         accrueInterest() { return false; }
         applySnapshot(snapshot) {
             snapshot = this.money.hydrate(snapshot);
+            this.platform = snapshot.platform; this.directory = snapshot.directory;
+            this.mode = snapshot.platform?.mode || 'formal';
             if (this.revision !== undefined && snapshot.revision < this.revision) return;
             const selected = this.revision !== undefined ? this.data?.activeId : null;
-            if (selected && snapshot.data.users.some(user => user.id === selected)) snapshot.data.activeId = selected;
+            if (!snapshot.platform && selected && snapshot.data.users.some(user => user.id === selected)) snapshot.data.activeId = selected;
             const pending = snapshot.data.users.find(user => user.blackjack && user.blackjack.phase !== 'settled');
             if (pending) snapshot.data.activeId = pending.id;
             this.data = snapshot.data; this.revision = snapshot.revision; this.offset = snapshot.now - Date.now();
             if (this.revision > 0) this.legacyPending = false;
             this.now = () => Date.now() + this.offset;
             if (snapshot.auth) this.auth = snapshot.auth;
+            if (!this.auth?.admin) this.adminPlayers = [];
         }
         async send(command, args = [], {admin = false} = {}) {
             if (this.legacyPending && command !== 'import') throw new Error('检测到旧存档，请先进入 ADMIN，通过 Windows Hello 验证并导入后继续。');
             if (this.requestBusy) throw new Error('上一项操作仍在处理，请稍后再试。');
-            const id = crypto.randomUUID(), body = this.money.stringify({id,command,args,playerId:this.data.activeId});
+            const id = crypto.randomUUID(), body = this.money.stringify({id,command,args,playerId:this.data.activeId,...(this.platform?{mode:this.mode||'formal'}:{})});
             this.requestBusy = true; this.onChange?.();
             try {
                 let response;
                 for(let attempt=0;attempt<2;attempt++) {
-                    try { response = await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body,credentials:'same-origin',signal:AbortSignal.timeout(15000)}); break; }
+                    try { response = await fetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json',...(this.platform?{'X-Club-Protocol':'2'}:{})},body,credentials:'same-origin',signal:AbortSignal.timeout(15000)}); break; }
                     catch(error) { if(attempt===1) throw new Error('无法连接服务器。请刷新以确认余额，操作不会重复入账。'); }
                 }
                 const data = this.money.hydrate(await response.json());
@@ -3769,11 +3782,19 @@ if (window.__CASINO_BOOTSTRAP__) {
         }
         async sync() {
             if(this.requestBusy||this.animationLock)return;
-            const response=await fetch('/api/state?playerId='+encodeURIComponent(this.data.activeId),{credentials:'same-origin',cache:'no-store'});
+            const response=await fetch('/api/state?playerId='+encodeURIComponent(this.data.activeId)+'&mode='+(this.mode||'formal'),{credentials:'same-origin',cache:'no-store'});
             const value=await response.json();if(!response.ok)throw new Error(value.error||'账户同步失败。');
             this.applySnapshot(value);this.onChange?.();
         }
+        async api(path) {
+            const response=await fetch(path,{credentials:'same-origin',cache:'no-store'});
+            const value=this.money.hydrate(await response.json());if(!response.ok)throw new Error(value.error||'请求失败。');return value;
+        }
+        async setSandbox(enabled) {
+            this.ensureIdle();const snapshot=await this.api('/api/state?mode='+(enabled?'sandbox':'formal'));this.applySnapshot(snapshot);this.onChange?.();
+        }
         switchUser(id) {
+            if(this.platform && id!==this.active.id)throw new Error('独立账号只能操作自己的玩家。');
             this.ensureIdle(); if(!this.data.users.some(user=>user.id===id))throw new Error('请选择有效玩家。');this.data.activeId=id;
             try {sessionStorage.setItem('club-selected-player',id);} catch {}
         }
@@ -4016,7 +4037,7 @@ function createBlackjackTable(engine, callbacks) {
     const ranks = ['', 'A','2','3','4','5','6','7','8','9','10','J','Q','K'];
     let visible = false, animating = false, timer = null, scene = null, muted = false, audio = null, overhead = false;
     function tone(frequency, duration = .06, volume = .05) {
-        if (muted || !visible) return;
+        if (muted || !visible || window.CasinoPreferences?.sound === false) return;
         try {
             const Audio = window.AudioContext || window.webkitAudioContext;
             if (!Audio) return;
@@ -4083,7 +4104,7 @@ function createBlackjackTable(engine, callbacks) {
     function changed() { update(); callbacks.changed(); }
     function schedule(callback, delay) {
         if(timer!==null) clearTimeout(timer);
-        timer=setTimeout(()=>{timer=null;return callback();},reduced.matches?0:delay);
+        timer=setTimeout(()=>{timer=null;return callback();},reduced.matches||window.CasinoPreferences?.reducedMotion?0:delay);
     }
     function finishedMotion() {
         animating=false;
@@ -4297,7 +4318,7 @@ function createArcadeGame(kind,engine,callbacks) {
         try {
             result=kind==='plinko'?await engine.playPlinko(wager,$('risk').value,$('lane').value,{jackpot}):await engine.playDice(wager,$('kind').value,$('kind').value==='sum'?Number($('target').value):null,{jackpot});
             pending=false;animating=true;visualBalance=result.walletAfterWager;runningId=result.id;engine.lock=kind;$('status').textContent=kind==='plinko'?'弹珠正在穿过钉阵…':'骰子正在滚动…';$('result').textContent='';update();callbacks.changed();
-            scene.play(result,reduced?0:kind==='plinko'?4200:2300,()=>{
+            scene.play(result,reduced||window.CasinoPreferences?.reducedMotion?0:kind==='plinko'?4200:2300,()=>{
                 animating=false;visualBalance=null;runningId=null;engine.lock=null;$('result').textContent=describe(result);$('result').dataset.loss=String(result.net<0);
                 $('status').textContent=engine.active.recovery?`负数记录 -${fmt(engine.active.recovery.deficit)} · 下一局可用 10。`:'本局已结算，可以继续下注。';
                 update();callbacks.changed();
@@ -4379,7 +4400,7 @@ function createLotteryGame(engine, callbacks) {
         try {
             result = await engine.buyLottery(selected,{jackpot}); pending = false; animating = true; runningId = result.id; engine.lock = 'lottery';
             $('status').textContent = '彩票已购买，即将揭晓…'; update(); callbacks.changed();
-            if (reduced) reveal(); else timer = setTimeout(reveal,1800);
+            if (reduced||window.CasinoPreferences?.reducedMotion) reveal(); else timer = setTimeout(reveal,1800);
         } catch (error) {
             pending = false; animating = false; visualBalance = null; runningId = null;
             if (result) engine.lock = null;
@@ -4488,7 +4509,7 @@ function createPlayerLoansUI(engine, callbacks) {
     }
     function render() {
         const user = engine.active, locked = callbacks.locked(), selected = $('peer-loan-user').value;
-        const options = engine.data.users.filter(person => person.id !== user.id).map(person => { const option = element('option', person.name); option.value = person.id; return option; });
+        const options = (engine.directory || engine.data.users).filter(person => person.id !== user.id).map(person => { const option = element('option', person.name); option.value = person.id; return option; });
         $('peer-loan-user').replaceChildren(...options);
         if (options.some(option => option.value === selected)) $('peer-loan-user').value = selected;
         $('peer-loan-user').disabled = locked || !options.length;
@@ -4596,7 +4617,8 @@ function createAccountUI(engine, callbacks) {
         $('forecast-growth').textContent = `未来 ${minutes} 分钟预计增加 ${fmt(engine.money.sub(later.total,now.total))} 筹码欠款。`;
     }
     function render() {
-        const rows = CasinoAccounts.summaries(engine.data), current = rows.find(row => row.id === engine.active.id), locked = callbacks.locked();
+        const summaries = CasinoAccounts.summaries(engine.data), current = summaries.find(row => row.id === engine.active.id), locked = callbacks.locked();
+        const v2 = Boolean(engine.platform), rows = v2 ? engine.directory.map(p => ({id:p.id,name:p.name,cash:p.balance??0,privateBalance:p.balance===undefined})) : summaries;
         const selection = CasinoAccounts.selectPlayers(rows,{query:$('directory-search').value,sort:$('directory-sort').value,page});
         page = selection.page;
         $('directory-count').textContent = `${selection.total} 位匹配 · 共 ${rows.length} 位玩家`;
@@ -4604,14 +4626,14 @@ function createAccountUI(engine, callbacks) {
         $('directory-page').textContent = `${selection.page} / ${selection.pages}`;
         $('directory-prev').disabled = page === 1; $('directory-next').disabled = page === selection.pages;
         $('directory-rows').replaceChildren(...selection.rows.map(player => {
-            const row = document.createElement('tr'), name = element('td',player.name), cash = element('td',player.recovery ? '-'+fmt(player.negative) : fmt(player.cash));
+            const row = document.createElement('tr'), name = element('td',player.name), cash = element('td',player.privateBalance ? '未公开' : player.recovery ? '-'+fmt(player.negative) : fmt(player.cash));
             if (player.recovery) { cash.dataset.negative = 'true'; cash.append(element('small',`可用 ${fmt(player.allowance)} · 负数模式`)); }
             else if (player.reserved) cash.append(element('small',`另有 ${fmt(player.reserved)} 下注中`));
-            const debt = element('td',fmt(player.debt)), net = element('td',fmt(player.net)), actions = document.createElement('td');
-            net.dataset.negative = String(player.net < 0); net.append(element('small',`应收 ${fmt(player.receivable)}`));
-            const button = element('button',player.id===current.id?'当前玩家':'切换','club-action secondary');
-            button.type = 'button'; button.disabled = locked || player.id === current.id;
-            button.addEventListener('click',()=>callbacks.switchPlayer(player.id)); actions.append(button);
+            const debt = element('td',v2?'仅本人可见':fmt(player.debt)), net = element('td',v2?'仅本人可见':fmt(player.net)), actions = document.createElement('td');
+            if(!v2){net.dataset.negative = String(player.net < 0); net.append(element('small',`应收 ${fmt(player.receivable)}`));}
+            const button = element('button',v2?'查看资料':player.id===current.id?'当前玩家':'切换','club-action secondary');
+            button.type = 'button'; button.disabled = locked || !v2 && player.id === current.id;
+            button.addEventListener('click',()=>v2?callbacks.profile(player.id):callbacks.switchPlayer(player.id)); actions.append(button);
             row.append(name,cash,debt,net,actions); return row;
         }));
         $('summary-net').textContent = fmt(current.net); $('summary-net').dataset.negative = String(current.net < 0);
@@ -4631,6 +4653,7 @@ function createAccountUI(engine, callbacks) {
         tick();
     }
     for (const id of ['directory-search','directory-sort']) $(id).addEventListener(id.endsWith('search')?'input':'change',()=>{page=1;render();});
+    if(engine.platform)for(const option of $('directory-sort').children)if(['net','debt'].includes(option.value))option.disabled=true;
     $('directory-prev').addEventListener('click',()=>{page--;render();}); $('directory-next').addEventListener('click',()=>{page++;render();});
     $('activity-search').addEventListener('input',render); $('forecast-minutes').addEventListener('change',tick);
     $('bank-repay-all').addEventListener('click',()=>callbacks.transact(()=>engine.repayAll('bank'),'银行欠款已全部还清。'));
@@ -4658,6 +4681,7 @@ function createAdminUI(engine, callbacks) {
     }
     function render() {
         auth=engine.auth||auth;
+        if(engine.platform){$('admin-adjust-reason').required=true;$('admin-adjust-reason').minLength=3;$('admin-import').hidden=true;}
         $('admin-login').hidden=auth.admin;$('admin-panel').hidden=!auth.admin;
         $('admin-enroll').hidden=!auth.canEnroll;$('admin-signin').hidden=!auth.enrolled;
         $('admin-enroll').disabled=working;$('admin-signin').disabled=working;
@@ -4665,8 +4689,8 @@ function createAdminUI(engine, callbacks) {
         $('admin-legacy').hidden=!legacy||engine.revision!==0;
         $('club-migration-note').hidden=!engine.legacyPending||window.location.pathname==='/admin';
         const selected=$('admin-adjust-player').value;
-        $('admin-adjust-player').replaceChildren(...engine.data.users.map(user=>{const option=document.createElement('option');option.value=user.id;option.textContent=user.name+' · '+(user.recovery?'-'+user.recovery.deficit.toLocaleString()+' · 可用 ':'')+user.balance.toLocaleString();return option;}));
-        if(engine.data.users.some(user=>user.id===selected))$('admin-adjust-player').value=selected;
+        $('admin-adjust-player').replaceChildren(...(engine.adminPlayers || engine.data.users).map(user=>{const option=document.createElement('option');option.value=user.id;option.textContent=user.name+' · '+(user.recovery?'-'+user.recovery.deficit.toLocaleString()+' · 可用 ':'')+user.balance.toLocaleString();return option;}));
+        if((engine.adminPlayers || engine.data.users).some(user=>user.id===selected))$('admin-adjust-player').value=selected;
         document.querySelectorAll('[data-admin-action]').forEach(button=>button.disabled=working||!auth.admin||callbacks.locked());
     }
     async function authenticate(register) {
@@ -4685,6 +4709,7 @@ function createAdminUI(engine, callbacks) {
     $('admin-lock').addEventListener('click',async()=>{try{await api('/api/admin/logout',{});auth={...auth,admin:false};engine.auth=auth;callbacks.changed();}catch(error){$('admin-message').textContent=error.message;}render();});
     $('admin-adjust-form').addEventListener('submit',async event=>{
         event.preventDefault();
+        if(engine.platform && !await CasinoV2.confirm('确认调整该玩家余额？此操作会写入永久审计流水。'))return;
         if(await callbacks.transact(()=>engine.adminAdjust($('admin-adjust-player').value,$('admin-adjust-mode').value,$('admin-adjust-amount').value,$('admin-adjust-reason').value),'管理员余额调整已保存并记录。')){$('admin-adjust-amount').value='';$('admin-adjust-reason').value='';}
     });
     $('admin-import').addEventListener('click',async()=>{
@@ -4694,17 +4719,158 @@ function createAdminUI(engine, callbacks) {
     return {render,get unlocked(){return Boolean(auth.admin);}};
 }
 
+(function(root){
+ 'use strict';
+ const groups=[
+  {id:'games',name:'Games 游戏',items:[['roulette','Roulette'],['slots','777 Slots'],['blackjack','Blackjack'],['plinko','Plinko 弹珠'],['dice','骰宝'],['lottery','彩票']]},
+  {id:'economy',name:'Economy 经济',items:[['bank','银行'],['market','黑市商人'],['inventory','收藏 / Inventory']]},
+  {id:'social',name:'Social 社交',items:[['players','玩家往来'],['leaderboard','排行榜'],['clubs','朋友俱乐部']]},
+  {id:'rewards',name:'Rewards 奖励',items:[['rewards','每日签到'],['quests','任务 / Quests'],['achievements','成就 / Achievements']]},
+  {id:'account',name:'Account 账户',items:[['dashboard','PLAYER 总览'],['profile','个人资料'],['settings','设置']]}];
+ const views=['dashboard','profile','settings','inventory','leaderboard','clubs','rewards','quests','achievements'];
+ const $=id=>document.getElementById(id),fmt=n=>n?.toLocaleString()??'—';
+ function el(tag,text='',className=''){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;}
+ function button(label,action,disabled=false){const b=el('button',label,'club-action secondary');b.type='button';b.disabled=disabled;b.addEventListener('click',action);return b;}
+ function card(title){const c=el('section','','club-card v2-card');if(title)c.append(el('h3',title));return c;}
+ function message(parent,text){parent.append(el('p',text,'v2-muted'));}
+ function input(form,label,value='',type='text'){const box=el('label',label),n=el('input','','club-input');n.type=type;n.value=String(value??'');box.append(n);form.append(box);return n;}
+ function select(form,label,options,value){const box=el('label',label),n=el('select','','club-select');for(const [id,title]of options){const o=el('option',title);o.value=id;n.append(o);}if(value!==undefined)n.value=String(value);box.append(n);form.append(box);return n;}
+ function check(form,label,value){const box=el('label',label,'v2-check'),n=el('input');n.type='checkbox';n.checked=Boolean(value);box.prepend(n);form.append(box);return n;}
+ function progress(parent,value,max){const bar=el('progress','','v2-progress');bar.max=max||1;bar.value=Math.min(value,max||1);bar.setAttribute('aria-label',`${value} / ${max}`);parent.append(bar);}
+ async function confirmAction(text){const dialog=$('v2-confirm');$('v2-confirm-text').textContent=text;dialog.returnValue='cancel';return new Promise(resolve=>{const yes=()=>dialog.close('yes'),cancel=()=>dialog.close('cancel');dialog.addEventListener('close',()=>{$('v2-confirm-yes').removeEventListener('click',yes);$('v2-confirm-cancel').removeEventListener('click',cancel);resolve(dialog.returnValue==='yes');},{once:true});$('v2-confirm-yes').addEventListener('click',yes);$('v2-confirm-cancel').addEventListener('click',cancel);dialog.showModal();});}
+ function download(value,name){const blob=new Blob([JSON.stringify(value,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ function navigate(engine,callbacks){
+  const nav=$('club-player-tabs');nav.classList.add('v2-nav');nav.removeAttribute('role');const existing=new Map([...nav.querySelectorAll('[data-view]')].map(n=>[n.dataset.view,n]));nav.replaceChildren();
+  for(const group of groups){const details=el('details'),summary=el('summary',group.name),list=el('div','','v2-nav-menu');details.dataset.group=group.id;list.setAttribute('role','tablist');
+   for(const [view,title]of group.items){const b=existing.get(view)||el('button',title);b.type='button';b.dataset.view=view;b.id='tab-'+view;b.setAttribute('role','tab');b.setAttribute('aria-selected','false');b.setAttribute('aria-controls',views.includes(view)?'v2-'+view+'-view':view==='roulette'?'canvas-container':view+'-view');
+    b.addEventListener('click',()=>{details.open=false;});list.append(b);}
+   details.append(summary,list);nav.append(details);details.addEventListener('toggle',()=>{if(details.open)for(const other of nav.querySelectorAll('details'))if(other!==details)other.open=false;});
+   details.addEventListener('keydown',event=>{const buttons=[...list.querySelectorAll('button')].filter(b=>!b.disabled);if(event.key==='Escape'){details.open=false;summary.focus();event.preventDefault();return;}let index=buttons.indexOf(document.activeElement);if(event.key==='ArrowDown'||event.key==='ArrowRight')index=(index+1)%buttons.length;else if(event.key==='ArrowUp'||event.key==='ArrowLeft')index=(index+buttons.length-1)%buttons.length;else if(event.key==='Home')index=0;else if(event.key==='End')index=buttons.length-1;else return;event.preventDefault();details.open=true;buttons[index]?.focus();});
+  }
+  document.addEventListener('click',event=>{if(!nav.contains(event.target))for(const group of nav.querySelectorAll('details'))group.open=false;});
+  for(const link of document.querySelectorAll('a[href="/admin"]'))link.hidden=!['owner','admin'].includes(engine.auth?.role);
+ }
+ function createOnboarding(roulette){
+  const engine=new root.CasinoEngine();let current=engine.auth||{},checking=false;
+  function init(){document.body.classList.add('v2-setup-mode');const screen=el('main','','v2-setup-screen'),shell=el('div','','v2-shell'),box=card('账户绑定');
+   shell.append(el('p','ROULETTE CLUB V2','club-eyebrow'),el('h1','欢迎回来'),el('p','旧玩家、余额与游戏记录已保留。独立账号需要先绑定自己的玩家档案。','v2-muted'),box);screen.append(shell);document.body.append(screen);
+   const status=el('p','','v2-notice');box.append(status);
+   const admin=['owner','admin'].includes(current.role);
+   if(!admin){status.textContent='你已登录。请让管理员将已有玩家绑定到你的账号；绑定后本页会自动进入游戏。';const label=el('p','账号识别码：'+(current.actor||''),'v2-muted');box.append(label);setInterval(async()=>{try{const r=await fetch('/api/state',{credentials:'same-origin'}),v=await r.json();if(v.platform?.account?.playerId)window.location.reload();}catch{}},5000);return;}
+   const auth=button(current.enrolled?'使用 Windows Hello 验证':'设置 Windows Hello',async()=>{
+    if(checking)return;checking=true;auth.disabled=true;
+    try{const kind=current.enrolled?'authenticate':'register',options=await api('/api/admin/'+kind+'/options',{}),response=kind==='register'?await ClubPasskeys.startRegistration({optionsJSON:options}):await ClubPasskeys.startAuthentication({optionsJSON:options});await api('/api/admin/'+kind+'/verify',response);await showProfiles();}
+    catch(error){status.textContent=error.name==='NotAllowedError'?'系统验证已取消，玩家数据未修改。':error.message;}finally{checking=false;auth.disabled=false;}
+   });box.append(auth);status.textContent='请验证管理身份，再选择属于你的旧玩家。其他旧玩家仍会保留，之后可逐一绑定给朋友。';
+   async function api(path,body){const response=await fetch(path,{method:body===undefined?'GET':'POST',credentials:'same-origin',headers:body?{'Content-Type':'application/json','X-Club-Protocol':'2'}:{},body:body?JSON.stringify(body):undefined});const result=await response.json();if(!response.ok)throw Error(result.error||'操作失败');return result;}
+   async function showProfiles(){const data=await api('/api/admin/overview');auth.hidden=true;const form=el('form'),choice=select(form,'选择属于你的已有玩家',data.players.filter(u=>!data.accounts.some(a=>a.playerId===u.id)).map(u=>[u.id,u.name+' · '+fmt(engine.money.hydrate(u).balance)+' 筹码']));
+    const submit=el('button','绑定并进入 PLAYER','club-action');submit.type='submit';form.append(submit);box.append(form);status.textContent='请选择本人玩家；不会创建替代存档，也不会重置余额。';
+    form.addEventListener('submit',async event=>{event.preventDefault();submit.disabled=true;try{await api('/api/command',{id:crypto.randomUUID(),command:'admin.bind',args:[current.actor,choice.value],mode:'formal'});window.location.reload();}catch(error){status.textContent=error.message;submit.disabled=false;}});
+   }
+   if(current.admin)showProfiles().catch(error=>status.textContent=error.message);
+  }
+  return {engine,init,refresh(){},render(){},busy:()=>true,toast(){},get view(){return 'setup';}};
+ }
+ function createFeatures(engine,callbacks){
+  let view='dashboard',publicId=null,lastKey='',loading=false,remote=null,adminData=null,adminRevision=-1,adminLoading=false,leaderMetric='xp',leaderPeriod='all',leaderQuery='',leaderPage=1,inventoryKind='all',inventoryRarity='all',inventoryOwned=true,itemPreview=null,questFilter='all',selectedDefinition=null,selectedItem=null;
+  const rootNode=$('v2-feature-panels'),sections={};root.CasinoPreferences=engine.platform.profile?.settings||{};navigate(engine,callbacks);
+  for(const name of views){const section=el('section','','club-view');section.id='v2-'+name+'-view';section.hidden=true;section.setAttribute('role','tabpanel');section.setAttribute('aria-labelledby','tab-'+name);const shell=el('div','','v2-shell');section.append(shell);rootNode.append(section);sections[name]=shell;}
+  const adminRoot=$('v2-admin-tools');$('admin-panel').append(adminRoot);
+  async function action(command,args=[],success='已保存。',confirmation){
+   if(callbacks.locked()){callbacks.notify('请先等待当前操作完成。',true);return false;}
+   if(confirmation&&!await confirmAction(confirmation))return false;
+   try{await engine.send(command,args,{admin:command.startsWith('admin.')});remote=null;lastKey='';callbacks.changed();callbacks.notify(success);if(['clubs','leaderboard','profile'].includes(view))await load();return true;}catch(error){callbacks.notify(error.message,true);return false;}
+  }
+  function formSubmit(form,handler){form.addEventListener('submit',event=>{event.preventDefault();Promise.resolve(handler()).catch(error=>callbacks.notify(error.message,true));});}
+  function heading(parent,title,subtitle){const h=el('header','','v2-heading'),left=el('div');left.append(el('p','ROULETTE CLUB · PLAYER','club-eyebrow'),el('h2',title));if(subtitle)message(left,subtitle);h.append(left);parent.append(h);}
+  function row(parent,label,detail,control){const r=el('div','','v2-row'),description=el('div',label);if(detail)description.append(el('small',detail));r.append(description);if(control)r.append(control);parent.append(r);return r;}
+  function tile(parent,label,value,detail){const c=card(label);c.append(el('div',fmt(value),'v2-number'));if(detail)message(c,detail);parent.append(c);return c;}
+  function data(){return engine.platform||{};}
+  function profile(parent){const own=!publicId||publicId===engine.active.id,p=data(),u=own?{id:engine.active.id,name:engine.active.name,...p.profile,xp:p.progress.xp,level:p.progress.level}:remote;
+   if(!u){message(parent,'正在载入资料…');return;}const c=card(u.name),avatar=el('div',u.avatar&&u.avatar!=='initial'?{star:'S',moon:'M',diamond:'D'}[u.avatar]||u.name[0]:u.name[0],'v2-profile-avatar');
+   if(u.equipped?.frame)avatar.dataset.frame=u.equipped.frame;if(u.equipped?.background)c.dataset.background=u.equipped.background;c.classList.add('v2-profile');c.append(avatar);
+   message(c,`Lv. ${u.level||1} · ${fmt(u.xp||0)} XP`);if(u.equipped?.title)message(c,p.items.find(i=>i.id===u.equipped.title)?.name||'');message(c,u.bio||'还没有个人介绍。');
+   const badges=el('div','','v2-tabs');for(const id of u.featuredBadges||[])badges.append(el('span',p.items.find(i=>i.id===id)?.name||id,'v2-pill'));c.append(badges);parent.append(c);
+   if(!own){if(u.balance!==undefined)message(c,'公开余额 '+fmt(u.balance));c.append(button('返回我的资料',()=>callbacks.setView('profile')));return;}
+   const form=card('编辑资料'),name=input(form,'显示名称',engine.active.name),bio=input(form,'个人介绍',u.bio||''),avatarChoice=select(form,'头像样式',[['initial','姓名首字'],['star','星光 S'],['moon','月夜 M'],['diamond','钻石 D']],u.avatar||'initial');name.maxLength=24;name.required=true;bio.maxLength=180;
+   form.append(button('保存资料',()=>action('profile.update',[{name:name.value,bio:bio.value,avatar:avatarChoice.value}])));parent.append(form);
+  }
+  function dashboard(parent){const p=data(),prog=p.progress,cfg=p.definitions.find(d=>d.kind==='settings'),grid=el('div','','v2-grid');tile(grid,'正式钱包',engine.active.recovery?0:engine.active.balance,'沿用已有筹码，非现金资产');tile(grid,'成长等级','Lv. '+prog.level,fmt(prog.xp)+' XP');tile(grid,'V2 完成对局',prog.games,'不含历史补算与沙盒');tile(grid,'已解锁成就',Object.keys(prog.achievements).length);parent.append(grid);
+   const c=card('下一等级'),floor=cfg.levelFactor*(prog.level-1)**2,next=cfg.levelFactor*prog.level**2;progress(c,prog.xp-floor,next-floor);message(c,`${fmt(prog.xp)} / ${fmt(next)} XP · 还需 ${fmt(next-prog.xp)} XP`);c.append(button('查看任务',()=>callbacks.setView('quests')),button('每日签到',()=>callbacks.setView('rewards')));parent.append(c);
+   if(p.maintenance)parent.append(el('p','只读维护已开启，暂不能下注、转账或领取奖励。','v2-notice'));
+  }
+  function settings(parent){const p=data().profile,c=card('隐私和偏好');const visible=check(c,'向成员展示余额，并加入余额榜',p.walletVisible),sound=check(c,'允许游戏音效',p.settings.sound),motion=check(c,'减少动态效果',p.settings.reducedMotion);
+   message(c,'欠款、借贷明细、卡包和私有游戏记录始终只向本人及授权管理员展示。关闭余额展示后，服务端也会从成员响应与榜单中移除余额。');c.append(button('保存设置',()=>action('profile.settings',[{walletVisible:visible.checked,sound:sound.checked,reducedMotion:motion.checked}])));parent.append(c);}
+  function rewards(parent){const p=data(),prog=p.progress,cfg=p.definitions.find(d=>d.kind==='settings'),c=card('七日签到'),calendar=el('div','','v2-day-grid'),claimed=prog.lastDaily===p.periods.day;
+   cfg.dailyXP.forEach((xp,i)=>{const d=el('div','第 '+(i+1)+' 天','v2-day');d.dataset.current=String((prog.streak||1)===i+1);d.append(el('strong',xp+' XP'));calendar.append(d);});c.append(calendar);message(c,'断签后从第一天重新开始；第七天获得纪念徽章。同款不重复生成，不兑换筹码。');
+   c.append(button(claimed?'今日已领取':'领取今日奖励',()=>action('reward.claim',[],'签到奖励已到账。'),claimed));const countdown=el('p','','v2-muted');countdown.dataset.countdown=String(p.periods.nextDay);c.append(countdown);parent.append(c);}
+  function quests(parent){const filters=el('div','','v2-tabs');for(const [kind,label]of [['all','全部'],['day','每日'],['week','每周'],['alltime','一次性'],['event','活动']])filters.append(button(label,()=>{questFilter=kind;lastKey='';render();}));parent.append(filters);const grid=el('div','','v2-grid');
+   for(const q of data().quests.filter(q=>questFilter==='all'||q.period===(questFilter==='alltime'?'all':questFilter))){const c=card(q.name);message(c,`${fmt(q.progress)} / ${fmt(q.target)} · 奖励 ${fmt(q.xp||0)} XP`);progress(c,q.progress,q.target);if(q.endsAt){const t=el('p','','v2-muted');t.dataset.countdown=String(q.endsAt);c.append(t);}c.append(button(q.claimed?'已领取':'领取奖励',()=>action('quest.claim',[q.id],'任务奖励已领取。'),q.claimed||q.progress<q.target));grid.append(c);}if(!grid.children.length)message(grid,'当前没有这类任务。');parent.append(grid);}
+  function achievements(parent){const p=data(),grid=el('div','','v2-grid');for(const d of p.definitions.filter(d=>d.kind==='achievement'&&(d.enabled||p.progress.achievements[d.id]))){const earned=p.progress.achievements[d.id],c=card(d.name),source=p.progress[d.period]||p.progress,values={games:source.games,types:Object.keys(source.types||source.gameTypes||{}).length,profile:Number(p.progress.profileCompleted),club:p.progress.clubsJoined,quests:p.progress.questsCompleted,items:p.inventory.length},amount=earned?d.target:Math.min(d.target,values[d.condition]||0);message(c,(d.category||'Achievements')+' · '+(earned?'已解锁':'尚未解锁'));message(c,`${fmt(amount)} / ${fmt(d.target)} · ${d.condition}`);progress(c,amount,d.target);for(const id of d.itemIds||[])c.append(el('span',p.items.find(i=>i.id===id)?.name||id,'v2-pill'));if(earned)message(c,new Date(earned).toLocaleString());grid.append(c);}parent.append(grid);}
+  function inventory(parent){const p=data(),controls=el('div','','v2-filters');select(controls,'分类',[['all','全部'],['frame','头像框'],['badge','徽章'],['title','称号'],['background','背景'],['souvenir','纪念品']],inventoryKind).addEventListener('change',event=>{inventoryKind=event.target.value;lastKey='';render();});select(controls,'稀有度',[['all','全部'],['common','普通'],['rare','稀有'],['epic','史诗'],['legendary','传说']],inventoryRarity).addEventListener('change',event=>{inventoryRarity=event.target.value;lastKey='';render();});check(controls,'仅看已拥有',inventoryOwned).addEventListener('change',event=>{inventoryOwned=event.target.checked;lastKey='';render();});parent.append(controls);
+   const grid=el('div','','v2-grid'),owned=new Map(p.inventory.map(i=>[i.itemId,i]));for(const item of [...p.items].filter(i=>(inventoryKind==='all'||i.kind===inventoryKind)&&(inventoryRarity==='all'||i.rarity===inventoryRarity)&&(!inventoryOwned||owned.has(i.id))).sort((a,b)=>a.name.localeCompare(b.name))){const c=card(item.name);c.classList.add('v2-item');c.dataset.rarity=item.rarity;c.append(el('div',item.name,'v2-item-preview'));const rarity=el('span',item.rarity,'v2-pill');rarity.dataset.rarity=item.rarity;c.append(rarity);message(c,item.description);const ownership=owned.get(item.id);message(c,ownership?'获得于 '+new Date(ownership.createdAt).toLocaleString()+' · '+ownership.source:'尚未拥有');
+    c.append(button('查看 / 预览',()=>{itemPreview=item;lastKey='';render();}));if(ownership&&item.enabled){if(['frame','title','background'].includes(item.kind)){const equipped=p.profile.equipped[item.kind]===item.id;c.append(button(equipped?'取消装备':'装备',()=>action('inventory.equip',[item.kind,equipped?null:item.id])));}else if(item.kind==='badge'){const featured=p.profile.featuredBadges.includes(item.id);c.append(button(featured?'取消展示':'精选展示',()=>action('inventory.equip',['badges',featured?p.profile.featuredBadges.filter(id=>id!==item.id):[...p.profile.featuredBadges,item.id]]),!featured&&p.profile.featuredBadges.length>=3));}}grid.append(c);}
+   if(itemPreview){const preview=card('预览 · '+itemPreview.name);preview.append(el('div',engine.active.name+' · '+itemPreview.name,'v2-item-preview'));message(preview,itemPreview.description);preview.append(button('关闭预览',()=>{itemPreview=null;lastKey='';render();}));parent.append(preview);}if(!grid.children.length)message(grid,'没有符合筛选的物品。');parent.append(grid);}
+  async function load(){if(loading)return;loading=true;try{if(view==='leaderboard')remote=await engine.api(`/api/leaderboards?metric=${leaderMetric}&period=${leaderPeriod}&page=${leaderPage}&query=${encodeURIComponent(leaderQuery)}`);else if(view==='clubs')remote=await engine.api('/api/clubs');else if(view==='profile'&&publicId&&publicId!==engine.active.id)remote=await engine.api('/api/players/'+encodeURIComponent(publicId));}catch(error){callbacks.notify(error.message,true);remote={error:error.message};}finally{loading=false;lastKey='';render();}}
+  function leaderboard(parent){const controls=el('div','','v2-filters');select(controls,'排行',[['xp','XP'],['wallet','余额'],['games','完成对局'],['achievements','成就'],['activity','活动']],leaderMetric).addEventListener('change',event=>{leaderMetric=event.target.value;leaderPage=1;remote=null;load();});select(controls,'时间',[['all','V2 累计'],['week','本周'],['month','本月']],leaderPeriod).addEventListener('change',event=>{leaderPeriod=event.target.value;leaderPage=1;remote=null;load();});const search=input(controls,'搜索玩家',leaderQuery,'search');search.addEventListener('change',()=>{leaderQuery=search.value;leaderPage=1;remote=null;load();});parent.append(controls);message(parent,leaderMetric==='wallet'?'当前正式余额，包含旧余额和管理员调整；未公开余额的玩家不进入本榜。':'只统计 V2 正式活动。相同数值并列排名；沙盒不计入。');
+   if(!remote){message(parent,'正在载入排行榜…');return;}if(remote.error){message(parent,remote.error);return;}const wrap=el('div','','v2-table-wrap'),table=el('table','','v2-table'),head=el('tr');for(const name of ['RANK','玩家','等级','数值'])head.append(el('th',name));table.append(head);
+   for(const item of remote.rows){const r=el('tr');r.dataset.self=String(item.id===engine.active.id);const name=el('td'),link=el('a',item.name);link.href='#profile/'+item.id;link.addEventListener('click',event=>{event.preventDefault();callbacks.setView('profile/'+item.id);});name.append(link);r.append(el('td','#'+item.rank),name,el('td','Lv. '+item.level),el('td',fmt(item.score)));table.append(r);}wrap.append(table);parent.append(wrap);const paging=el('div','','v2-actions');paging.append(button('上一页',()=>{leaderPage--;remote=null;load();},leaderPage<=1),el('span',`${remote.page} / ${remote.pages}`,'v2-muted'),button('下一页',()=>{leaderPage++;remote=null;load();},leaderPage>=remote.pages));parent.append(paging);if(!remote.rows.length)message(parent,'没有匹配玩家。');}
+  function clubs(parent){const result=remote||data().club;if(!result){message(parent,'正在载入俱乐部…');return;}if(result.error){message(parent,result.error);return;}
+   for(const invite of result.incoming||[]){const c=card('俱乐部邀请 · '+invite.clubName);message(c,'有效期至 '+new Date(invite.expiresAt).toLocaleString());c.append(button('接受',()=>action('club.respond',[invite.id,true],'已加入俱乐部。')),button('拒绝',()=>action('club.respond',[invite.id,false])));parent.append(c);}
+   if(!result.club){const c=card('创建私有俱乐部'),name=input(c,'俱乐部名称'),description=input(c,'介绍');name.maxLength=32;description.maxLength=200;c.append(button('创建',()=>action('club.create',[{name:name.value,description:description.value}],'俱乐部已创建。')));message(c,'每人同时只能加入一个俱乐部。也可以等待朋友发来邀请。');parent.append(c);return;}
+   const club=result.club,isOwner=club.ownerId===engine.active.id,c=card(club.name);message(c,club.description);message(c,isOwner?'你是俱乐部所有者':'你是俱乐部成员');c.append(button('退出俱乐部',()=>action('club.leave',[],'已退出。','确认退出当前俱乐部？贡献记录会保留。')));parent.append(c);
+   const challenge=card('本周团队挑战');progress(challenge,result.challenge.progress,result.challenge.target);message(challenge,`${result.challenge.progress} / ${result.challenge.target} 局 · 参与成员可领取 100 XP`);challenge.append(button(result.challenge.claimed?'已领取':'领取团队奖励',()=>action('club.claim',[],'团队奖励已领取。'),result.challenge.claimed||result.challenge.progress<50||!result.challenge.participated));parent.append(challenge);
+   const members=card('成员与本周贡献');for(const member of result.members){const person=engine.directory.find(u=>u.id===member.id),count=result.leaderboard.find(u=>u.playerId===member.id)?.rounds||0,actions=el('div','','v2-actions');if(isOwner&&member.id!==engine.active.id)actions.append(button('转移所有权',()=>action('club.transfer',[member.id],'所有权已转移。','确认将俱乐部交给 '+person?.name+'？')),button('移除',()=>action('club.remove',[member.id],'已移除成员。','确认移除该成员？')));row(members,person?.name||member.id,`${count} 局${club.ownerId===member.id?' · Owner':''}`,actions);}parent.append(members);
+   if(isOwner){const manage=card('俱乐部管理'),name=input(manage,'名称',club.name),description=input(manage,'介绍',club.description);manage.append(button('保存介绍',()=>action('club.update',[{name:name.value,description:description.value}])));const recipient=select(manage,'邀请朋友',engine.directory.filter(u=>!result.members.some(m=>m.id===u.id)).map(u=>[u.id,u.name]));manage.append(button('发送邀请',()=>action('club.invite',[recipient.value],'邀请已发送。'),!recipient.options.length));for(const invitation of result.outgoing||[])row(manage,engine.directory.find(u=>u.id===invitation.targetId)?.name||invitation.targetId,'邀请待处理',button('撤销',()=>action('club.revoke',[invitation.id])));manage.append(button('归档俱乐部',()=>action('club.archive',[],'俱乐部已归档。','确认归档俱乐部？需要先移除其他成员。')));parent.append(manage);}
+   const feed=card('俱乐部动态');for(const event of result.feed||[])row(feed,event.kind,new Date(event.createdAt).toLocaleString());if(!result.feed?.length)message(feed,'还没有活动记录。');parent.append(feed);
+  }
+  async function loadAdmin(){if(adminLoading||!engine.auth?.admin)return;adminLoading=true;try{adminData=await engine.api('/api/admin/overview');adminRevision=engine.revision;engine.adminPlayers=adminData.players;lastKey='';renderAdmin();callbacks.changed();}catch(error){callbacks.notify(error.message,true);}finally{adminLoading=false;}}
+  function renderAdmin(){adminRoot.hidden=!engine.auth?.admin;if(!adminData||!engine.auth?.admin)return;adminRoot.replaceChildren();const head=card('ADMIN V2 · 权限与系统');message(head,'敏感操作需要角色权限和 Windows Hello。旧玩家由管理员绑定，不开放自行认领。');head.append(button('进入独立沙盒',async()=>{try{await engine.setSandbox(true);callbacks.setView('slots');callbacks.changed();}catch(e){callbacks.notify(e.message,true);}}));
+   head.append(button(adminData.maintenance?'恢复服务':'开启只读维护',()=>action('admin.maintenance',[!adminData.maintenance,adminData.maintenance?'owner resumes service':'owner starts maintenance'],'维护状态已更新。','确认切换维护状态？')));
+   head.append(button('下载一致性备份',async()=>{try{const backup=await engine.api('/api/admin/backup');download(backup,'roulette-club-v2-backup-'+new Date().toISOString().slice(0,10)+'.json');callbacks.notify('备份已下载，请保存在私密位置。');}catch(error){callbacks.notify(error.message,true);}}));message(head,'导出前必须开启只读维护。备份包含私人资料，请勿公开分享。');adminRoot.append(head);
+   const accounts=card('账号与旧玩家绑定');message(accounts,'先通过站点共享功能邀请朋友。朋友首次登录后，会显示为待绑定账号。');for(const a of adminData.accounts){const box=card(a.email||a.actor);message(box,`${a.role} · ${a.status} · ${adminData.players.find(p=>p.id===a.playerId)?.name||'未绑定'}`);
+    if(!a.playerId){const choice=select(box,'绑定已有玩家',adminData.players.filter(u=>!adminData.accounts.some(other=>other.playerId===u.id)).map(u=>[u.id,u.name]));box.append(button('绑定',()=>action('admin.bind',[a.actor,choice.value],'已绑定。','确认将该旧玩家分配给此账号？')));}
+    if(engine.auth.role==='owner'&&a.role!=='owner'){const role=select(box,'角色',[['member','成员'],['admin','管理员']],a.role),status=select(box,'状态',[['active','启用'],['suspended','停用'],['pending','待绑定']],a.status),reason=input(box,'修改原因');box.append(button('保存角色 / 状态',()=>action('admin.account',[a.actor,role.value,status.value,reason.value],'账号已更新。','确认更改该账号的权限？')));}accounts.append(box);}adminRoot.append(accounts);
+   const config=card('成长设置'),cfg=adminData.definitions.find(d=>d.kind==='settings'),game=input(config,'每局 XP',cfg.gameXP,'number'),cap=input(config,'每日对局 XP 上限',cfg.dailyGameCap,'number'),factor=input(config,'等级门槛系数',cfg.levelFactor,'number'),days=cfg.dailyXP.map((n,i)=>input(config,'第 '+(i+1)+' 天 XP',n,'number'));config.append(button('保存成长配置',()=>action('admin.definition',[{...cfg,gameXP:Number(game.value),dailyGameCap:Number(cap.value),levelFactor:Number(factor.value),dailyXP:days.map(n=>Number(n.value))}])));adminRoot.append(config);
+   const definitions=card('任务与成就配置');for(const d of adminData.definitions.filter(d=>d.kind!=='settings'))row(definitions,d.name,`${d.kind} · v${d.version} · ${d.enabled?'启用':'停用'}`,button('编辑',()=>{selectedDefinition=d;renderAdmin();}));definitions.append(button('新增任务',()=>{selectedDefinition={kind:'quest',period:'day',condition:'games',target:1,xp:20,enabled:true};renderAdmin();}),button('新增成就',()=>{selectedDefinition={kind:'achievement',period:'all',condition:'games',target:1,xp:0,enabled:true};renderAdmin();}));adminRoot.append(definitions);
+   if(selectedDefinition){const d=selectedDefinition,f=card('编辑 '+(d.name||'新定义')),name=input(f,'名称',d.name||''),period=select(f,'周期',[['day','每日'],['week','每周'],['month','每月'],['all','一次性'],['event','限时活动']],d.period),condition=select(f,'目标',[['games','完成对局'],['types','不同游戏数'],['profile','完善资料'],['club','加入俱乐部'],['quests','领取任务数'],['items','收藏数量']],d.condition),target=input(f,'目标数量',d.target,'number'),xp=input(f,'XP 奖励',d.xp||0,'number'),item=select(f,'装饰奖励',[['','无'],...adminData.items.filter(i=>i.enabled).map(i=>[i.id,i.name])],d.itemIds?.[0]||''),enabled=check(f,'启用',d.enabled),start=input(f,'活动开始（北京时间）',d.startsAt?new Date(d.startsAt+28800000).toISOString().slice(0,16):'','datetime-local'),end=input(f,'活动结束（北京时间）',d.endsAt?new Date(d.endsAt+28800000).toISOString().slice(0,16):'','datetime-local');
+    f.append(button('保存定义',async()=>{const value={...d,id:d.id||crypto.randomUUID(),name:name.value,period:period.value,condition:condition.value,target:Number(target.value),xp:Number(xp.value),itemIds:item.value?[item.value]:[],enabled:enabled.checked};if(period.value==='event'){value.startsAt=Date.parse(start.value+':00+08:00');value.endsAt=Date.parse(end.value+':00+08:00');}if(await action('admin.definition',[value])){selectedDefinition=null;await loadAdmin();}}),button('关闭编辑',()=>{selectedDefinition=null;renderAdmin();}));adminRoot.append(f);}
+   const items=card('收藏与称号配置');for(const i of adminData.items)row(items,i.name,i.kind+' · '+i.rarity,button('编辑',()=>{selectedItem=i;renderAdmin();}));items.append(button('新增装饰品',()=>{selectedItem={kind:'badge',rarity:'common',enabled:true};renderAdmin();}));adminRoot.append(items);
+   if(selectedItem){const i=selectedItem,f=card('编辑装饰品'),name=input(f,'名称',i.name||''),description=input(f,'描述',i.description||''),kind=select(f,'分类',[['badge','徽章'],['frame','头像框'],['title','称号'],['background','背景'],['souvenir','纪念品']],i.kind),rarity=select(f,'稀有度',[['common','普通'],['rare','稀有'],['epic','史诗'],['legendary','传说']],i.rarity),enabled=check(f,'启用',i.enabled);f.append(button('保存物品',async()=>{if(await action('admin.item',[{id:i.id||crypto.randomUUID(),name:name.value,description:description.value,kind:kind.value,rarity:rarity.value,enabled:enabled.checked}])){selectedItem=null;await loadAdmin();}}),button('关闭编辑',()=>{selectedItem=null;renderAdmin();}));adminRoot.append(f);}
+   const moderation=card('俱乐部管理');for(const c of adminData.clubs.filter(c=>!c.archived)){const box=card(c.name),reason=input(box,'归档原因');box.append(button('归档 / 解除成员',()=>action('admin.club',[c.id,reason.value],'俱乐部已归档。','确认归档此俱乐部并解除其成员关系？')));moderation.append(box);}adminRoot.append(moderation);
+   const journal=card('永久审计与调整补偿'),list=el('ol','','v2-log');for(const e of adminData.journal){const li=el('li',`${new Date(e.createdAt).toLocaleString()} · ${e.actor} · ${e.kind} · ${e.asset}: ${e.before} → ${e.after} · ${e.reason||''}`);if(e.kind==='adminAdjust'&&e.asset==='cash'){const reason=input(li,'补偿原因');li.append(button('关联补偿',()=>action('admin.compensate',[e.id,reason.value],'已追加补偿交易。','确认追加一笔反向补偿？原流水不会被修改。')));}list.append(li);}journal.append(list);message(journal,'这里只展示最近 100 条；全部记录保存在永久账本，备份包含完整记录。');adminRoot.append(journal);
+   const logs=card('系统健康与事件');message(logs,`V2 · revision ${adminData.health.revision} · 数据准备 ${adminData.health.ready?'完成':'进行中'}`);const eventList=el('ol','','v2-log');for(const event of adminData.events)eventList.append(el('li',`${new Date(event.createdAt).toLocaleString()} · ${event.kind} · ${event.actor||event.playerId||'system'}`));logs.append(eventList);logs.append(button('查看近 30 日统计',async()=>{try{const stats=await engine.api('/api/admin/analytics');const panel=card('近 30 日统计');message(panel,'24 小时活跃玩家 '+stats.activePlayers24h);message(panel,stats.accounting);message(panel,`筹码增加 ${fmt(stats.cashIncreases)} · 减少 ${fmt(stats.cashDecreases)}`);for(const x of stats.events)row(panel,x.kind,String(x.count));for(const x of stats.claims)row(panel,'奖励 '+x.kind,String(x.count));logs.append(panel);}catch(e){callbacks.notify(e.message,true);}}));adminRoot.append(logs);
+  }
+  function tick(){for(const node of rootNode.querySelectorAll('[data-countdown]')){const seconds=Math.max(0,Math.ceil((Number(node.dataset.countdown)-engine.now())/1000));node.textContent=`重置 / 到期还剩 ${Math.floor(seconds/3600)} 时 ${Math.floor(seconds%3600/60)} 分 ${seconds%60} 秒`;}}
+  function render(){const p=data();$('v2-sandbox-banner').hidden=p.mode!=='sandbox';if(!engine.auth?.admin){adminRoot.hidden=true;adminData=null;engine.adminPlayers=[];}if(!p.progress)return;for(const id of Object.keys(p.progress.achievements))if(!seen.has(id)){seen.add(id);callbacks.notify('成就解锁：'+(p.definitions.find(d=>d.id===id)?.name||id));}root.CasinoPreferences=p.profile?.settings||{};document.body.dataset.reducedMotion=String(Boolean(p.profile?.settings.reducedMotion));$('v2-sandbox-banner').hidden=p.mode!=='sandbox';
+   for(const d of $('club-player-tabs').querySelectorAll('details'))d.dataset.active=String(groups.find(g=>g.id===d.dataset.group)?.items.some(i=>i[0]===view));
+   if(view==='admin'&&engine.auth.admin&&adminRevision!==engine.revision&&!adminLoading)loadAdmin();
+   const key=engine.money.stringify([view,publicId,p,remote,inventoryKind,inventoryRarity,inventoryOwned,itemPreview,questFilter]);if(key===lastKey)return;lastKey=key;
+   const parent=sections[view];if(!parent)return;const active=document.activeElement,selection=active&&parent.contains(active)?{index:[...parent.querySelectorAll('input,textarea,select')].indexOf(active),value:active.value,start:active.selectionStart,end:active.selectionEnd}:null;
+   parent.replaceChildren();heading(parent,groups.flatMap(g=>g.items).find(i=>i[0]===view)?.[1]||view,'仅使用当前账号可访问的数据。');
+   ({dashboard,profile,settings,rewards,quests,achievements,inventory,leaderboard,clubs})[view]?.(parent);tick();
+   if(selection){const field=parent.querySelectorAll('input,textarea,select')[selection.index];if(field){field.value=selection.value;field.focus({preventScroll:true});if(typeof field.setSelectionRange==='function'&&selection.start!==null)try{field.setSelectionRange(selection.start,selection.end);}catch{}}}
+  }
+  $('v2-sandbox-exit').addEventListener('click',async()=>{if(callbacks.locked())return;try{await engine.setSandbox(false);lastKey='';callbacks.changed();}catch(e){callbacks.notify(e.message,true);}});
+  let seen=new Set(Object.keys(data().progress?.achievements||{}));
+  return {render,tick,confirm:confirmAction,paint(next,route){const prior=view,priorId=publicId;view=next;publicId=next==='profile'?route?.split('/')[1]||null:null;for(const [name,shell]of Object.entries(sections))shell.parentElement.hidden=name!==view;if(prior!==view||priorId!==publicId){lastKey='';remote=null;if(['leaderboard','clubs','profile'].includes(view))load();}render();},get views(){return views;}};
+ }
+ root.CasinoV2={groups,views,createFeatures,createOnboarding,confirm:confirmAction};
+})(globalThis);
+
 function createCasinoClub(roulette) {
     'use strict';
     let browserStorage;
     try { browserStorage = window.localStorage; } catch { /* Session mode is supported. */ }
     const engine = new CasinoEngine(browserStorage);
+    if (engine.platform && !engine.platform.account.playerId) return CasinoV2.createOnboarding(roulette);
+    const v2 = Boolean(engine.platform), directory = () => engine.directory || engine.data.users;
     if (!browserStorage && !engine.remote) engine.storageWarning = 'Browser storage is unavailable. This session is temporary.';
     for (const key of ['balance', 'bets', 'lastBets', 'history']) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, plinko, dice, lottery, customRoulette, economy, playerLoans, accounts, admin, distress, adminPage = 1, recoveryPlayer = null, pendingDelete = null;
+    let view = 'roulette', toastTimer, lucky, blackjack, plinko, dice, lottery, features, customRoulette, economy, playerLoans, accounts, admin, distress, adminPage = 1, recoveryPlayer = null, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -4734,7 +4900,7 @@ function createCasinoClub(roulette) {
         $('club-user').replaceChildren(...engine.data.users.map(option));
         $('club-user').value = u.id;
         $('club-user').disabled = viewLocked();
-        $('transfer-user').replaceChildren(...engine.data.users.filter(p => p.id !== u.id).map(option));
+        $('transfer-user').replaceChildren(...directory().filter(p => p.id !== u.id).map(option));
         if ([...$('transfer-user').options].some(o => o.value === selectedRecipient)) $('transfer-user').value = selectedRecipient;
         const visualWallet = (view === 'plinko' ? plinko?.displayBalance : view === 'dice' ? dice?.displayBalance : view === 'lottery' ? lottery?.displayBalance : lucky?.displayBalance) ?? u.balance;
         $('club-wallet').textContent = u.recovery ? `-${fmt(u.recovery.deficit)} · 可用 ${fmt(visualWallet)} ₵` : `${fmt(visualWallet)} ₵`;
@@ -4743,9 +4909,9 @@ function createCasinoClub(roulette) {
         $('bank-debt').textContent = fmt(u.debt);
         $('bank-credit').textContent = fmt(engine.availableCredit);
         $('club-storage-note').textContent = engine.storageWarning;
-        const adminSelection = CasinoAccounts.selectPlayers(engine.data.users,{query:$('admin-player-search').value,page:adminPage});
+        const adminSelection = CasinoAccounts.selectPlayers(v2 ? (engine.adminPlayers || []) : engine.data.users,{query:$('admin-player-search').value,page:adminPage});
         adminPage = adminSelection.page;
-        $('admin-player-count').textContent = `${adminSelection.total} 位匹配 · 共 ${engine.data.users.length} 位玩家`;
+        $('admin-player-count').textContent = `${adminSelection.total} 位匹配 · 共 ${(v2 ? engine.adminPlayers || [] : engine.data.users).length} 位玩家`;
         $('admin-player-page').textContent = `${adminPage} / ${adminSelection.pages}`;
         $('admin-player-prev').disabled = adminPage === 1; $('admin-player-next').disabled = adminPage === adminSelection.pages;
         $('club-player-list').replaceChildren(...adminSelection.rows.map(p => {
@@ -4757,11 +4923,11 @@ function createCasinoClub(roulette) {
             detail.textContent = `${p.recovery ? '-' + fmt(p.recovery.deficit) + ' · 可用 ' : ''}${fmt(p.balance)} chips · ${fmt(engine.money.add(p.debt, p.sharkDebt))} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
             data.append(name, detail);
             const button = document.createElement('button'); button.type = 'button'; button.className = 'club-action secondary';
-            button.textContent = p.id === u.id ? 'Playing' : 'Switch';
-            button.disabled = p.id === u.id || viewLocked();
-            button.addEventListener('click', () => switchPlayer(p.id));
+            button.textContent = v2 ? '查看资料' : p.id === u.id ? 'Playing' : 'Switch';
+            button.disabled = (!v2 && p.id === u.id) || viewLocked();
+            button.addEventListener('click', () => v2 ? setView('profile/'+p.id) : switchPlayer(p.id));
             const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'club-action secondary danger';
-            remove.textContent = pendingDelete === p.id ? '再次点击确认永久删除（含余额）' : '删除';
+            remove.textContent = pendingDelete === p.id ? (v2 ? '再次点击确认归档（保留审计）' : '再次点击确认永久删除（含余额）') : (v2 ? '归档' : '删除');
             remove.disabled = viewLocked() || engine.data.users.length === 1 || !admin?.unlocked;
             remove.addEventListener('click', async () => {
                 if (!admin?.unlocked) { toast('请先使用 Windows Hello 解锁管理入口。',true); return; }
@@ -4785,6 +4951,7 @@ function createCasinoClub(roulette) {
         playerLoans?.render();
         accounts?.render();
         distress?.render(view);
+        features?.render();
     }
     function refresh() { engine.save(); render(); }
     function paintView() {
@@ -4804,14 +4971,18 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('.club-roulette-hud, #roulette-controls, #hint-pill, #status-banner, #canvas-container').forEach(el => {
             if (view === 'roulette') el.style.removeProperty('display'); else el.style.display = 'none';
         });
+        features?.paint(view, window.location.hash.slice(1));
         render();
     }
     function setView(next) {
-        if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(next)) return;
+        const route = next; next = next.split('/')[0];
+        if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(next) && !(v2 && CasinoV2.views.includes(next))) return;
+        if (engine.platform?.mode === 'sandbox' && !['roulette','slots','blackjack','plinko','dice','lottery','admin'].includes(next)) { toast('请先退出管理员沙盒。',true); return; }
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
         paintView();
-        try { window.history.replaceState(null, '', '#' + view); } catch { /* Local file previews still work. */ }
+        features?.paint(view, route);
+        try { window.history.replaceState(null, '', '#' + route); } catch { /* Local file previews still work. */ }
     }
     function switchPlayer(id) {
         try {
@@ -4830,9 +5001,11 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
+        if (v2) features = CasinoV2.createFeatures(engine,{locked:viewLocked,changed:()=>updateBettingHUD(),notify:toast,setView});
         bindJackpotShortcut(window, () => {
             if (distress?.blocking) return false;
             if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery'].includes(view)) return false;
+            if (v2 && engine.platform.mode !== 'sandbox') { toast('特殊开奖仅在 ADMIN 独立沙盒开放。', true); return; }
             if (roulette.isChargingSpin || roulette.isDraggingTurret || lucky?.dragging) { toast('Release the controls before using the shortcut.', true); return; }
             if (view === 'blackjack') blackjack.forceJackpot();
             else if (view === 'plinko') plinko.forceJackpot();
@@ -4864,7 +5037,7 @@ function createCasinoClub(roulette) {
         });
         admin = createAdminUI(engine, {locked:viewLocked,transact,changed:()=>{lucky.resetPlayer();render();}});
         distress = createDistressUI(engine, {locked:viewLocked,openBank:()=>setView('bank')});
-        accounts = createAccountUI(engine, {locked:viewLocked,transact,switchPlayer,notify:toast});
+        accounts = createAccountUI(engine, {locked:viewLocked,transact,switchPlayer,profile:id=>setView('profile/'+id),notify:toast});
         if(engine.remote) engine.onChange = render;
         $('admin-player-search').addEventListener('input',()=>{adminPage=1;pendingDelete=null;render();});
         $('admin-player-prev').addEventListener('click',()=>{adminPage--;pendingDelete=null;render();});
@@ -4899,7 +5072,7 @@ function createCasinoClub(roulette) {
         window.addEventListener('keyup', e => {
             if (e.code === 'Space' && (view !== 'roulette' || e.target.closest('input, select, textarea, button'))) e.stopImmediatePropagation();
         });
-        document.querySelectorAll('[role="tab"]').forEach(tab => tab.addEventListener('keydown', e => {
+        if (!v2) document.querySelectorAll('[role="tab"]').forEach(tab => tab.addEventListener('keydown', e => {
             const tabs = [...document.querySelectorAll('[role="tab"]')];
             let i = tabs.indexOf(tab);
             if (e.key === 'ArrowRight') i = (i + 1) % tabs.length;
@@ -4909,16 +5082,16 @@ function createCasinoClub(roulette) {
             else return;
             e.preventDefault(); setView(tabs[i].dataset.view); tabs[i].focus();
         }));
-        const requestedView = window.location.pathname === '/admin' ? 'admin' : window.location.hash.slice(1);
+        const requestedView = window.location.pathname === '/admin' ? 'admin' : window.location.hash.slice(1).split('/')[0];
         if (requestedView === 'admin') view = 'admin';
         else if (blackjack.pending) view = 'blackjack';
-        else if (['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(requestedView)) view = requestedView;
+        else if (['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(requestedView) || v2 && CasinoV2.views.includes(requestedView)) view = requestedView;
         paintView();
         let lastSync = 0;
         const tick = () => {
             if(engine.remote && !viewLocked() && Date.now()-lastSync >= 5000){lastSync=Date.now();engine.sync().catch(()=>{});}
             if (engine.accrueInterest()) { engine.save(); render(); }
-            else { economy?.tick(); playerLoans?.tick(); accounts?.tick(); }
+            else { economy?.tick(); playerLoans?.tick(); accounts?.tick(); features?.tick(); }
         };
         setInterval(tick, 1000);
         window.addEventListener('focus', tick);
@@ -4948,7 +5121,7 @@ function createCasinoClub(roulette) {
             }
 
             playPocketClick(intensity = 1.0) {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 
@@ -4973,7 +5146,7 @@ function createCasinoClub(roulette) {
             }
 
             playChipSound() {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 
@@ -4994,7 +5167,7 @@ function createCasinoClub(roulette) {
             }
 
             playBallSettle() {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 
@@ -5015,7 +5188,7 @@ function createCasinoClub(roulette) {
             }
 
             playWinSound(isBigWin = false) {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 
@@ -5038,7 +5211,7 @@ function createCasinoClub(roulette) {
             }
 
             playLoseSound() {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 

@@ -1,9 +1,9 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {DatabaseSync}=require('node:sqlite');
-async function fixture(){
+async function fixture(options={}){
  const sql=new DatabaseSync(':memory:');for(const file of fs.readdirSync(path.join(__dirname,'../drizzle')).filter(f=>f.endsWith('.sql')).sort())sql.exec(fs.readFileSync(path.join(__dirname,'../drizzle',file),'utf8'));
  const DB={prepare(query){let values=[];const s={bind(...v){values=v;return s;},execute(){const r=sql.prepare(query).run(...values);return {meta:{changes:Number(r.changes)}};},async run(){return s.execute();},async first(){return sql.prepare(query).get(...values)||null;},async all(){return {results:sql.prepare(query).all(...values)};}};return s;},async batch(statements){sql.exec('BEGIN');try{const r=statements.map(s=>s.execute());sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}}};
- const {createService,ORIGIN}=await import('../worker/service.mjs'),service=createService({v2:true,bootstrapOwnerPrivate:true});
+ const {createService,ORIGIN}=await import('../worker/service.mjs'),service=createService({v2:true,bootstrapOwnerPrivate:true,...options});
  async function request(route,{actor='owner',body,step=false,protocol=2}={}){
   const headers={'oai-authenticated-user-id':actor,'oai-authenticated-user-email':actor+'@example.test','X-Club-Protocol':String(protocol)};
   if(body){headers.Origin=ORIGIN;headers['Content-Type']='application/json';}if(step)headers.Cookie='__Host-club-admin=test-session';
@@ -77,4 +77,17 @@ test('admin corrections append compensating records rather than editing history'
  assert.equal((await t.command('admin.compensate',[entry.id,'repeat reverse'],{step:true})).status,409);
  const state=await (await t.request('/api/state')).json();assert.equal(state.data.users[0].balance,1000);
  const after=await (await t.request('/api/transactions')).json();assert.equal(after.rows.find(r=>r.id===entry.id).after,'1100');assert.ok(after.rows.some(r=>r.kind==='admin.compensate'));
+});
+test('V2 profile edits and completed games grant cosmetic achievements without changing another player',async()=>{
+ const t=await fixture();await t.owner();await t.request('/api/state',{actor:'friend'});await t.command('admin.bind',['friend','jamie'],{step:true});
+ const edited=await t.command('profile.update',[{name:'Owner New',bio:'Hello <friends>',avatar:'moon'}]);assert.equal(edited.status,200);
+ assert.equal((await t.command('profile.update',[{name:'Intruder'}],{actor:'friend',playerId:'alex'})).status,403);
+ assert.equal((await t.command('inventory.equip',['title','title-newcomer'])).status,403);
+ assert.equal((await t.command('roulette.bet',['RED',1])).status,200);let state=await (await t.request('/api/state')).json();assert.equal(state.platform.progress.xp,0);
+ assert.equal((await t.command('dice',[1,'small',null])).status,200);state=await (await t.request('/api/state')).json();
+ assert.equal(state.platform.progress.games,1);assert.equal(state.platform.progress.xp,5);assert.ok(state.platform.inventory.some(i=>i.itemId==='title-newcomer'));
+ assert.equal((await t.command('inventory.equip',['title','title-newcomer'])).status,200);
+ const profile=await (await t.request('/api/players/alex',{actor:'friend'})).json();assert.equal(profile.name,'Owner New');assert.equal(profile.bio,'Hello <friends>');assert.equal(profile.equipped.title,'title-newcomer');assert.equal(profile.debt,undefined);assert.equal(profile.inventory,undefined);
+ assert.equal((await t.command('inventory.equip',['badges',['badge-week','badge-week']])).status,400);
+ const friend=await (await t.request('/api/state',{actor:'friend'})).json();assert.equal(friend.platform.progress.games,0);
 });

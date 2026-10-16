@@ -6,7 +6,7 @@ function createBlackjackTable(engine, callbacks) {
     const ranks = ['', 'A','2','3','4','5','6','7','8','9','10','J','Q','K'];
     let visible = false, animating = false, timer = null, scene = null, muted = false, audio = null, overhead = false;
     function tone(frequency, duration = .06, volume = .05) {
-        if (muted || !visible) return;
+        if (muted || !visible || window.CasinoPreferences?.sound === false) return;
         try {
             const Audio = window.AudioContext || window.webkitAudioContext;
             if (!Audio) return;
@@ -73,7 +73,7 @@ function createBlackjackTable(engine, callbacks) {
     function changed() { update(); callbacks.changed(); }
     function schedule(callback, delay) {
         if(timer!==null) clearTimeout(timer);
-        timer=setTimeout(()=>{timer=null;return callback();},reduced.matches?0:delay);
+        timer=setTimeout(()=>{timer=null;return callback();},reduced.matches||window.CasinoPreferences?.reducedMotion?0:delay);
     }
     function finishedMotion() {
         animating=false;

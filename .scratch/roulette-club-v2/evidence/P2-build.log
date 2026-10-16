@@ -1,0 +1,4 @@
+npm notice run roulette-club@1.0.0 build
+npm notice run node build.cjs && node build-worker.cjs
+Built roulette club and standalone roulette.html.
+Built server-validated casino and passkey admin.

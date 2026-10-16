@@ -318,7 +318,7 @@
             }
 
             playPocketClick(intensity = 1.0) {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 
@@ -343,7 +343,7 @@
             }
 
             playChipSound() {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 
@@ -364,7 +364,7 @@
             }
 
             playBallSettle() {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 
@@ -385,7 +385,7 @@
             }
 
             playWinSound(isBigWin = false) {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 
@@ -408,7 +408,7 @@
             }
 
             playLoseSound() {
-                if (!this.enabled) return;
+                if (!this.enabled || window.CasinoPreferences?.sound === false) return;
                 this.init();
                 if (!this.ctx) return;
 

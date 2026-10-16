@@ -3,12 +3,14 @@ function createCasinoClub(roulette) {
     let browserStorage;
     try { browserStorage = window.localStorage; } catch { /* Session mode is supported. */ }
     const engine = new CasinoEngine(browserStorage);
+    if (engine.platform && !engine.platform.account.playerId) return CasinoV2.createOnboarding(roulette);
+    const v2 = Boolean(engine.platform), directory = () => engine.directory || engine.data.users;
     if (!browserStorage && !engine.remote) engine.storageWarning = 'Browser storage is unavailable. This session is temporary.';
     for (const key of ['balance', 'bets', 'lastBets', 'history']) {
         Object.defineProperty(roulette, key, { configurable: true, enumerable: true,
             get: () => engine.active[key], set: value => { engine.active[key] = value; } });
     }
-    let view = 'roulette', toastTimer, lucky, blackjack, plinko, dice, lottery, customRoulette, economy, playerLoans, accounts, admin, distress, adminPage = 1, recoveryPlayer = null, pendingDelete = null;
+    let view = 'roulette', toastTimer, lucky, blackjack, plinko, dice, lottery, features, customRoulette, economy, playerLoans, accounts, admin, distress, adminPage = 1, recoveryPlayer = null, pendingDelete = null;
     const $ = id => document.getElementById(id);
     const fmt = n => n.toLocaleString();
     const busy = () => Boolean(engine.lock);
@@ -38,7 +40,7 @@ function createCasinoClub(roulette) {
         $('club-user').replaceChildren(...engine.data.users.map(option));
         $('club-user').value = u.id;
         $('club-user').disabled = viewLocked();
-        $('transfer-user').replaceChildren(...engine.data.users.filter(p => p.id !== u.id).map(option));
+        $('transfer-user').replaceChildren(...directory().filter(p => p.id !== u.id).map(option));
         if ([...$('transfer-user').options].some(o => o.value === selectedRecipient)) $('transfer-user').value = selectedRecipient;
         const visualWallet = (view === 'plinko' ? plinko?.displayBalance : view === 'dice' ? dice?.displayBalance : view === 'lottery' ? lottery?.displayBalance : lucky?.displayBalance) ?? u.balance;
         $('club-wallet').textContent = u.recovery ? `-${fmt(u.recovery.deficit)} · 可用 ${fmt(visualWallet)} ₵` : `${fmt(visualWallet)} ₵`;
@@ -47,9 +49,9 @@ function createCasinoClub(roulette) {
         $('bank-debt').textContent = fmt(u.debt);
         $('bank-credit').textContent = fmt(engine.availableCredit);
         $('club-storage-note').textContent = engine.storageWarning;
-        const adminSelection = CasinoAccounts.selectPlayers(engine.data.users,{query:$('admin-player-search').value,page:adminPage});
+        const adminSelection = CasinoAccounts.selectPlayers(v2 ? (engine.adminPlayers || []) : engine.data.users,{query:$('admin-player-search').value,page:adminPage});
         adminPage = adminSelection.page;
-        $('admin-player-count').textContent = `${adminSelection.total} 位匹配 · 共 ${engine.data.users.length} 位玩家`;
+        $('admin-player-count').textContent = `${adminSelection.total} 位匹配 · 共 ${(v2 ? engine.adminPlayers || [] : engine.data.users).length} 位玩家`;
         $('admin-player-page').textContent = `${adminPage} / ${adminSelection.pages}`;
         $('admin-player-prev').disabled = adminPage === 1; $('admin-player-next').disabled = adminPage === adminSelection.pages;
         $('club-player-list').replaceChildren(...adminSelection.rows.map(p => {
@@ -61,11 +63,11 @@ function createCasinoClub(roulette) {
             detail.textContent = `${p.recovery ? '-' + fmt(p.recovery.deficit) + ' · 可用 ' : ''}${fmt(p.balance)} chips · ${fmt(engine.money.add(p.debt, p.sharkDebt))} debt${CasinoEngine.sumBets(p.bets) ? ` · ${fmt(CasinoEngine.sumBets(p.bets))} on roulette` : ''}`;
             data.append(name, detail);
             const button = document.createElement('button'); button.type = 'button'; button.className = 'club-action secondary';
-            button.textContent = p.id === u.id ? 'Playing' : 'Switch';
-            button.disabled = p.id === u.id || viewLocked();
-            button.addEventListener('click', () => switchPlayer(p.id));
+            button.textContent = v2 ? '查看资料' : p.id === u.id ? 'Playing' : 'Switch';
+            button.disabled = (!v2 && p.id === u.id) || viewLocked();
+            button.addEventListener('click', () => v2 ? setView('profile/'+p.id) : switchPlayer(p.id));
             const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'club-action secondary danger';
-            remove.textContent = pendingDelete === p.id ? '再次点击确认永久删除（含余额）' : '删除';
+            remove.textContent = pendingDelete === p.id ? (v2 ? '再次点击确认归档（保留审计）' : '再次点击确认永久删除（含余额）') : (v2 ? '归档' : '删除');
             remove.disabled = viewLocked() || engine.data.users.length === 1 || !admin?.unlocked;
             remove.addEventListener('click', async () => {
                 if (!admin?.unlocked) { toast('请先使用 Windows Hello 解锁管理入口。',true); return; }
@@ -89,6 +91,7 @@ function createCasinoClub(roulette) {
         playerLoans?.render();
         accounts?.render();
         distress?.render(view);
+        features?.render();
     }
     function refresh() { engine.save(); render(); }
     function paintView() {
@@ -108,14 +111,18 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('.club-roulette-hud, #roulette-controls, #hint-pill, #status-banner, #canvas-container').forEach(el => {
             if (view === 'roulette') el.style.removeProperty('display'); else el.style.display = 'none';
         });
+        features?.paint(view, window.location.hash.slice(1));
         render();
     }
     function setView(next) {
-        if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(next)) return;
+        const route = next; next = next.split('/')[0];
+        if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(next) && !(v2 && CasinoV2.views.includes(next))) return;
+        if (engine.platform?.mode === 'sandbox' && !['roulette','slots','blackjack','plinko','dice','lottery','admin'].includes(next)) { toast('请先退出管理员沙盒。',true); return; }
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
         paintView();
-        try { window.history.replaceState(null, '', '#' + view); } catch { /* Local file previews still work. */ }
+        features?.paint(view, route);
+        try { window.history.replaceState(null, '', '#' + route); } catch { /* Local file previews still work. */ }
     }
     function switchPlayer(id) {
         try {
@@ -134,9 +141,11 @@ function createCasinoClub(roulette) {
         } catch (e) { toast(e.message, true); return false; }
     }
     function init() {
+        if (v2) features = CasinoV2.createFeatures(engine,{locked:viewLocked,changed:()=>updateBettingHUD(),notify:toast,setView});
         bindJackpotShortcut(window, () => {
             if (distress?.blocking) return false;
             if (!['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery'].includes(view)) return false;
+            if (v2 && engine.platform.mode !== 'sandbox') { toast('特殊开奖仅在 ADMIN 独立沙盒开放。', true); return; }
             if (roulette.isChargingSpin || roulette.isDraggingTurret || lucky?.dragging) { toast('Release the controls before using the shortcut.', true); return; }
             if (view === 'blackjack') blackjack.forceJackpot();
             else if (view === 'plinko') plinko.forceJackpot();
@@ -168,7 +177,7 @@ function createCasinoClub(roulette) {
         });
         admin = createAdminUI(engine, {locked:viewLocked,transact,changed:()=>{lucky.resetPlayer();render();}});
         distress = createDistressUI(engine, {locked:viewLocked,openBank:()=>setView('bank')});
-        accounts = createAccountUI(engine, {locked:viewLocked,transact,switchPlayer,notify:toast});
+        accounts = createAccountUI(engine, {locked:viewLocked,transact,switchPlayer,profile:id=>setView('profile/'+id),notify:toast});
         if(engine.remote) engine.onChange = render;
         $('admin-player-search').addEventListener('input',()=>{adminPage=1;pendingDelete=null;render();});
         $('admin-player-prev').addEventListener('click',()=>{adminPage--;pendingDelete=null;render();});
@@ -203,7 +212,7 @@ function createCasinoClub(roulette) {
         window.addEventListener('keyup', e => {
             if (e.code === 'Space' && (view !== 'roulette' || e.target.closest('input, select, textarea, button'))) e.stopImmediatePropagation();
         });
-        document.querySelectorAll('[role="tab"]').forEach(tab => tab.addEventListener('keydown', e => {
+        if (!v2) document.querySelectorAll('[role="tab"]').forEach(tab => tab.addEventListener('keydown', e => {
             const tabs = [...document.querySelectorAll('[role="tab"]')];
             let i = tabs.indexOf(tab);
             if (e.key === 'ArrowRight') i = (i + 1) % tabs.length;
@@ -213,16 +222,16 @@ function createCasinoClub(roulette) {
             else return;
             e.preventDefault(); setView(tabs[i].dataset.view); tabs[i].focus();
         }));
-        const requestedView = window.location.pathname === '/admin' ? 'admin' : window.location.hash.slice(1);
+        const requestedView = window.location.pathname === '/admin' ? 'admin' : window.location.hash.slice(1).split('/')[0];
         if (requestedView === 'admin') view = 'admin';
         else if (blackjack.pending) view = 'blackjack';
-        else if (['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(requestedView)) view = requestedView;
+        else if (['roulette', 'slots', 'blackjack', 'plinko', 'dice', 'lottery', 'bank', 'market', 'players', 'admin'].includes(requestedView) || v2 && CasinoV2.views.includes(requestedView)) view = requestedView;
         paintView();
         let lastSync = 0;
         const tick = () => {
             if(engine.remote && !viewLocked() && Date.now()-lastSync >= 5000){lastSync=Date.now();engine.sync().catch(()=>{});}
             if (engine.accrueInterest()) { engine.save(); render(); }
-            else { economy?.tick(); playerLoans?.tick(); accounts?.tick(); }
+            else { economy?.tick(); playerLoans?.tick(); accounts?.tick(); features?.tick(); }
         };
         setInterval(tick, 1000);
         window.addEventListener('focus', tick);

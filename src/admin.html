@@ -15,7 +15,7 @@
           <label for="admin-adjust-player" class="club-field">目标玩家</label><select id="admin-adjust-player" class="club-select" required></select>
           <label for="admin-adjust-mode" class="club-field">调整方式</label><select id="admin-adjust-mode" class="club-select"><option value="add">增加筹码</option><option value="remove">扣除筹码</option></select>
           <label for="admin-adjust-amount" class="club-field">金额 / 筹码</label><input id="admin-adjust-amount" type="text" pattern="[0-9]+" class="club-input" inputmode="numeric" required>
-          <label for="admin-adjust-reason" class="club-field">备注（可选）</label><input id="admin-adjust-reason" class="club-input" type="text" maxlength="120" placeholder="例如奖励、修正余额">
+          <label for="admin-adjust-reason" class="club-field">调整原因（V2 必填）</label><input id="admin-adjust-reason" class="club-input" type="text" maxlength="120" placeholder="例如奖励、修正余额">
           <div class="club-actions"><button type="submit" class="club-action" data-admin-action>确认调整并记录</button></div>
         </form>
         <form id="player-form" class="club-card"><h3>添加玩家</h3><p class="club-muted">新玩家初始 1,000 筹码；可再通过余额调整修改。玩家保存到数据库，无固定人数上限。</p><label class="club-field" for="player-name">新玩家名称</label><input id="player-name" class="club-input" type="text" maxlength="24" required placeholder="玩家名称"><div class="club-actions"><button type="submit" class="club-action" data-admin-action>添加玩家</button></div></form>

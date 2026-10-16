@@ -58,7 +58,7 @@ function createLotteryGame(engine, callbacks) {
         try {
             result = await engine.buyLottery(selected,{jackpot}); pending = false; animating = true; runningId = result.id; engine.lock = 'lottery';
             $('status').textContent = '彩票已购买，即将揭晓…'; update(); callbacks.changed();
-            if (reduced) reveal(); else timer = setTimeout(reveal,1800);
+            if (reduced||window.CasinoPreferences?.reducedMotion) reveal(); else timer = setTimeout(reveal,1800);
         } catch (error) {
             pending = false; animating = false; visualBalance = null; runningId = null;
             if (result) engine.lock = null;

@@ -7,6 +7,7 @@ function createAdminUI(engine, callbacks) {
     }
     function render() {
         auth=engine.auth||auth;
+        if(engine.platform){$('admin-adjust-reason').required=true;$('admin-adjust-reason').minLength=3;$('admin-import').hidden=true;}
         $('admin-login').hidden=auth.admin;$('admin-panel').hidden=!auth.admin;
         $('admin-enroll').hidden=!auth.canEnroll;$('admin-signin').hidden=!auth.enrolled;
         $('admin-enroll').disabled=working;$('admin-signin').disabled=working;
@@ -14,8 +15,8 @@ function createAdminUI(engine, callbacks) {
         $('admin-legacy').hidden=!legacy||engine.revision!==0;
         $('club-migration-note').hidden=!engine.legacyPending||window.location.pathname==='/admin';
         const selected=$('admin-adjust-player').value;
-        $('admin-adjust-player').replaceChildren(...engine.data.users.map(user=>{const option=document.createElement('option');option.value=user.id;option.textContent=user.name+' · '+(user.recovery?'-'+user.recovery.deficit.toLocaleString()+' · 可用 ':'')+user.balance.toLocaleString();return option;}));
-        if(engine.data.users.some(user=>user.id===selected))$('admin-adjust-player').value=selected;
+        $('admin-adjust-player').replaceChildren(...(engine.adminPlayers || engine.data.users).map(user=>{const option=document.createElement('option');option.value=user.id;option.textContent=user.name+' · '+(user.recovery?'-'+user.recovery.deficit.toLocaleString()+' · 可用 ':'')+user.balance.toLocaleString();return option;}));
+        if((engine.adminPlayers || engine.data.users).some(user=>user.id===selected))$('admin-adjust-player').value=selected;
         document.querySelectorAll('[data-admin-action]').forEach(button=>button.disabled=working||!auth.admin||callbacks.locked());
     }
     async function authenticate(register) {
@@ -34,6 +35,7 @@ function createAdminUI(engine, callbacks) {
     $('admin-lock').addEventListener('click',async()=>{try{await api('/api/admin/logout',{});auth={...auth,admin:false};engine.auth=auth;callbacks.changed();}catch(error){$('admin-message').textContent=error.message;}render();});
     $('admin-adjust-form').addEventListener('submit',async event=>{
         event.preventDefault();
+        if(engine.platform && !await CasinoV2.confirm('确认调整该玩家余额？此操作会写入永久审计流水。'))return;
         if(await callbacks.transact(()=>engine.adminAdjust($('admin-adjust-player').value,$('admin-adjust-mode').value,$('admin-adjust-amount').value,$('admin-adjust-reason').value),'管理员余额调整已保存并记录。')){$('admin-adjust-amount').value='';$('admin-adjust-reason').value='';}
     });
     $('admin-import').addEventListener('click',async()=>{

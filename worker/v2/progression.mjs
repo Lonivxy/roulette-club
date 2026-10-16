@@ -56,10 +56,11 @@ function value(prog,definition,p,id){
 }
 function currentQuest(p,id,d,now){
  const prog=p.progress[id],key=d.period==='all'?'all':d.period==='event'?String(d.startsAt):periods(now)[d.period];
- let instance=prog.quests[d.id];if(!instance||instance.key!==key){instance={key,definition:structuredClone(d),progress:0};prog.quests[d.id]=instance;}
+ let instance=prog.quests[d.id];if(!instance||instance.key!==key){instance={key,definition:structuredClone(d),progress:0,eventStats:{games:0,types:{}}};prog.quests[d.id]=instance;}
  const definition=instance.definition;
  if(definition.period==='event'&&(now<definition.startsAt||now>=definition.endsAt))return null;
- instance.progress=Math.min(definition.target,value(prog,definition,p,id));return instance;
+ const amount=definition.period==='event'?(definition.condition==='types'?Object.keys(instance.eventStats?.types||{}).length:instance.eventStats?.games||0):value(prog,definition,p,id);
+ instance.progress=Math.min(definition.target,amount);return instance;
 }
 export function refreshAchievements(p,id,now){
  const prog=p.progress[id];
@@ -71,6 +72,9 @@ export function refreshAchievements(p,id,now){
 }
 export function settledRound(p,id,game,roundId,now){
  ensurePlayer(p,id,now);if(p.claims[id+':round:'+roundId])return false;
+ for(const d of Object.values(p.definitions).filter(d=>d.kind==='quest'&&d.enabled&&d.period==='event')){
+  const q=currentQuest(p,id,d,now);if(q){q.eventStats??={games:0,types:{}};q.eventStats.games++;q.eventStats.types[game]=true;}
+ }
  const prog=p.progress[id],cfg=p.definitions.settings,xp=Math.max(0,Math.min(cfg.gameXP,cfg.dailyGameCap-prog.day.gameXP));
  grant(p,id,'round:'+roundId,'round',xp,[],now);prog.day.gameXP+=xp;prog.games++;prog.gameTypes[game]=true;
  for(const kind of ['day','week','month']){prog[kind].games++;prog[kind].types[game]=true;}

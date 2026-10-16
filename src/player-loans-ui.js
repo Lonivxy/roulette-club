@@ -13,7 +13,7 @@ function createPlayerLoansUI(engine, callbacks) {
     }
     function render() {
         const user = engine.active, locked = callbacks.locked(), selected = $('peer-loan-user').value;
-        const options = engine.data.users.filter(person => person.id !== user.id).map(person => { const option = element('option', person.name); option.value = person.id; return option; });
+        const options = (engine.directory || engine.data.users).filter(person => person.id !== user.id).map(person => { const option = element('option', person.name); option.value = person.id; return option; });
         $('peer-loan-user').replaceChildren(...options);
         if (options.some(option => option.value === selected)) $('peer-loan-user').value = selected;
         $('peer-loan-user').disabled = locked || !options.length;
