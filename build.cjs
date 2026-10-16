@@ -118,5 +118,6 @@ replace('        function evaluateSpinOutcome(winningIndex) {', `        functio
 replace('            // Display result banner', '            if (totalWagered > 0) casino.engine.completeRound(CasinoEngine.money.sub(totalPayout, totalWagered));\n            updateBettingHUD();\n            // Display result banner');
 fs.mkdirSync(path.join(base, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(base, 'dist', 'index.html'), html);
+fs.writeFileSync(path.join(base, 'dist', 'roulette.html'), html);
 fs.writeFileSync(path.join(base, '..', 'roulette.html'), html);
 console.log('Built roulette club and standalone roulette.html.');
