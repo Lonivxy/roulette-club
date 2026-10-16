@@ -1,3 +1,6 @@
+import {clubAction,clubView} from './v2/clubs.mjs';
+import {platformRead} from './v2/queries.mjs';
+import {createV2Service} from './v2/service.mjs';
 import '../src/money.js';
 import '../src/lottery-core.js';
 import '../src/arcade-core.js';
@@ -99,7 +102,8 @@ export async function applyCommand(engine, command, args, admin) {
     fail('未知操作。',404);
 }
 
-export function createService({page='',webauthn={generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse}}={}) {
+export function createService({page='',webauthn={generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse},v2=false,bootstrapOwnerPrivate=false,clock,credentialKey='owner',extensions={}}={}) {
+    if(v2)return createV2Service({page,applyCommand,bootstrapOwnerPrivate,clock,origin:ORIGIN,extensions:{action:clubAction,clubView,read:platformRead,...extensions},legacyFactory:options=>createService({webauthn,...options})});
     async function readState(db) {
         let row=await db.prepare('SELECT snapshot, revision FROM casino_state WHERE id = ?').bind('club').first();
         if(!row){const e=engineFrom(M.stringify(new Engine(null).data));await db.prepare('INSERT OR IGNORE INTO casino_state (id,snapshot,revision,last_op) VALUES (?,?,0,?)').bind('club',M.stringify(e.data),'initial').run();row=await db.prepare('SELECT snapshot, revision FROM casino_state WHERE id = ?').bind('club').first();}
@@ -111,7 +115,7 @@ export function createService({page='',webauthn={generateRegistrationOptions,ver
         return Boolean(row&&row.actor===actor(request)&&row.expires_at>Date.now());
     }
     async function status(request,db) {
-        const credential=await db.prepare('SELECT actor FROM admin_credential WHERE id = ?').bind('owner').first();
+        const credential=await db.prepare('SELECT actor FROM admin_credential WHERE id = ?').bind(credentialKey).first();
         return {enrolled:Boolean(credential),admin:await adminSession(request,db),canEnroll:!credential};
     }
     async function session(request,db) {
@@ -166,7 +170,7 @@ export function createService({page='',webauthn={generateRegistrationOptions,ver
         fail('账户正在更新，请重试。',409);
     }
     async function passkey(request,db,path,body) {
-        const who=actor(request),stored=await db.prepare('SELECT * FROM admin_credential WHERE id = ?').bind('owner').first();
+        const who=actor(request),stored=await db.prepare('SELECT * FROM admin_credential WHERE id = ?').bind(credentialKey).first();
         if(path==='/api/admin/status')return json(await status(request,db));
         if(path==='/api/admin/logout'){
             await db.prepare('DELETE FROM admin_sessions WHERE id = ?').bind(await hash(getCookie(request,SESSION))).run();return json({ok:true},200,{'Set-Cookie':cookie(SESSION,'',0)});
@@ -192,12 +196,12 @@ export function createService({page='',webauthn={generateRegistrationOptions,ver
             const verification=await webauthn.verifyRegistrationResponse({response:body,expectedChallenge:challenge.challenge,expectedOrigin:ORIGIN,expectedRPID:RP,requireUserVerification:true,supportedAlgorithmIDs:[-7,-257]});
             if(!verification.verified)fail('通行密钥验证失败。',401);
             const c=verification.registrationInfo.credential;
-            await db.prepare('INSERT INTO admin_credential (id,actor,credential_id,public_key,counter,transports) VALUES (?,?,?,?,?,?)').bind('owner',who,c.id,bytesToB64(c.publicKey),c.counter,JSON.stringify(c.transports||['internal'])).run();
+            await db.prepare('INSERT INTO admin_credential (id,actor,credential_id,public_key,counter,transports) VALUES (?,?,?,?,?,?)').bind(credentialKey,who,c.id,bytesToB64(c.publicKey),c.counter,JSON.stringify(c.transports||['internal'])).run();
         }else{
             if(!stored)fail('未设置通行密钥。',401);
             const verification=await webauthn.verifyAuthenticationResponse({response:body,expectedChallenge:challenge.challenge,expectedOrigin:ORIGIN,expectedRPID:RP,requireUserVerification:true,credential:{id:stored.credential_id,publicKey:fromB64(stored.public_key),counter:stored.counter,transports:JSON.parse(stored.transports)}});
             if(!verification.verified)fail('通行密钥验证失败。',401);
-            const updated=await db.prepare('UPDATE admin_credential SET counter=? WHERE id=? AND counter=?').bind(verification.authenticationInfo.newCounter,'owner',stored.counter).run();
+            const updated=await db.prepare('UPDATE admin_credential SET counter=? WHERE id=? AND counter=?').bind(verification.authenticationInfo.newCounter,credentialKey,stored.counter).run();
             if(!updated.meta.changes)fail('验证计数已更新，请重试。',409);
         }
         return session(request,db);

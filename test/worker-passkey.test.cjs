@@ -3,7 +3,7 @@ const {DatabaseSync}=require('node:sqlite');
 const {generateKeyPairSync,createHash,randomBytes,sign}=require('node:crypto');
 const b64=value=>Buffer.from(value).toString('base64url');
 function database() {
-    const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync(path.join(__dirname,'../drizzle/0000_sloppy_sasquatch.sql'),'utf8'));
+    const sql=new DatabaseSync(':memory:');for(const file of fs.readdirSync(path.join(__dirname,'../drizzle')).filter(file=>file.endsWith('.sql')).sort())sql.exec(fs.readFileSync(path.join(__dirname,'../drizzle',file),'utf8'));
     const DB={prepare(query){
         let args=[];const result={bind(...values){args=values;return result;},execute(){const value=sql.prepare(query).run(...args);return {meta:{changes:Number(value.changes)}};},async run(){return result.execute();},async first(){return sql.prepare(query).get(...args)||null;},async all(){return {results:sql.prepare(query).all(...args)};}};return result;
     },async batch(statements){sql.exec('BEGIN IMMEDIATE');try{const results=statements.map(statement=>statement.execute());sql.exec('COMMIT');return results;}catch(error){sql.exec('ROLLBACK');throw error;}}};return {DB,sql};

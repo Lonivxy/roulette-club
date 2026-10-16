@@ -47,13 +47,14 @@
         constructor(engine, options = {}) {
             this.engine = engine;
             this.shoeFactory = options.shoeFactory || (() => makeShoe(() => engine.random()));
-            for (const user of engine.data.users) {
+            const scopedUsers = engine.isolatedPlayer ? [engine.active] : engine.data.users;
+            for (const user of scopedUsers) {
                 if (user.blackjack && !validRound(user.blackjack, user.id)) {
                     user.blackjack = null;
                     engine.storageWarning = 'An unreadable saved blackjack hand was cleared. Your wallet and bank records were kept.';
                 }
             }
-            const pending = engine.data.users.find(u => u.blackjack && u.blackjack.phase !== 'settled');
+            const pending = scopedUsers.find(u => u.blackjack && u.blackjack.phase !== 'settled');
             if (pending) { engine.data.activeId = pending.id; engine.lock = 'blackjack'; }
         }
         get round() { return this.engine.active.blackjack || null; }

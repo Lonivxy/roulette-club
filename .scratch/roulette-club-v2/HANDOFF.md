@@ -11,21 +11,24 @@ Browser runtime previously cannot load browser-service.mjs; retry supported brow
 
 ## Automatic checkpoint
 
-Updated: 2026/10/16 13:22:14 Asia/Shanghai
+Updated: 2026/10/16 14:13:09 Asia/Shanghai
 
 Completed tasks: 2/25
 
 Next/current: [03 — 账号绑定、角色与私有响应过滤](issues/03.md) — in-progress
 
-HEAD: e685560f86c0887d637ee13364035de6d4c2ef30
+HEAD: 4fdc3201e3cefbea5e93543fe0d1891359af9a28
 
 Working tree (inspect before resuming):
 ```
- M .scratch/roulette-club-v2/HANDOFF.md
- M .scratch/roulette-club-v2/TODO.md
- M .scratch/roulette-club-v2/issues/01.md
- M .scratch/roulette-club-v2/issues/02.md
  M .scratch/roulette-club-v2/issues/03.md
-?? .scratch/roulette-club-v2/P0-gate.json
-?? .scratch/roulette-club-v2/evidence/P0.json
+ M db/schema.ts
+ M drizzle/meta/_journal.json
+ M src/blackjack-core.js
+?? drizzle/0001_little_calypso.sql
+?? drizzle/meta/0001_snapshot.json
+?? test/v2-growth.test.cjs
+?? test/v2-http.test.cjs
+?? test/v2-identity.test.cjs
+?? worker/v2/
 ```
