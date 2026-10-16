@@ -2,6 +2,7 @@ import {fail} from './identity.mjs';
 import {ensurePlayer,refreshAchievements,claimDaily,claimQuest} from './progression.mjs';
 const text=(value,max,min=0)=>{if(typeof value!=='string'||value.trim().length<min||value.trim().length>max)fail(`文字长度必须为 ${min}–${max}。`);return value.trim();};
 const integer=(value,min,max)=>{if(!Number.isSafeInteger(value)||value<min||value>max)fail('请输入有效整数。');return value;};
+const identifier=value=>{const id=text(value,80,1);if(!/^[a-zA-Z0-9_-]+$/.test(id)||['__proto__','prototype','constructor'].includes(id))fail('配置标识无效。');return id;};
 const owner=(p,a)=>{if(a.actor!==p.meta.ownerActor||a.role!=='owner')fail('只有站点所有者可以执行此操作。',403);};
 export const isAdminCommand=command=>command.startsWith('admin.')||['adminAdjust','addUser','deletePlayer','import'].includes(command);
 export function platformAction(p,engine,account,command,args,now){
@@ -41,12 +42,12 @@ export function platformAction(p,engine,account,command,args,now){
  }
  if(command==='admin.maintenance'){owner(p,account);if(typeof args[0]!=='boolean')fail('维护状态无效。');text(args[1],120,3);p.meta.maintenance=args[0];return {maintenance:args[0]};}
  if(command==='admin.item'){
-  const item=structuredClone(args[0]);if(!item||typeof item!=='object')fail('物品无效。');item.id=text(item.id,80,1);item.name=text(item.name,48,1);item.description=text(item.description||'',300);
+  const item=structuredClone(args[0]);if(!item||typeof item!=='object'||Array.isArray(item))fail('物品无效。');item.id=identifier(item.id);item.name=text(item.name,48,1);item.description=text(item.description||'',300);
   if(!['frame','badge','title','background','souvenir'].includes(item.kind)||!['common','rare','epic','legendary'].includes(item.rarity)||typeof item.enabled!=='boolean')fail('物品分类或稀有度无效。');
   if(p.items[item.id]&&p.items[item.id].kind!==item.kind)fail('已有物品不能改变装备类型。');p.items[item.id]=item;return item;
  }
  if(command==='admin.definition'){
-  const d=structuredClone(args[0]);if(!d||typeof d!=='object')fail('配置无效。');d.id=text(d.id,80,1);d.name=text(d.name||d.id,60,1);
+  const d=structuredClone(args[0]);if(!d||typeof d!=='object'||Array.isArray(d))fail('配置无效。');d.id=identifier(d.id);d.name=text(d.name||d.id,60,1);
   if(typeof d.enabled!=='boolean'||!['settings','quest','achievement'].includes(d.kind))fail('配置类型无效。');
   if(d.kind==='settings'){
    if(d.id!=='settings')fail('配置标识无效。');integer(d.gameXP,0,100);integer(d.dailyGameCap,0,1000);integer(d.levelFactor,10,1000000);
@@ -54,10 +55,13 @@ export function platformAction(p,engine,account,command,args,now){
   }else{
    if(!['day','week','month','all','event'].includes(d.period)||!['games','types','profile','club','quests','items'].includes(d.condition))fail('任务规则无效。');
    integer(d.target,1,1000000);integer(d.xp||0,0,10000);
-   if(d.period==='event'){integer(d.startsAt,0,Number.MAX_SAFE_INTEGER);integer(d.endsAt,d.startsAt+1,Number.MAX_SAFE_INTEGER);}
+   if(d.period==='event'){integer(d.startsAt,0,Number.MAX_SAFE_INTEGER);integer(d.endsAt,d.startsAt+1,Number.MAX_SAFE_INTEGER);if(!['games','types'].includes(d.condition))fail('限时任务支持完成对局或不同游戏数量。');}
+   if(d.kind==='achievement'&&d.period!=='all')fail('成就使用累计里程碑规则。');
    if(d.itemIds!==undefined&&(!Array.isArray(d.itemIds)||d.itemIds.length>5||d.itemIds.some(item=>!p.items[item])))fail('奖励物品无效。');
   }
   const previous=p.definitions[d.id];if(previous&&previous.kind!==d.kind)fail('不能改变已有配置的类型。');d.version=(previous?.version||0)+1;
+  if(previous?.kind==='quest'&&(previous.period!==d.period||d.period==='event'&&(previous.startsAt!==d.startsAt||previous.endsAt!==d.endsAt)))fail('已有任务不能更改周期或活动时间；请创建新任务。');
+  if(d.kind==='settings')for(const progress of Object.values(p.progress))progress.level=1+Math.floor(Math.sqrt(progress.xp/d.levelFactor));
   p.definitions[d.id]=d;p.versions[d.id+':'+d.version]=structuredClone(d);return d;
  }
  return undefined;

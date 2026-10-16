@@ -10,7 +10,7 @@ async function fixture(options={}){
   return service.fetch(new Request(ORIGIN+route,{headers,method:body?'POST':'GET',body:body?globalThis.CasinoMoney.stringify(body):undefined}),{DB});
  }
  async function command(command,args=[],options={}){return request('/api/command',{body:{id:crypto.randomUUID(),command,args,playerId:options.playerId},...options});}
- async function owner(){await request('/api/state');const {createHash}=require('node:crypto');sql.prepare('INSERT INTO admin_sessions VALUES (?,?,?)').run(createHash('sha256').update('test-session').digest('base64url'),'owner',Date.now()+600000);await command('admin.bind',['owner','alex'],{step:true});}
+ async function owner(){await request('/api/state');const {createHash}=require('node:crypto');sql.prepare('INSERT INTO admin_sessions VALUES (?,?,?)').run(createHash('sha256').update('test-session').digest('base64url'),'owner',(options.clock?options.clock():Date.now())+600000);const bound=await command('admin.bind',['owner','alex'],{step:true});assert.equal(bound.status,200);}
  return {sql,DB,request,command,owner};
 }
 test('V2 HTTP binds accounts and never leaks another player private state',async()=>{
@@ -19,6 +19,12 @@ test('V2 HTTP binds accounts and never leaks another player private state',async
  assert.equal(value.data.users.length,1);assert.equal(value.data.users[0].id,'jamie');assert.equal(value.directory[0].debt,undefined);
  assert.equal((await t.command('slots',[1],{actor:'friend',playerId:'alex'})).status,403);
  assert.equal((await t.command('slots',[1,null],{actor:'friend',protocol:1})).status,409);
+});
+test('definition configuration rejects reserved keys and prevents reopening a claimed task under another period',async()=>{
+ const t=await fixture();await t.owner();const state=await (await t.request('/api/state')).json(),d=state.platform.definitions.find(d=>d.id==='daily-rounds');
+ assert.equal((await t.command('admin.definition',[{...d,id:'__proto__'}],{step:true})).status,400);
+ assert.equal((await t.command('admin.definition',[{...d,period:'all'}],{step:true})).status,400);
+ assert.equal((await t.command('admin.definition',[{...d,id:'bad-event',period:'event',condition:'profile',startsAt:Date.now(),endsAt:Date.now()+10000}],{step:true})).status,400);
 });
 module.exports={fixture};
 test('V2 atomic rewards replay once and simultaneous new claims grant only once',async()=>{
@@ -90,4 +96,16 @@ test('V2 profile edits and completed games grant cosmetic achievements without c
  const profile=await (await t.request('/api/players/alex',{actor:'friend'})).json();assert.equal(profile.name,'Owner New');assert.equal(profile.bio,'Hello <friends>');assert.equal(profile.equipped.title,'title-newcomer');assert.equal(profile.debt,undefined);assert.equal(profile.inventory,undefined);
  assert.equal((await t.command('inventory.equip',['badges',['badge-week','badge-week']])).status,400);
  const friend=await (await t.request('/api/state',{actor:'friend'})).json();assert.equal(friend.platform.progress.games,0);
+});
+test('quest claims race atomically, expire at Shanghai midnight and roll back every effect on database failure',async()=>{
+ let now=Date.parse('2026-10-16T15:59:00Z');const t=await fixture({clock:()=>now});await t.owner();
+ for(let i=0;i<3;i++)assert.equal((await t.command('dice',[1,'small',null])).status,200);
+ const race=await Promise.all([t.command('quest.claim',['daily-rounds']),t.command('quest.claim',['daily-rounds'])]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
+ let state=await (await t.request('/api/state')).json();assert.equal(state.platform.progress.xp,55);assert.equal(state.platform.progress.questsCompleted,1);
+ now=Date.parse('2026-10-16T16:00:00Z');assert.equal((await t.command('quest.claim',['daily-rounds'])).status,400);
+ const before=await (await t.request('/api/state')).json(),batch=t.DB.batch;
+ t.DB.batch=statements=>batch([...statements,t.DB.prepare('INSERT INTO nonexistent_v2_table VALUES (1)')]);
+ assert.equal((await t.command('reward.claim')).status,500);t.DB.batch=batch;
+ state=await (await t.request('/api/state')).json();assert.equal(state.revision,before.revision);assert.equal(state.platform.progress.xp,55);assert.equal(state.platform.progress.lastDaily,null);
+ assert.equal((await t.command('reward.claim')).status,200);
 });

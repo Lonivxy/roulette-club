@@ -1,0 +1,8 @@
+{
+  "accepted": true,
+  "exitCode": 0,
+  "commands": ["node --test test/v2-growth.test.cjs test/v2-http.test.cjs", "npm run build", "npm test"],
+  "results": "205 tests passed. Covers Shanghai calendar boundaries, missed sign-in, seven-day cycles and unique badge, frozen quest reward versions, event-only settlements, expiry, concurrent claims, duplicate requests, and injected transactional failure with no partial XP/claim/wallet commit.",
+  "logs": ["P3-tests.log", "P3-build.log", "P3-targeted.log"],
+  "limitations": "Real browser acceptance remains in P7. Existing quest cadence and event dates are immutable; create a new ID to schedule a different event."
+}

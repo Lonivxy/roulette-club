@@ -1,0 +1,21 @@
+✔ normal rounds grant five XP capped at 100 per Shanghai day, and daily claims cannot repeat (16.7014ms)
+✔ Shanghai resets cover Monday, month and year boundaries; seven-day rewards cycle without duplicate cosmetics (2.7297ms)
+✔ a quest keeps its period reward version and cannot be claimed again after definition edits (1.2958ms)
+✔ event quests count only settlements inside their own window and expire unclaimed rewards (1ms)
+✔ V2 HTTP binds accounts and never leaks another player private state (472.4932ms)
+✔ definition configuration rejects reserved keys and prevents reopening a claimed task under another period (21.9074ms)
+✔ V2 atomic rewards replay once and simultaneous new claims grant only once (39.261ms)
+✔ V2 sandbox wins cannot alter formal wallet or progression and require step-up (38.9172ms)
+✔ V2 permanent journal and exact balances survive transfers, retries, suspension and privacy changes (47.5417ms)
+✔ V2 preserves a large old snapshot during bounded initialization and records opening funds without inventing XP (53.8462ms)
+✔ V2 blackjack locks only its owner, while maintenance freezes interest and backup exports exact data (53.6898ms)
+✔ admin corrections append compensating records rather than editing history (24.5437ms)
+✔ V2 profile edits and completed games grant cosmetic achievements without changing another player (41.6516ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1010.6391
