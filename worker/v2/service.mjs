@@ -11,17 +11,40 @@ const cookie=request=>request.headers.get('cookie')?.split(';').map(x=>x.trim())
 const who=request=>request.headers.get('oai-authenticated-user-id')||fail('请先登录。',401);
 function engine(snapshot,now,freezeEconomy=false){const e=new E({getItem:()=>snapshot,setItem(){}},undefined,()=>now,{recoverRoulette:false,freezeEconomy});if(e.storageWarning)fail('存档校验失败，未修改旧数据。',500);e.isolatedPlayer=true;return e;}
 function fields(user){return {cash:user.balance,bank:user.debt,shark:user.sharkDebt,negative:user.recovery?.deficit||0,reserved:M.add(E.sumBets(user.bets),user.blackjack&&user.blackjack.phase!=='settled'?user.blackjack.hands.reduce((sum,h)=>M.add(sum,h.bet),0):0)};}
+function walletMark(user){return {balance:String(user.balance),recovery:user.recovery?{deficit:String(user.recovery.deficit)}:null,reserved:String(fields(user).reserved)};}
+function adminAudit(before,after,operation,args,result){
+ const accountState=a=>a?{actor:a.actor,playerId:a.playerId,role:a.role,status:a.status}:null;
+ if(operation==='admin.account'||operation==='admin.bind')return {target:args[0],reason:operation==='admin.account'?args[3]:'Assign existing player',before:accountState(before.accounts[args[0]]),after:accountState(after.accounts[args[0]])};
+ if(operation==='admin.maintenance')return {target:'platform',reason:args[1],before:before.meta.maintenance,after:after.meta.maintenance};
+ if(operation==='admin.club')return {target:args[0],reason:args[1],before:{club:before.clubs[args[0]],members:Object.values(before.memberships).filter(m=>m.clubId===args[0]).map(m=>m.id)},after:{club:after.clubs[args[0]],members:Object.values(after.memberships).filter(m=>m.clubId===args[0]).map(m=>m.id)}};
+ if(operation==='admin.definition')return {target:result.id,beforeVersion:before.definitions[result.id]?.version||0,afterVersion:result.version,enabled:result.enabled};
+ if(operation==='admin.item')return {target:result.id,before:before.items[result.id]||null,after:result};
+ if(operation==='adminAdjust')return {target:args[0],mode:args[1],amount:String(M.parse(args[2])),reason:args[3]};
+ if(operation==='admin.compensate')return {...result,reason:args[1]};
+ if(operation==='deletePlayer')return {target:args[0],reason:'Archive player after clearance',before:before.profiles[args[0]]?.archived||false,after:true};
+ if(operation==='addUser')return {target:result.id,name:result.name};
+ return undefined;
+}
 function accountJournal(p,before,after,operation,actor,kind,now,reason=''){
  for(const user of after.users){const old=before.users.find(x=>x.id===user.id),a=old?fields(old):{cash:0,bank:0,shark:0,negative:0,reserved:0},b=fields(user);
-  for(const asset of Object.keys(b))if(!old||M.compare(a[asset],b[asset])!==0)p.journal.push({id:operation+':'+user.id+':'+asset,playerId:user.id,operationId:operation,actor,kind,asset,before:String(a[asset]),after:String(b[asset]),delta:String(M.sub(b[asset],a[asset])),createdAt:now,reason});
+  for(const asset of Object.keys(b))if(!old||M.compare(a[asset],b[asset])!==0)p.journal.push({id:operation+':'+user.id+':'+asset,playerId:user.id,operationId:operation,actor,kind,asset,before:String(a[asset]),after:String(b[asset]),delta:String(M.sub(b[asset],a[asset])),createdAt:now,reason,...(kind==='adminAdjust'&&old?{walletBefore:walletMark(old),walletAfter:walletMark(user)}:{})});
  }
  for(const user of before.users)if(!after.users.some(u=>u.id===user.id))fail('不能物理删除有历史的玩家。');
+ loanJournal(p,before.loans||[],after.loans||[],operation,actor,kind,now,reason);
+}
+function loanJournal(p,before,after,operation,actor,kind,now,reason=''){
+ const mark=loan=>loan?{id:loan.id,lenderId:loan.lenderId,borrowerId:loan.borrowerId,principal:String(loan.principal),balance:String(loan.balance),status:loan.status,rateBps:loan.rateBps,periodMs:loan.periodMs,interestAt:loan.interestAt}:null;
+ for(const loanId of new Set([...before,...after].map(loan=>loan.id))){
+  const old=before.find(loan=>loan.id===loanId),next=after.find(loan=>loan.id===loanId),a=mark(old),b=mark(next);if(M.stringify(a)===M.stringify(b))continue;
+  const loan=next||old,owedBefore=old?.status==='active'?old.balance:0,owedAfter=next?.status==='active'?next.balance:0;
+  for(const [playerId,asset]of [[loan.borrowerId,'peerPayable'],[loan.lenderId,'peerReceivable']])p.journal.push({id:operation+':loan:'+loanId+':'+asset,playerId,operationId:operation,actor,kind,asset,before:String(owedBefore),after:String(owedAfter),delta:String(M.sub(owedAfter,owedBefore)),loanId,loanBefore:a,loanAfter:b,createdAt:now,reason});
+ }
 }
 function indexes(p,data){for(const user of data.users){if(!p.profiles[user.id])continue;const amount=user.recovery?0:user.balance,negative=amount<0,digits=String(M.abs(amount));p.wallets[user.id]={id:user.id,visible:p.profiles[user.id].walletVisible&&!p.profiles[user.id].archived?1:0,sign:amount===0?0:negative?-1:1,magnitude:digits.length,digits,name:user.name};}}
 export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwnerPrivate=false,initialMaintenance=false,clock=()=>Date.now(),origin,extensions={}}){
- async function security(request,db,status){
-  if(!db||![401,403,429].includes(status))return;
-  const event={id:crypto.randomUUID(),playerId:null,kind:status===429?'security.rate-limited':'security.denied',createdAt:clock(),actor:request.headers.get('oai-authenticated-user-id')||'anonymous',path:new URL(request.url).pathname.slice(0,160),status};
+ async function security(request,db,status,kind){
+  if(!db||!kind&&![401,403,429].includes(status))return;
+  const event={id:crypto.randomUUID(),playerId:null,kind:status===429?'security.rate-limited':kind||'security.denied',createdAt:clock(),actor:request.headers.get('oai-authenticated-user-id')||'anonymous',path:new URL(request.url).pathname.slice(0,160),status};
   await db.prepare('INSERT INTO v2_events (id,player_id,kind,created_at,body) VALUES (?,NULL,?,?,?)').bind(event.id,event.kind,event.createdAt,M.stringify(event)).run();
  }
  async function limit(request,db){
@@ -42,7 +65,8 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
    const data=M.parseJSON(row.snapshot),missing=data.users.filter(u=>!next.profiles[u.id]).slice(0,5);
    for(const user of missing){ensurePlayer(next,user.id,now);accountJournal(next,{users:[]},{users:[user]},'opening:'+user.id,'system','opening',now);}
    if(!next.accounts[who(request)])next.accounts[who(request)]={id:who(request),actor:who(request),playerId:null,email:request.headers.get('oai-authenticated-user-email')||'',role:'member',status:'pending',createdAt:now};
-   indexes(next,data);next.meta.ready=data.users.every(u=>next.profiles[u.id]);
+   indexes(next,data);
+   if(!next.meta.ready){const cursor=next.meta.loanOpening||0,loans=(data.loans||[]).slice(cursor,cursor+5);loanJournal(next,[],loans,'opening:loans','system','opening',now);next.meta.loanOpening=cursor+loans.length;next.meta.ready=data.users.every(u=>next.profiles[u.id])&&next.meta.loanOpening>=(data.loans||[]).length;}
    const changes=platformWrites(db,previous,next,'initializing');if(!changes.length)return {p:previous,row};
    const operation=crypto.randomUUID(),writes=platformWrites(db,previous,next,operation);
    const result=await db.batch([db.prepare('UPDATE casino_state SET revision=revision+1,last_op=? WHERE id=? AND revision=?').bind(operation,'club',row.revision),...writes]);
@@ -92,11 +116,11 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
     if(operation==='admin.compensate'){
      const entry=await db.prepare('SELECT body FROM v2_journal WHERE id=?').bind(args[0]).first();
      if(!entry||typeof args[1]!=='string'||args[1].trim().length<3)fail('请选择原调整流水并填写原因。');
-     const originalEntry=M.parseJSON(entry.body);if(originalEntry.kind!=='adminAdjust'||originalEntry.asset!=='cash')fail('只能补偿管理员钱包调整。');
-     const claimId=originalEntry.playerId+':compensation:'+originalEntry.id;if(p.claims[claimId]||await db.prepare('SELECT id FROM v2_claims WHERE id=?').bind(claimId).first())fail('该调整已经补偿。',409);
-     const delta=M.sub(M.parse(originalEntry.before),M.parse(originalEntry.after));if(delta===0)fail('该记录没有金额变化。');
-     await play(e,'adminAdjust',[originalEntry.playerId,delta>0?'add':'remove',M.abs(delta),args[1]],true);
-     p.claims[claimId]={id:claimId,playerId:originalEntry.playerId,kind:'compensation',createdAt:now,source:originalEntry.id,reason:args[1]};result={source:originalEntry.id};
+     const originalEntry=M.parseJSON(entry.body);if(originalEntry.kind!=='adminAdjust'||!['cash','negative'].includes(originalEntry.asset)||!originalEntry.walletBefore||!originalEntry.walletAfter)fail('只能补偿有完整前后记录的管理员钱包调整。');
+     const claimId=originalEntry.playerId+':compensation:'+originalEntry.operationId;if(p.claims[claimId]||await db.prepare('SELECT id FROM v2_claims WHERE id=?').bind(claimId).first())fail('该调整已经补偿。',409);
+     const target=e.data.users.find(u=>u.id===originalEntry.playerId);if(!target||p.profiles[target.id]?.archived||M.stringify(walletMark(target))!==M.stringify(originalEntry.walletAfter))fail('钱包已有后续变动，不能覆盖；请另行新增带原因的调整。',409);
+     target.balance=M.parse(originalEntry.walletBefore.balance);target.recovery=originalEntry.walletBefore.recovery?{deficit:M.parse(originalEntry.walletBefore.recovery.deficit)}:null;
+     p.claims[claimId]={id:claimId,playerId:originalEntry.playerId,kind:'compensation',createdAt:now,source:originalEntry.operationId,sourceEntry:originalEntry.id,reason:args[1]};result={source:originalEntry.operationId,sourceEntry:originalEntry.id,target:originalEntry.playerId};
     }else if(operation==='deletePlayer'){
      const user=e.data.users.find(u=>u.id===args[0]);if(!user||p.profiles[user.id]?.archived)fail('玩家不存在或已归档。');
      if(Object.values(p.accounts).some(a=>a.playerId===user.id&&a.role==='owner'))fail('不能归档所有者的玩家。');
@@ -115,9 +139,11 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
     const round=operation==='blackjack'?e.active.blackjack: null;
     const roundId=['slots','lottery','plinko','dice','roulette.spin'].includes(operation)?result?.roundId||result?.id||id:round?.phase==='settled'&&!(original.users.find(u=>u.id===account.playerId)?.blackjack?.id===round.id&&original.users.find(u=>u.id===account.playerId)?.blackjack?.phase==='settled')?round.id:null;
     if(roundId){if(await db.prepare('SELECT id FROM v2_claims WHERE id=?').bind(account.playerId+':round:'+roundId).first())fail('该对局已经结算。',409);settledRound(p,account.playerId,operation==='blackjack'?'blackjack':operation==='roulette.spin'?'roulette':operation,roundId,now,operation==='blackjack'?round.result:result);}
-    accountJournal(p,original,e.data,id,who(request),operation,now,operation==='adminAdjust'?args[3]:isAdminCommand(operation)?String(args.at(-1)||''):'');indexes(p,e.data);
+    accountJournal(p,original,e.data,id,who(request),operation,now,operation==='adminAdjust'?args[3]:isAdminCommand(operation)?String(args.at(-1)||''):'');
+    if(operation==='admin.compensate')for(const entry of p.journal)if(entry.playerId===result.target&&['cash','negative'].includes(entry.asset))entry.sourceOperationId=result.source;
+    indexes(p,e.data);
    }
-   p.events.push({id:'command:'+id,playerId:account.playerId||null,kind:mode==='sandbox'?'sandbox.command':operation,createdAt:now,actor:who(request)});
+   p.events.push({id:'command:'+id,playerId:account.playerId||null,kind:mode==='sandbox'?'sandbox.command':operation,createdAt:now,actor:who(request),...(mode==='formal'&&isAdminCommand(operation)?{audit:adminAudit(before,p,operation,args,result)}:{})});
    const nextSnapshot=mode==='sandbox'?row.snapshot:M.stringify(e.data),receipt=M.stringify({result:result??null});
    const batch=await db.batch([db.prepare('UPDATE casino_state SET snapshot=?,revision=revision+1,last_op=? WHERE id=? AND revision=?').bind(nextSnapshot,id,'club',row.revision),
     ...platformWrites(db,before,p,id),db.prepare("INSERT INTO casino_operations (id,actor,payload,response,created_at) SELECT ?,?,?,?,? WHERE EXISTS (SELECT 1 FROM casino_state WHERE id='club' AND last_op=?)").bind(id,who(request),payload,receipt,now,id)]);
@@ -151,7 +177,7 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
   const actor=who(request),url=new URL(request.url);if(!env.DB)fail('数据库未连接。',503);await limit(request,env.DB);
   if(url.pathname.startsWith('/api/admin/register/')||url.pathname.startsWith('/api/admin/authenticate/')||['/api/admin/status','/api/admin/logout'].includes(url.pathname)){
    const {p}=await initialize(request,env.DB),a=p.accounts[actor];if(!['owner','admin'].includes(a?.role)||a.status!=='active')fail('没有管理员权限。',403);
-   const response=await legacyFactory({credentialKey:a.role==='owner'?'owner':'admin:'+actor}).fetch(request,env);await security(request,env.DB,response.status);return response;
+   const response=await legacyFactory({credentialKey:a.role==='owner'?'owner':'admin:'+actor}).fetch(request,env);await security(request,env.DB,response.status,url.pathname.endsWith('/verify')&&response.status>=400?'security.authentication-failed':undefined);return response;
   }
   if(request.method==='POST'){
    if(request.headers.get('origin')!==origin||!request.headers.get('content-type')?.startsWith('application/json'))fail('请求来源无效。',403);

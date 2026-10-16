@@ -6,7 +6,7 @@ async function fixture(options={}){
  const {createService,ORIGIN}=await import('../worker/service.mjs'),service=createService({v2:true,bootstrapOwnerPrivate:true,...options});
  async function request(route,{actor='owner',body,step=false,protocol=2}={}){
   const headers={'oai-authenticated-user-id':actor,'oai-authenticated-user-email':actor+'@example.test','X-Club-Protocol':String(protocol)};
-  if(body){headers.Origin=ORIGIN;headers['Content-Type']='application/json';}if(step)headers.Cookie='__Host-club-admin=test-session';
+  if(body){headers.Origin=ORIGIN;headers['Content-Type']='application/json';}if(step)headers.Cookie='__Host-club-admin='+(typeof step==='string'?step:'test-session');
   return service.fetch(new Request(ORIGIN+route,{headers,method:body?'POST':'GET',body:body?globalThis.CasinoMoney.stringify(body):undefined}),{DB});
  }
  async function command(command,args=[],options={}){return request('/api/command',{body:{id:crypto.randomUUID(),command,args,playerId:options.playerId},...options});}
@@ -139,7 +139,7 @@ test('private clubs handle concurrent invite acceptance, revocation, expiry, tra
  const a=await (await t.command('club.invite',['jamie'])).json(),b=await (await t.command('club.invite',['jamie'],{actor:'other'})).json();
  const races=await Promise.all([t.command('club.respond',[a.result.id,true],{actor:'friend'}),t.command('club.respond',[b.result.id,true],{actor:'friend'})]);assert.equal(races.filter(r=>r.status===200).length,1);
  const joined=await (await t.request('/api/clubs',{actor:'friend'})).json();assert.ok([club.id,other.id].includes(joined.club.id));
- await t.command('club.leave',[],{actor:'friend'});const invite=await (await t.command('club.invite',['jamie'])).json();
+ await t.command('club.leave',[],{actor:'friend'});const invite=joined.club.id===club.id?await (await t.command('club.invite',['jamie'])).json():a;
  await t.command('club.revoke',[invite.result.id]);assert.equal((await t.command('club.respond',[invite.result.id,true],{actor:'friend'})).status,403);
  const fresh=await (await t.command('club.invite',['jamie'])).json();now+=7*86400000;assert.equal((await t.command('club.respond',[fresh.result.id,true],{actor:'friend'})).status,403);
  now-=7*86400000;await t.command('club.respond',[fresh.result.id,true],{actor:'friend'});assert.equal((await t.command('club.leave')).status,400);assert.equal((await t.command('club.transfer',['jamie'])).status,200);assert.equal((await t.command('club.leave')).status,200);
@@ -150,10 +150,43 @@ test('weekly club challenge counts formal activity only and prevents duplicate c
  assert.equal((await t.command('club.claim',[],{actor:'friend'})).status,400);
  for(let i=0;i<49;i++)assert.equal((await t.command('dice',[1,'small',null])).status,200);
  assert.equal((await t.command('dice',[1,'small',null],{actor:'friend'})).status,200);
- const club=await (await t.request('/api/clubs',{actor:'friend'})).json();assert.equal(club.challenge.progress,50);assert.ok(club.feed.length);
+ const club=await (await t.request('/api/clubs',{actor:'friend'})).json();assert.equal(club.challenge.progress,50);assert.ok(club.feed.some(e=>e.kind==='game.settled'));assert.ok(club.feed.every(e=>e.wager===undefined&&e.payout===undefined&&e.net===undefined&&e.actor===undefined));
  const race=await Promise.all([t.command('club.claim',[],{actor:'friend'}),t.command('club.claim',[],{actor:'friend'})]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
  await t.command('club.leave',[],{actor:'friend'});invite=await (await t.command('club.invite',['jamie'])).json();await t.command('club.respond',[invite.result.id,true],{actor:'friend'});
  assert.equal((await t.command('club.claim',[],{actor:'friend'})).status,409);assert.equal((await (await t.request('/api/clubs')).json()).challenge.progress,50);
+});
+test('delegated administrators cannot undo owner suspension by rebinding the same player',async()=>{
+ const t=await fixture();await t.owner();for(const [actor,id]of [['friend','jamie'],['blocked','taylor']]){await t.request('/api/state',{actor});await t.command('admin.bind',[actor,id],{step:true});}
+ await t.command('admin.account',['friend','admin','active','delegate management'],{step:true});await t.command('admin.account',['blocked','member','suspended','owner suspended account'],{step:true});
+ const hash=require('node:crypto').createHash('sha256').update('delegated-session').digest('base64url');t.sql.prepare('INSERT INTO admin_sessions VALUES (?,?,?)').run(hash,'friend',Date.now()+600000);
+ assert.equal((await t.command('admin.bind',['blocked','taylor'],{actor:'friend',step:'delegated-session'})).status,403);assert.equal((await t.request('/api/state',{actor:'blocked'})).status,403);
+ const event=(await (await t.request('/api/admin/overview',{step:true})).json()).events.find(e=>e.kind==='admin.account'&&e.audit?.target==='blocked');assert.equal(event.audit.reason,'owner suspended account');assert.equal(event.audit.before.status,'active');assert.equal(event.audit.after.status,'suspended');
+});
+test('club moderation stores the reason and complete membership change in private audit events',async()=>{
+ const t=await fixture();await t.owner();await t.command('club.create',[{name:'Moderated club'}]);const club=(await (await t.request('/api/clubs')).json()).club;
+ assert.equal((await t.command('admin.club',[club.id,'owner requested archive'],{step:true})).status,200);
+ const event=(await (await t.request('/api/admin/overview',{step:true})).json()).events.find(e=>e.kind==='admin.club');assert.equal(event.audit.reason,'owner requested archive');assert.deepEqual(event.audit.before.members,['alex']);assert.deepEqual(event.audit.after.members,[]);assert.equal(event.audit.after.club.archived,true);
+});
+test('adjustment compensation restores the complete recovery wallet and rejects overwriting later changes',async()=>{
+ const t=await fixture();await t.owner();const raw=t.sql.prepare('SELECT snapshot FROM casino_state').get(),old=CasinoMoney.parseJSON(raw.snapshot);old.users[0].balance=10;old.users[0].recovery={deficit:100};old.users[0].sharkDebt=100;old.users[0].sharkInterestAt=Date.now();old.users[0].sharkInterestPolicy=2;t.sql.prepare('UPDATE casino_state SET snapshot=?').run(CasinoMoney.stringify(old));
+ for(const amount of [150,20]){
+  assert.equal((await t.command('adminAdjust',['alex','add',amount,'recovery adjustment'],{step:true})).status,200);
+  const ledger=await (await t.request('/api/transactions')).json(),entry=ledger.rows.find(e=>e.kind==='adminAdjust'&&['cash','negative'].includes(e.asset));
+  assert.equal((await t.command('admin.compensate',[entry.id,'reverse complete effect'],{step:true})).status,200);
+  const state=await (await t.request('/api/state')).json();assert.equal(state.data.users[0].balance,10);assert.equal(state.data.users[0].recovery.deficit,100);
+  assert.equal((await t.command('admin.compensate',[entry.id,'repeat reverse'],{step:true})).status,409);
+ }
+ await t.command('adminAdjust',['alex','add',20,'third adjustment'],{step:true});const entry=(await (await t.request('/api/transactions')).json()).rows.find(e=>e.kind==='adminAdjust'&&e.asset==='negative');
+ await t.command('adminAdjust',['alex','add',1,'later financial activity'],{step:true});assert.equal((await t.command('admin.compensate',[entry.id,'do not overwrite later money'],{step:true})).status,409);
+});
+test('peer-loan terms, acceptance and time-based interest retain permanent paired receivable/payable history',async()=>{
+ let now=Date.parse('2026-10-16T04:00:00Z');const t=await fixture({clock:()=>now});await t.owner();await t.request('/api/state',{actor:'friend'});await t.command('admin.bind',['friend','jamie'],{step:true});
+ const offered=await (await t.command('offerLoan',['jamie',100,15,10])).json();assert.equal((await t.command('respondLoan',[offered.result.id,true],{actor:'friend'})).status,200);
+ now+=600000;await t.request('/api/state',{actor:'friend'});
+ const lender=(await (await t.request('/api/transactions')).json()).rows,borrower=(await (await t.request('/api/transactions',{actor:'friend'})).json()).rows;
+ const payable=borrower.find(e=>e.asset==='peerPayable'&&e.kind==='system.sync');assert.ok(payable);assert.equal(payable.before,'100');assert.equal(payable.after,'115');assert.equal(payable.loanAfter.rateBps,1500);
+ const receivable=lender.find(e=>e.asset==='peerReceivable'&&e.operationId===payable.operationId);assert.ok(receivable);assert.equal(receivable.after,'115');assert.equal(receivable.loanId,offered.result.id);
+ assert.equal((await t.request('/api/transactions',{actor:'unbound'})).status,403);
 });
 test('admin analytics exclude sandbox activity and count a placed roulette stake as reserved assets',async()=>{
  const t=await fixture();await t.owner();await t.command('slots',[100,{jackpot:true}],{step:true,body:{id:crypto.randomUUID(),command:'slots',args:[100,{jackpot:true}],mode:'sandbox'}});

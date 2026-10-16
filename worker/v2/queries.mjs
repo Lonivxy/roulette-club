@@ -3,6 +3,7 @@ import {periods} from './progression.mjs';
 import {clubView} from './clubs.mjs';
 import {rows} from './repository.mjs';
 const M=globalThis.CasinoMoney;
+const publicActivity=event=>({id:event.id,playerId:event.playerId,kind:event.kind,createdAt:event.createdAt,...(event.game?{game:event.game}:{})});
 const pageOf=url=>Math.max(1,Math.min(1000000,Math.floor(Number(url.searchParams.get('page')))||1));
 export async function platformRead(request,db,p,row,stepUp,now=Date.now()){
  const url=new URL(request.url),account=authorize(p,request.headers.get('oai-authenticated-user-id'),null),id=account.playerId,data=M.parseJSON(row.snapshot),page=pageOf(url),limit=20;
@@ -14,11 +15,11 @@ export async function platformRead(request,db,p,row,stepUp,now=Date.now()){
  if(url.pathname.startsWith('/api/players/')){const user=publicUsers.find(u=>u.id===decodeURIComponent(url.pathname.slice(13)));if(!user)fail('玩家不存在。',404);return publicPlayer(user,p);}
  if(url.pathname==='/api/transactions')return {rows:await rows(db,'v2_journal','WHERE player_id=?',[id],limit,(page-1)*limit),page};
  if(url.pathname==='/api/clubs'){
-  const result=clubView(p,id,now);if(result.club)result.feed=await rows(db,'v2_events',"WHERE json_extract(body,'$.clubId')=?",[result.club.id],30);return result;
+  const result=clubView(p,id,now);if(result.club)result.feed=(await rows(db,'v2_events',"WHERE json_extract(body,'$.clubId')=?",[result.club.id],30)).map(publicActivity);return result;
  }
  if(url.pathname.startsWith('/api/clubs/')){
   const clubId=decodeURIComponent(url.pathname.slice(11));if(p.memberships[id]?.clubId!==clubId)fail('不是该俱乐部成员。',403);
-  const value=clubView(p,id,now);value.feed=await rows(db,'v2_events',"WHERE json_extract(body,'$.clubId')=?",[clubId],30);return value;
+  const value=clubView(p,id,now);value.feed=(await rows(db,'v2_events',"WHERE json_extract(body,'$.clubId')=?",[clubId],30)).map(publicActivity);return value;
  }
  if(url.pathname==='/api/leaderboards'){
   const metric=url.searchParams.get('metric')||'xp',period=url.searchParams.get('period')||'all';

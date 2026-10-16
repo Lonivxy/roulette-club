@@ -2,7 +2,7 @@ const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_pro
 const base=path.resolve(__dirname,'../.scratch/roulette-club-v2'),dir=path.join(base,'issues');
 const stages=JSON.parse(fs.readFileSync(path.join(base,'stages.json'),'utf8'));
 const field=(body,key)=>body.match(new RegExp('^'+key+': (.*)$','m'))?.[1];
-const read=id=>{const file=path.join(dir,id+'.md'),body=fs.readFileSync(file,'utf8');return {id,file,body,status:field(body,'Status'),stage:field(body,'Stage'),title:body.split('\n')[0].replace(/^# /,'')};};
+const read=id=>{const file=path.join(dir,id+'.md'),body=fs.readFileSync(file,'utf8');return {id,file,body,status:field(body,'Status'),stage:field(body,'Stage'),title:body.split('\n')[0].replace(/^# /,'').trim()};};
 const all=()=>stages.flatMap(s=>s.tasks.map(read));
 function evidence(file){const value=JSON.parse(fs.readFileSync(path.resolve(base,file),'utf8'));if(value.exitCode!==0||value.accepted!==true)throw Error('Evidence must record exitCode=0 and accepted=true.');return value;}
 function update(task,key,value){task.body=task.body.replace(new RegExp('^'+key+': .*$','m'),key+': '+value);fs.writeFileSync(task.file,task.body);}
@@ -17,8 +17,9 @@ try{
   }
   if(action==='block')update(task,'Status','blocked');
   if(action==='done'){
+   if(task.status!=='in-progress')throw Error('Start the task before marking it done.');
    evidence(arg);update(task,'Evidence',arg);update(task,'Commit',cp.execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim());update(task,'Status','done');
-   task.body=task.body.replaceAll('- [ ]','- [x]');fs.writeFileSync(task.file,task.body);
+   task.body=task.body.replaceAll('- [ ]','- [x]').replace('尚未开始。下一 AI 先读 ../HANDOFF.md。','已完成；验收命令和真实输出见 Evidence，关联代码提交见 Commit。');fs.writeFileSync(task.file,task.body);
   }
   if(action==='checkpoint')fs.appendFileSync(task.file,'\nCheckpoint: '+new Date().toISOString()+' — '+arg+'\n');
  }

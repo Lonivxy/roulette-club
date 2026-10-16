@@ -30,6 +30,7 @@ export function platformAction(p,engine,account,command,args,now){
  if(command==='admin.bind'){
   const [actor,playerId]=args,target=p.accounts[actor],player=engine.data.users.find(u=>u.id===playerId);
   if(!target||!player||p.profiles[playerId]?.archived)fail('请选择已登录的账号和有效旧玩家。');
+  if(target.status==='suspended')fail('停用账号必须先由所有者恢复状态，不能通过重新绑定启用。',403);
   if(target.playerId&&target.playerId!==playerId)fail('该账号已经绑定其他玩家。');
   if(Object.values(p.accounts).some(a=>a.actor!==actor&&a.playerId===playerId))fail('该玩家已经绑定其他账号。',409);
   if(target.role!=='member'&&account.role!=='owner')fail('只有所有者可以绑定管理员账号。',403);
