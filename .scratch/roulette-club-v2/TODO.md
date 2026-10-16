@@ -21,12 +21,12 @@ Generated from issue Status fields. Update with scripts/task-board.cjs. Never ti
 - [x] **P4 — 收藏与装备界面**
   - [x] [13 — 物品网格、筛选、详情和记录](issues/13.md) — done
   - [x] [14 — 称号、框、背景与精选徽章](issues/14.md) — done
-- [ ] **P5 — 社交系统**
-  - [ ] [15 — 精确余额榜、隐私及并列排名](issues/15.md) — in-progress
-  - [ ] [16 — 私有俱乐部、邀请与成员操作](issues/16.md) — pending
-  - [ ] [17 — 团队挑战、贡献及活动](issues/17.md) — pending
+- [x] **P5 — 社交系统**
+  - [x] [15 — 精确余额榜、隐私及并列排名](issues/15.md) — done
+  - [x] [16 — 私有俱乐部、邀请与成员操作](issues/16.md) — done
+  - [x] [17 — 团队挑战、贡献及活动](issues/17.md) — done
 - [ ] **P6 — ADMIN V2**
-  - [ ] [18 — 账户状态、角色与有原因的余额调整](issues/18.md) — pending
+  - [ ] [18 — 账户状态、角色与有原因的余额调整](issues/18.md) — in-progress
   - [ ] [19 — 奖励、任务、成就、等级和收藏配置](issues/19.md) — pending
   - [ ] [20 — 俱乐部管理、审计与健康信息](issues/20.md) — pending
   - [ ] [21 — 事件统计及经济分析](issues/21.md) — pending

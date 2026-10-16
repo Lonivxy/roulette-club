@@ -11,20 +11,21 @@ Browser runtime previously cannot load browser-service.mjs; retry supported brow
 
 ## Automatic checkpoint
 
-Updated: 2026/10/16 14:46:20 Asia/Shanghai
+Updated: 2026/10/16 14:48:55 Asia/Shanghai
 
-Completed tasks: 14/25
+Completed tasks: 17/25
 
-Next/current: [15 — 精确余额榜、隐私及并列排名](issues/15.md) — in-progress
+Next/current: [18 — 账户状态、角色与有原因的余额调整](issues/18.md) — in-progress
 
-HEAD: 9dad94ad35dc96d3010aaa02a0311ce7ed9c5090
+HEAD: 298c625911e3fb7aafa82411df2becc3bed57329
 
 Working tree (inspect before resuming):
 ```
  M .scratch/roulette-club-v2/HANDOFF.md
  M .scratch/roulette-club-v2/TODO.md
- M .scratch/roulette-club-v2/issues/13.md
- M .scratch/roulette-club-v2/issues/14.md
  M .scratch/roulette-club-v2/issues/15.md
-?? .scratch/roulette-club-v2/P4-gate.json
+ M .scratch/roulette-club-v2/issues/16.md
+ M .scratch/roulette-club-v2/issues/17.md
+ M .scratch/roulette-club-v2/issues/18.md
+?? .scratch/roulette-club-v2/P5-gate.json
 ```
