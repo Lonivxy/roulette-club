@@ -2,7 +2,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const {DatabaseSync}=require('node:sqlite');
 async function fixture(options={}){
  const sql=new DatabaseSync(':memory:');for(const file of fs.readdirSync(path.join(__dirname,'../drizzle')).filter(f=>f.endsWith('.sql')).sort())sql.exec(fs.readFileSync(path.join(__dirname,'../drizzle',file),'utf8'));
- const DB={prepare(query){let values=[];const s={bind(...v){values=v;return s;},execute(){const r=sql.prepare(query).run(...values);return {meta:{changes:Number(r.changes)}};},async run(){return s.execute();},async first(){return sql.prepare(query).get(...values)||null;},async all(){return {results:sql.prepare(query).all(...values)};}};return s;},async batch(statements){sql.exec('BEGIN');try{const r=statements.map(s=>s.execute());sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}}};
+ const DB={prepare(query){let values=[];const s={bind(...v){values=v;return s;},execute(){if(/^\s*SELECT/i.test(query))return {results:sql.prepare(query).all(...values),meta:{changes:0}};const r=sql.prepare(query).run(...values);return {meta:{changes:Number(r.changes)}};},async run(){return s.execute();},async first(){return sql.prepare(query).get(...values)||null;},async all(){return {results:sql.prepare(query).all(...values)};}};return s;},async batch(statements){sql.exec('BEGIN');try{const r=statements.map(s=>s.execute());sql.exec('COMMIT');return r;}catch(e){sql.exec('ROLLBACK');throw e;}}};
  const {createService,ORIGIN}=await import('../worker/service.mjs'),service=createService({v2:true,bootstrapOwnerPrivate:true,...options});
  async function request(route,{actor='owner',body,step=false,protocol=2}={}){
   const headers={'oai-authenticated-user-id':actor,'oai-authenticated-user-email':actor+'@example.test','X-Club-Protocol':String(protocol)};
@@ -61,7 +61,7 @@ test('V2 preserves a large old snapshot during bounded initialization and record
  let response;for(let i=0;i<10;i++){response=await t.request('/api/state');if(response.status===200)break;assert.equal(response.status,503);}
  assert.equal(response.status,200);assert.equal(t.sql.prepare('SELECT snapshot FROM casino_state').get().snapshot,saved);
  const progress=t.sql.prepare('SELECT xp,games FROM v2_progress WHERE id=?').get('alex');assert.equal(progress.xp,0);assert.equal(progress.games,0);
- assert.equal(t.sql.prepare("SELECT COUNT(*) AS count FROM v2_journal WHERE kind='opening'").get().count,144);
+ assert.equal(t.sql.prepare("SELECT COUNT(*) AS count FROM v2_journal WHERE kind='opening'").get().count,180);
 });
 test('V2 blackjack locks only its owner, while maintenance freezes interest and backup exports exact data',async()=>{
  const t=await fixture();await t.owner();await t.request('/api/state',{actor:'friend'});await t.command('admin.bind',['friend','jamie'],{step:true});
@@ -154,4 +154,28 @@ test('weekly club challenge counts formal activity only and prevents duplicate c
  const race=await Promise.all([t.command('club.claim',[],{actor:'friend'}),t.command('club.claim',[],{actor:'friend'})]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
  await t.command('club.leave',[],{actor:'friend'});invite=await (await t.command('club.invite',['jamie'])).json();await t.command('club.respond',[invite.result.id,true],{actor:'friend'});
  assert.equal((await t.command('club.claim',[],{actor:'friend'})).status,409);assert.equal((await (await t.request('/api/clubs')).json()).challenge.progress,50);
+});
+test('admin analytics exclude sandbox activity and count a placed roulette stake as reserved assets',async()=>{
+ const t=await fixture();await t.owner();await t.command('slots',[100,{jackpot:true}],{step:true,body:{id:crypto.randomUUID(),command:'slots',args:[100,{jackpot:true}],mode:'sandbox'}});
+ let analytics=await (await t.request('/api/admin/analytics',{step:true})).json();assert.equal(analytics.activePlayers24h,0);assert.ok(!analytics.events.some(e=>e.kind==='sandbox.command'));assert.equal(analytics.cashIncreases,0);assert.equal(analytics.cashDecreases,0);
+ await t.command('roulette.bet',['RED',10]);analytics=await (await t.request('/api/admin/analytics',{step:true})).json();assert.equal(analytics.cashDecreases,0);
+ await t.command('roulette.spin',[false]);analytics=await (await t.request('/api/admin/analytics',{step:true})).json();assert.ok(analytics.events.some(e=>e.kind==='game.settled'&&e.count===1));assert.equal(analytics.gameSettlements,1);assert.equal(analytics.wagered,10);
+ assert.equal((await t.request('/api/admin/analytics')).status,403);
+});
+test('archiving retains player history and audit, and requires club owners to resolve ownership first',async()=>{
+ const t=await fixture();await t.owner();await t.request('/api/state',{actor:'friend'});await t.command('admin.bind',['friend','jamie'],{step:true});
+ await t.command('club.create',[{name:'Cannot abandon'}],{actor:'friend'});const invite=await (await t.command('club.invite',['alex'],{actor:'friend'})).json();await t.command('club.respond',[invite.result.id,true]);
+ assert.equal((await t.command('deletePlayer',['jamie'],{step:true})).status,400);
+ await t.command('club.transfer',['alex'],{actor:'friend'});assert.equal((await t.command('deletePlayer',['jamie'],{step:true})).status,200);
+ assert.equal((await t.request('/api/state',{actor:'friend'})).status,403);const club=await (await t.request('/api/clubs')).json();assert.ok(!club.members.some(m=>m.id==='jamie'));
+ const overview=await (await t.request('/api/admin/overview',{step:true})).json();assert.ok(overview.players.some(u=>u.id==='jamie'&&u.balance===0));assert.ok(overview.journal.some(e=>e.playerId==='jamie'&&e.kind==='deletePlayer'));
+ assert.equal((await t.command('deletePlayer',['alex'],{step:true})).status,400);
+});
+test('sensitive endpoints rate-limit and retain security events visible only to verified administrators',async()=>{
+ const t=await fixture();await t.owner();await t.request('/api/state',{actor:'friend'});await t.command('admin.bind',['friend','jamie'],{step:true});
+ assert.equal((await t.command('adminAdjust',['alex','add',1,'forbidden'],{actor:'friend'})).status,403);
+ for(let i=0;i<10;i++)assert.equal((await t.request('/api/admin/register/options',{body:{}})).status,200);
+ assert.equal((await t.request('/api/admin/register/options',{body:{}})).status,429);
+ const overview=await (await t.request('/api/admin/overview',{step:true})).json();assert.ok(overview.events.some(e=>e.kind==='security.denied'&&e.actor==='friend'));assert.ok(overview.events.some(e=>e.kind==='security.rate-limited'));
+ assert.equal((await t.request('/api/admin/overview',{actor:'friend'})).status,403);
 });

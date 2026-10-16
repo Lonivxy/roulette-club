@@ -44,12 +44,17 @@ export async function platformRead(request,db,p,row,stepUp,now=Date.now()){
  }
  if(url.pathname==='/api/admin/analytics'){
   authorize(p,account.actor,null,true,stepUp);
-  const since=Date.now()-30*86400000,counts=(await db.prepare('SELECT kind,COUNT(*) AS count FROM v2_events WHERE created_at>=? GROUP BY kind').bind(since).all()).results;
-  const active=await db.prepare('SELECT COUNT(DISTINCT player_id) AS count FROM v2_events WHERE created_at>=? AND player_id IS NOT NULL').bind(Date.now()-86400000).first();
-  const claims=(await db.prepare("SELECT kind,COUNT(*) AS count FROM v2_claims WHERE kind!='round' AND created_at>=? GROUP BY kind").bind(since).all()).results;
-  const cash=(await db.prepare("SELECT body FROM v2_journal WHERE kind NOT IN ('opening','gift','respondLoan','repayLoan') AND created_at>=?").bind(since).all()).results.map(r=>M.parseJSON(r.body)).filter(r=>r.asset==='cash');
-  let increases=0,decreases=0;for(const entry of cash){const delta=M.parse(entry.delta);if(delta>0)increases=M.add(increases,delta);else decreases=M.sub(decreases,delta);}
-  return {window:'30 days',activePlayers24h:active.count,events:counts,claims,cashIncreases:increases,cashDecreases:decreases,accounting:'净筹码增减口径；排除期初和玩家互转。'};
+  const since=now-30*86400000,formal="kind NOT LIKE 'sandbox.%' AND kind NOT LIKE 'admin%' AND kind NOT LIKE 'security.%' AND kind!='system.sync'";
+  const counts=(await db.prepare(`SELECT kind,COUNT(*) AS count FROM v2_events WHERE created_at>=? AND ${formal} GROUP BY kind`).bind(since).all()).results;
+  const active=await db.prepare(`SELECT COUNT(DISTINCT player_id) AS count FROM v2_events WHERE created_at>=? AND player_id IS NOT NULL AND ${formal}`).bind(now-86400000).first();
+  const claims=(await db.prepare("SELECT kind,COUNT(*) AS count,SUM(COALESCE(json_extract(body,'$.xp'),0)) AS xp FROM v2_claims WHERE kind!='compensation' AND created_at>=? GROUP BY kind").bind(since).all()).results;
+  const cash=(await db.prepare("SELECT body FROM v2_journal WHERE kind NOT IN ('opening','gift','respondLoan','repayLoan') AND created_at>=?").bind(since).all()).results.map(r=>M.parseJSON(r.body)).filter(r=>['cash','reserved'].includes(r.asset));
+  const operations=new Map();for(const entry of cash)operations.set(entry.operationId,M.add(operations.get(entry.operationId)||0,M.parse(entry.delta)));
+  let increases=0,decreases=0;for(const delta of operations.values())if(delta>0)increases=M.add(increases,delta);else decreases=M.sub(decreases,delta);
+  const games=(await db.prepare("SELECT body FROM v2_events WHERE kind='game.settled' AND created_at>=?").bind(since).all()).results.map(r=>M.parseJSON(r.body));
+  let wagered=0,returned=0;for(const game of games){wagered=M.add(wagered,M.parse(game.wager||'0'));returned=M.add(returned,M.parse(game.payout||'0'));}
+  const items=(await db.prepare("SELECT json_extract(i.body,'$.kind') AS kind,COUNT(*) AS count FROM v2_inventory v JOIN v2_items i ON i.id=v.item_id WHERE json_extract(v.body,'$.createdAt')>=? GROUP BY json_extract(i.body,'$.kind')").bind(since).all()).results;
+  return {window:'30 days',activePlayers24h:active.count,events:counts,claims,items,gameSettlements:games.length,wagered,returned,cashIncreases:increases,cashDecreases:decreases,accounting:'钱包与下注占用合计的每操作净增减；排除期初和玩家互转。下注额与返还另列。'};
  }
  return undefined;
 }

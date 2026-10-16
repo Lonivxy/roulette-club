@@ -1,0 +1,8 @@
+{
+  "accepted": true,
+  "exitCode": 0,
+  "commands": ["npm run db:generate", "node --test test/v2-http.test.cjs test/v2-growth.test.cjs test/worker-passkey.test.cjs", "npm run build", "npm test"],
+  "results": "215 tests passed. Real ES256 registration/signature verification covers separate administrator credentials and role revocation. Covers owner-only role grants, required step-up/reasons, append-only compensation, archival membership cleanup, retained history, immutable configuration versions, security denial/rate events, and analytics excluding sandbox. Added read indexes and scoped claim/current-week contribution loading. Backup uses one transactional read batch with migration tags.",
+  "logs": ["P6-tests.log", "P6-build.log", "P6-targeted.log"],
+  "limitations": "0002 and 0003 are additive and not deployed. Drizzle generated a malformed expression index; corrected the new, unapplied 0003 SQL and verified the complete chain in SQLite. Real-browser acceptance and production cutover remain in P7."
+}

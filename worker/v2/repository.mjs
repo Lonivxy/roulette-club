@@ -9,8 +9,14 @@ export const collections={
  contributions:['v2_contributions',{club_id:'clubId',player_id:'playerId'}],stats:['v2_period_stats',{player_id:'playerId',period:'period',xp:'xp',games:'games'}],
  wallets:['v2_wallet_index',{visible:'visible',sign:'sign',magnitude:'magnitude',digits:'digits'}],sandbox:['v2_sandbox',{}]
 };
-export async function loadPlatform(db){
- const rows=await Promise.all(Object.entries(collections).map(async([key,[table]])=>[key,(await db.prepare(`SELECT id,body FROM ${table}`).all()).results]));
+export async function loadPlatform(db,{actor,week}={}){
+ const accountRows=(await db.prepare('SELECT id,body FROM v2_accounts').all()).results,accounts=Object.fromEntries(accountRows.map(row=>[row.id,M.parseJSON(row.body)])),playerId=accounts[actor]?.playerId||'';
+ const rows=await Promise.all(Object.entries(collections).map(async([key,[table]])=>{
+  if(key==='accounts')return [key,accountRows];
+  if(key==='claims'&&actor)return [key,(await db.prepare("SELECT id,body FROM v2_claims WHERE player_id=? AND kind!='round'").bind(playerId).all()).results];
+  if(key==='contributions'&&week)return [key,(await db.prepare("SELECT id,body FROM v2_contributions WHERE json_extract(body,'$.week')=?").bind(week).all()).results];
+  return [key,(await db.prepare(`SELECT id,body FROM ${table}`).all()).results];
+ }));
  const meta=await db.prepare('SELECT body FROM v2_meta WHERE id=?').bind('platform').first();
  return {meta:meta?M.parseJSON(meta.body):null,...Object.fromEntries(rows.map(([key,values])=>[key,Object.fromEntries(values.map(row=>[row.id,M.parseJSON(row.body)]))])),events:[],journal:[],backups:[]};
 }

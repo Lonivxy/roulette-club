@@ -43,7 +43,7 @@ function addXP(p,id,xp,now,cause){
 }
 export function grant(p,id,key,kind,xp,itemIds,now,details={}){
  const claimId=id+':'+key;if(p.claims[claimId])fail('该奖励已经领取。',409);
- for(const itemId of itemIds||[])if(!p.items[itemId]||!p.items[itemId].enabled)fail('奖励物品不存在或已停用。');
+ for(const itemId of itemIds||[])if(!p.items[itemId])fail('奖励物品不存在。');
  p.claims[claimId]={id:claimId,playerId:id,kind,xp,createdAt:now,...details};addXP(p,id,xp||0,now,claimId);
  for(const itemId of itemIds||[]){const inventoryId=id+':'+itemId;p.inventory[inventoryId]??={id:inventoryId,playerId:id,itemId,createdAt:now,source:kind};}
  return p.claims[claimId];
@@ -70,7 +70,7 @@ export function refreshAchievements(p,id,now){
  }
  for(const d of Object.values(p.definitions).filter(d=>d.kind==='quest'&&d.enabled))currentQuest(p,id,d,now);
 }
-export function settledRound(p,id,game,roundId,now){
+export function settledRound(p,id,game,roundId,now,settlement){
  ensurePlayer(p,id,now);if(p.claims[id+':round:'+roundId])return false;
  for(const d of Object.values(p.definitions).filter(d=>d.kind==='quest'&&d.enabled&&d.period==='event')){
   const q=currentQuest(p,id,d,now);if(q){q.eventStats??={games:0,types:{}};q.eventStats.games++;q.eventStats.types[game]=true;}
@@ -79,10 +79,11 @@ export function settledRound(p,id,game,roundId,now){
  grant(p,id,'round:'+roundId,'round',xp,[],now);prog.day.gameXP+=xp;prog.games++;prog.gameTypes[game]=true;
  for(const kind of ['day','week','month']){prog[kind].games++;prog[kind].types[game]=true;}
  const keys=periods(now);for(const kind of ['week','month','all']){const period=kind==='all'?'all':keys[kind],key=id+':'+kind+':'+period;const stats=p.stats[key]??={id:key,playerId:id,period:kind+':'+period,xp:0,games:0};stats.games++;}
- event(p,roundId,id,'game.settled',now,{game,...(p.memberships[id]?{clubId:p.memberships[id].clubId}:{})});
+ event(p,roundId,id,'game.settled',now,{game,...(settlement?{wager:String(settlement.wager),payout:String(settlement.payout),net:String(MoneyNet(settlement))}:{}),...(p.memberships[id]?{clubId:p.memberships[id].clubId}:{})});
  const member=p.memberships[id];if(member){const key=member.clubId+':'+keys.week+':'+roundId;p.contributions[key]={id:key,playerId:id,clubId:member.clubId,week:keys.week,createdAt:now,roundId};}
  refreshAchievements(p,id,now);return true;
 }
+function MoneyNet(result){return globalThis.CasinoMoney.sub(result.payout,result.wager);}
 export function claimDaily(p,id,now){
  ensurePlayer(p,id,now);const prog=p.progress[id],day=periods(now).day,previous=periods(now-86400000).day;
  if(prog.lastDaily===day)fail('今天已经领取签到奖励。',409);

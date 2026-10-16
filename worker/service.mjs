@@ -184,7 +184,7 @@ export function createService({page='',webauthn={generateRegistrationOptions,ver
             if(kind==='authenticate'&&!stored)fail('请先设置管理通行密钥。');
             const recent=await db.prepare('SELECT COUNT(*) AS count FROM admin_challenges WHERE actor=? AND expires_at>?').bind(who,Date.now()).first();
             if(recent.count>=10)fail('验证请求过于频繁，请五分钟后重试。',429);
-            const options=kind==='register'?await webauthn.generateRegistrationOptions({rpName:'Roulette Club Admin',rpID:RP,userName:'Club Administrator',userID:new TextEncoder().encode('club-owner'),attestationType:'none',authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'required',userVerification:'required'},supportedAlgorithmIDs:[-7,-257]})
+            const options=kind==='register'?await webauthn.generateRegistrationOptions({rpName:'Roulette Club Admin',rpID:RP,userName:credentialKey==='owner'?'Club Owner':'Club Administrator '+(await hash(credentialKey)).slice(0,8),userID:credentialKey==='owner'?new TextEncoder().encode('club-owner'):fromB64(await hash(credentialKey)),attestationType:'none',authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'required',userVerification:'required'},supportedAlgorithmIDs:[-7,-257]})
                 :await webauthn.generateAuthenticationOptions({rpID:RP,userVerification:'required',allowCredentials:[{id:stored.credential_id,transports:JSON.parse(stored.transports)}]});
             const id=token();await db.prepare('INSERT INTO admin_challenges (id,actor,kind,challenge,expires_at) VALUES (?,?,?,?,?)').bind(await hash(id),who,kind,options.challenge,Date.now()+5*60000).run();
             return json(options,200,{'Set-Cookie':cookie(CHALLENGE,id,300)});

@@ -8,11 +8,11 @@ function database() {
         let args=[];const result={bind(...values){args=values;return result;},execute(){const value=sql.prepare(query).run(...args);return {meta:{changes:Number(value.changes)}};},async run(){return result.execute();},async first(){return sql.prepare(query).get(...args)||null;},async all(){return {results:sql.prepare(query).all(...args)};}};return result;
     },async batch(statements){sql.exec('BEGIN IMMEDIATE');try{const results=statements.map(statement=>statement.execute());sql.exec('COMMIT');return results;}catch(error){sql.exec('ROLLBACK');throw error;}}};return {DB,sql};
 }
-async function fixture() {
-    const {createService,ORIGIN}=await import('../worker/service.mjs'),{DB,sql}=database(),service=createService({page:'<script>/* SERVER_BOOTSTRAP */</script>'});
+async function fixture(serviceOptions={}) {
+    const {createService,ORIGIN}=await import('../worker/service.mjs'),{DB,sql}=database(),service=createService({page:'<script>/* SERVER_BOOTSTRAP */</script>',...serviceOptions});
     const jar=new Map();
     async function request(route,{body,actor='owner-site-user',origin=ORIGIN,cookies=true}={}) {
-        const headers={};if(actor)headers['oai-authenticated-user-id']=actor;
+        const headers={};if(actor)headers['oai-authenticated-user-id']=actor;if(serviceOptions.v2)headers['X-Club-Protocol']='2';
         if(body!==undefined){headers['Content-Type']='application/json';headers.Origin=origin;}
         if(cookies)headers.Cookie=[...jar].map(([key,value])=>key+'='+value).join('; ');
         const response=await service.fetch(new Request(ORIGIN+route,{method:body===undefined?'GET':'POST',headers,body:body===undefined?undefined:globalThis.CasinoMoney.stringify(body)}),{DB});
@@ -37,6 +37,21 @@ async function fixture() {
     async function enroll(){const options=await (await request('/api/admin/register/options',{body:{}})).json();const response=await request('/api/admin/register/verify',{body:await registration(options)});assert.equal(response.status,200,JSON.stringify(await response.clone().json()));return response;}
     return {request,cmd,enroll,registration,assertion,sql,jar,DB,ORIGIN};
 }
+test('V2 real WebAuthn credentials and role authorization remain scoped to each invited administrator',async()=>{
+ const t=await fixture({v2:true,bootstrapOwnerPrivate:true});await t.enroll();assert.equal((await t.cmd('admin.bind',['owner-site-user','alex'])).status,200);
+ await t.request('/api/state',{actor:'delegated'});assert.equal((await t.cmd('admin.bind',['delegated','jamie'])).status,200);
+ assert.equal((await t.cmd('admin.account',['delegated','admin','active','approved administrator'])).status,200);
+ const options=await (await t.request('/api/admin/register/options',{actor:'delegated',body:{}})).json();
+ assert.notEqual(options.user.id,Buffer.from('club-owner').toString('base64url'));
+ assert.equal((await t.request('/api/admin/register/verify',{actor:'delegated',body:await t.registration(options)})).status,200);
+ const command=(operation,args,actor='delegated')=>t.request('/api/command',{actor,body:{id:crypto.randomUUID(),command:operation,args,playerId:actor==='delegated'?'jamie':'alex'}});
+ assert.equal((await command('adminAdjust',['alex','add',10,'delegated credit'])).status,200);
+ assert.equal((await command('admin.account',['delegated','member','active','self demotion'])).status,403);
+ assert.equal((await t.request('/api/admin/overview',{actor:'owner-site-user'})).status,403);
+ const own=await (await t.request('/api/admin/authenticate/options',{body:{}})).json();assert.equal((await t.request('/api/admin/authenticate/verify',{body:await t.assertion(own)})).status,200);
+ assert.equal((await command('admin.account',['delegated','member','suspended','revoked access'],'owner-site-user')).status,200);
+ assert.equal((await command('adminAdjust',['alex','add',10,'revoked attempt'])).status,403);
+});
 test('server rejects anonymous identity, foreign origins and all unverified management commands',async()=>{
     const t=await fixture();assert.equal((await t.request('/api/state',{actor:''})).status,401);
     assert.equal((await t.request('/api/admin/register/options',{body:{},origin:'https://evil.example'})).status,403);

@@ -15,9 +15,9 @@ if (window.__CASINO_BOOTSTRAP__) {
         accrueInterest() { return false; }
         applySnapshot(snapshot) {
             snapshot = this.money.hydrate(snapshot);
+            if (this.revision !== undefined && snapshot.revision < this.revision) return;
             this.platform = snapshot.platform; this.directory = snapshot.directory;
             this.mode = snapshot.platform?.mode || 'formal';
-            if (this.revision !== undefined && snapshot.revision < this.revision) return;
             const selected = this.revision !== undefined ? this.data?.activeId : null;
             if (!snapshot.platform && selected && snapshot.data.users.some(user => user.id === selected)) snapshot.data.activeId = selected;
             const pending = snapshot.data.users.find(user => user.blackjack && user.blackjack.phase !== 'settled');
@@ -47,8 +47,10 @@ if (window.__CASINO_BOOTSTRAP__) {
         }
         async sync() {
             if(this.requestBusy||this.animationLock)return;
+            const mode=this.mode;
             const response=await fetch('/api/state?playerId='+encodeURIComponent(this.data.activeId)+'&mode='+(this.mode||'formal'),{credentials:'same-origin',cache:'no-store'});
             const value=await response.json();if(!response.ok)throw new Error(value.error||'账户同步失败。');
+            if(this.requestBusy||this.mode!==mode)return;
             this.applySnapshot(value);this.onChange?.();
         }
         async api(path) {
@@ -56,7 +58,9 @@ if (window.__CASINO_BOOTSTRAP__) {
             const value=this.money.hydrate(await response.json());if(!response.ok)throw new Error(value.error||'请求失败。');return value;
         }
         async setSandbox(enabled) {
-            this.ensureIdle();const snapshot=await this.api('/api/state?mode='+(enabled?'sandbox':'formal'));this.applySnapshot(snapshot);this.onChange?.();
+            this.ensureIdle();this.requestBusy=true;this.onChange?.();
+            try{const snapshot=await this.api('/api/state?mode='+(enabled?'sandbox':'formal'));this.applySnapshot(snapshot);}
+            finally{this.requestBusy=false;this.onChange?.();}
         }
         switchUser(id) {
             if(this.platform && id!==this.active.id)throw new Error('独立账号只能操作自己的玩家。');

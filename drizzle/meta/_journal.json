@@ -15,6 +15,20 @@
       "when": 1792130898169,
       "tag": "0001_little_calypso",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792133591879,
+      "tag": "0002_lyrical_hemingway",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1792133787149,
+      "tag": "0003_tiny_vision",
+      "breakpoints": true
     }
   ]
 }

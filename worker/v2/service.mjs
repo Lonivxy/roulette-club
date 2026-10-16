@@ -3,27 +3,38 @@ import {authorize,privateState,publicPlayer,fail} from './identity.mjs';
 import {loadPlatform,platformWrites,emptyPlatform,rows} from './repository.mjs';
 import {initialPlatform,ensurePlayer,settledRound,questViews,periods} from './progression.mjs';
 import {platformAction,isAdminCommand} from './actions.mjs';
+import migrationJournal from '../../drizzle/meta/_journal.json' with {type:'json'};
 const M=globalThis.CasinoMoney,E=globalThis.CasinoEngine;
 const json=(body,status=200,headers={})=>new Response(M.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff',...headers}});
 const digest=async text=>{const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)));return btoa(String.fromCharCode(...bytes)).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');};
 const cookie=request=>request.headers.get('cookie')?.split(';').map(x=>x.trim()).find(x=>x.startsWith('__Host-club-admin='))?.slice(18)||'';
 const who=request=>request.headers.get('oai-authenticated-user-id')||fail('请先登录。',401);
 function engine(snapshot,now){const e=new E({getItem:()=>snapshot,setItem(){}},undefined,()=>now,{recoverRoulette:false});if(e.storageWarning)fail('存档校验失败，未修改旧数据。',500);e.isolatedPlayer=true;return e;}
-function fields(user){return {cash:user.balance,bank:user.debt,shark:user.sharkDebt,negative:user.recovery?.deficit||0};}
+function fields(user){return {cash:user.balance,bank:user.debt,shark:user.sharkDebt,negative:user.recovery?.deficit||0,reserved:M.add(E.sumBets(user.bets),user.blackjack&&user.blackjack.phase!=='settled'?user.blackjack.hands.reduce((sum,h)=>M.add(sum,h.bet),0):0)};}
 function accountJournal(p,before,after,operation,actor,kind,now,reason=''){
- for(const user of after.users){const old=before.users.find(x=>x.id===user.id),a=old?fields(old):{cash:0,bank:0,shark:0,negative:0},b=fields(user);
+ for(const user of after.users){const old=before.users.find(x=>x.id===user.id),a=old?fields(old):{cash:0,bank:0,shark:0,negative:0,reserved:0},b=fields(user);
   for(const asset of Object.keys(b))if(!old||M.compare(a[asset],b[asset])!==0)p.journal.push({id:operation+':'+user.id+':'+asset,playerId:user.id,operationId:operation,actor,kind,asset,before:String(a[asset]),after:String(b[asset]),delta:String(M.sub(b[asset],a[asset])),createdAt:now,reason});
  }
  for(const user of before.users)if(!after.users.some(u=>u.id===user.id))fail('不能物理删除有历史的玩家。');
 }
 function indexes(p,data){for(const user of data.users){if(!p.profiles[user.id])continue;const amount=user.recovery?0:user.balance,negative=amount<0,digits=String(M.abs(amount));p.wallets[user.id]={id:user.id,visible:p.profiles[user.id].walletVisible&&!p.profiles[user.id].archived?1:0,sign:amount===0?0:negative?-1:1,magnitude:digits.length,digits,name:user.name};}}
 export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwnerPrivate=false,clock=()=>Date.now(),origin,extensions={}}){
+ async function security(request,db,status){
+  if(!db||![401,403,429].includes(status))return;
+  const event={id:crypto.randomUUID(),playerId:null,kind:status===429?'security.rate-limited':'security.denied',createdAt:clock(),actor:request.headers.get('oai-authenticated-user-id')||'anonymous',path:new URL(request.url).pathname.slice(0,160),status};
+  await db.prepare('INSERT INTO v2_events (id,player_id,kind,created_at,body) VALUES (?,NULL,?,?,?)').bind(event.id,event.kind,event.createdAt,M.stringify(event)).run();
+ }
+ async function limit(request,db){
+  const path=new URL(request.url).pathname,kind=/\/api\/admin\/(register|authenticate)\//.test(path)?'passkey':request.method==='POST'?'write':'read',max=kind==='passkey'?20:kind==='write'?120:240;
+  const value=await db.prepare('INSERT INTO v2_rate_limits (id,window,count) VALUES (?,?,1) ON CONFLICT(id) DO UPDATE SET window=excluded.window,count=CASE WHEN window=excluded.window THEN count+1 ELSE 1 END RETURNING count').bind(who(request)+':'+kind,Math.floor(clock()/60000)).first();
+  if(value.count>max)fail('请求过于频繁，请一分钟后再试。',429);
+ }
  async function play(e,operation,args,admin){try{return await applyCommand(e,operation,args,admin);}catch(error){if(error.status)throw error;fail(error.message||'游戏操作无效。');}}
  async function wallet(db){let row=await db.prepare('SELECT snapshot,revision FROM casino_state WHERE id=?').bind('club').first();if(!row){const e=new E(null);await db.prepare('INSERT OR IGNORE INTO casino_state (id,snapshot,revision,last_op) VALUES (?,?,0,?)').bind('club',M.stringify(e.data),'initial').run();row=await db.prepare('SELECT snapshot,revision FROM casino_state WHERE id=?').bind('club').first();}return row;}
  async function stepUp(request,db){const raw=cookie(request);if(!raw)return false;const found=await db.prepare('SELECT actor,expires_at FROM admin_sessions WHERE id=?').bind(await digest(raw)).first();return Boolean(found&&found.actor===who(request)&&found.expires_at>clock());}
  async function initialize(request,db){
   for(let attempt=0;attempt<8;attempt++){
-   const row=await wallet(db),previous=await loadPlatform(db),now=clock();let next=structuredClone(previous);
+   const now=clock(),scope={actor:who(request),week:periods(now).week},row=await wallet(db),previous=await loadPlatform(db,scope);let next=structuredClone(previous);
    if(!next.meta){const old=await db.prepare('SELECT actor FROM admin_credential WHERE id=?').bind('owner').first();const owner=old?.actor||(bootstrapOwnerPrivate?who(request):null);if(!owner)fail('请先由所有者完成初始化。',503);
     next=initialPlatform(owner,now);next.accounts[owner]={id:owner,actor:owner,playerId:null,email:owner===who(request)?request.headers.get('oai-authenticated-user-email')||'':'',role:'owner',status:'active',createdAt:now};
     next.backups.push({id:'pre-v2:'+crypto.randomUUID(),createdAt:now,kind:'pre-v2',legacy:{snapshot:row.snapshot,revision:row.revision}});
@@ -35,7 +46,7 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
    const changes=platformWrites(db,previous,next,'initializing');if(!changes.length)return {p:previous,row};
    const operation=crypto.randomUUID(),writes=platformWrites(db,previous,next,operation);
    const result=await db.batch([db.prepare('UPDATE casino_state SET revision=revision+1,last_op=? WHERE id=? AND revision=?').bind(operation,'club',row.revision),...writes]);
-   if(result[0].meta.changes){row.revision++;if(!next.meta.ready)fail('正在安全导入旧玩家，请稍后刷新继续。',503);return {p:await loadPlatform(db),row};}
+   if(result[0].meta.changes){row.revision++;if(!next.meta.ready)fail('正在安全导入旧玩家，请稍后刷新继续。',503);return {p:await loadPlatform(db,scope),row};}
   }fail('初始化正忙，请重试。',409);
  }
  async function snapshot(request,db,p,row,mode='formal'){
@@ -60,7 +71,7 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
   if(request.headers.get('X-Club-Protocol')!=='2')fail('站点已升级，请刷新页面。',409);
   if(typeof id!=='string'||id.length<16||id.length>80||typeof operation!=='string'||!Array.isArray(args)||args.length>5||!['formal','sandbox'].includes(mode))fail('操作参数无效。');
   const payload=await digest(M.stringify({operation,args,playerId,mode}));
-  for(let attempt=0;attempt<6;attempt++){
+  for(let attempt=0;attempt<12;attempt++){
    const {p:before,row}=await initialize(request,db),p=structuredClone(before),now=clock(),elevated=await stepUp(request,db),privileged=isAdminCommand(operation)||mode==='sandbox';
    const account=authorize(p,who(request),playerId,privileged,elevated);
    if(p.meta.maintenance&&operation!=='admin.maintenance'&&operation!=='admin.bind')fail('维护期间暂停状态修改。',503);
@@ -82,13 +93,17 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
      const entry=await db.prepare('SELECT body FROM v2_journal WHERE id=?').bind(args[0]).first();
      if(!entry||typeof args[1]!=='string'||args[1].trim().length<3)fail('请选择原调整流水并填写原因。');
      const originalEntry=M.parseJSON(entry.body);if(originalEntry.kind!=='adminAdjust'||originalEntry.asset!=='cash')fail('只能补偿管理员钱包调整。');
-     const claimId=originalEntry.playerId+':compensation:'+originalEntry.id;if(p.claims[claimId])fail('该调整已经补偿。',409);
+     const claimId=originalEntry.playerId+':compensation:'+originalEntry.id;if(p.claims[claimId]||await db.prepare('SELECT id FROM v2_claims WHERE id=?').bind(claimId).first())fail('该调整已经补偿。',409);
      const delta=M.sub(M.parse(originalEntry.before),M.parse(originalEntry.after));if(delta===0)fail('该记录没有金额变化。');
-     e.adminAdjust(originalEntry.playerId,delta>0?'add':'remove',M.abs(delta),args[1]);
+     await play(e,'adminAdjust',[originalEntry.playerId,delta>0?'add':'remove',M.abs(delta),args[1]],true);
      p.claims[claimId]={id:claimId,playerId:originalEntry.playerId,kind:'compensation',createdAt:now,source:originalEntry.id,reason:args[1]};result={source:originalEntry.id};
     }else if(operation==='deletePlayer'){
-     const user=e.data.users.find(u=>u.id===args[0]);if(!user)fail('玩家不存在。');const copy=structuredClone(e.data);e.deletePlayer(user.id);e.data=copy;
+     const user=e.data.users.find(u=>u.id===args[0]);if(!user||p.profiles[user.id]?.archived)fail('玩家不存在或已归档。');
      if(Object.values(p.accounts).some(a=>a.playerId===user.id&&a.role==='owner'))fail('不能归档所有者的玩家。');
+     const club=p.clubs[p.memberships[user.id]?.clubId];if(club?.ownerId===user.id&&Object.values(p.memberships).some(m=>m.clubId===club.id&&m.id!==user.id))fail('请先转移俱乐部所有权，再归档该玩家。');
+     const copy=structuredClone(e.data);await play(e,'deletePlayer',[user.id],true);e.data=copy;
+     if(club?.ownerId===user.id)extensions.action?.(p,e,account,'admin.club',[club.id,'Player archived'],now);else delete p.memberships[user.id];
+     for(const invite of Object.values(p.invitations))if(invite.status==='pending'&&(invite.targetId===user.id||invite.inviterId===user.id))invite.status='revoked';
      const target=e.data.users.find(u=>u.id===user.id);target.balance=0;p.profiles[user.id].archived=true;for(const a of Object.values(p.accounts))if(a.playerId===user.id)a.status='suspended';result=null;
     }else if(operation==='import')fail('V2 已启用；旧存档不能覆盖现有数据库。',409);
     else{
@@ -98,8 +113,8 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
     }
     for(const user of e.data.users)if(!p.profiles[user.id])ensurePlayer(p,user.id,now);
     const round=operation==='blackjack'?e.active.blackjack: null;
-    if(['slots','lottery','plinko','dice','roulette.spin'].includes(operation))settledRound(p,account.playerId,operation==='roulette.spin'?'roulette':operation,result?.roundId||result?.id||id,now);
-    else if(round?.phase==='settled'&&!(original.users.find(u=>u.id===account.playerId)?.blackjack?.id===round.id&&original.users.find(u=>u.id===account.playerId)?.blackjack?.phase==='settled'))settledRound(p,account.playerId,'blackjack',round.id,now);
+    const roundId=['slots','lottery','plinko','dice','roulette.spin'].includes(operation)?result?.roundId||result?.id||id:round?.phase==='settled'&&!(original.users.find(u=>u.id===account.playerId)?.blackjack?.id===round.id&&original.users.find(u=>u.id===account.playerId)?.blackjack?.phase==='settled')?round.id:null;
+    if(roundId){if(await db.prepare('SELECT id FROM v2_claims WHERE id=?').bind(account.playerId+':round:'+roundId).first())fail('该对局已经结算。',409);settledRound(p,account.playerId,operation==='blackjack'?'blackjack':operation==='roulette.spin'?'roulette':operation,roundId,now,operation==='blackjack'?round.result:result);}
     accountJournal(p,original,e.data,id,who(request),operation,now,operation==='adminAdjust'?args[3]:isAdminCommand(operation)?String(args.at(-1)||''):'');indexes(p,e.data);
    }
    p.events.push({id:'command:'+id,playerId:account.playerId||null,kind:mode==='sandbox'?'sandbox.command':operation,createdAt:now,actor:who(request)});
@@ -123,18 +138,20 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
    if(url.pathname==='/api/admin/backup'){
     if(account.role!=='owner'||!p.meta.maintenance)fail('请由所有者先开启只读维护，再导出备份。',409);
     const tables=['casino_state','casino_operations','admin_credential','v2_meta',...Object.values((await import('./repository.mjs')).collections).map(([table])=>table),'v2_events','v2_journal','v2_backups'];const records={};
-    for(const table of tables)records[table]=(await db.prepare(`SELECT * FROM ${table}`).all()).results;
-    return json({format:2,createdAt:clock(),records});
+    const exported=await db.batch(tables.map(table=>db.prepare(`SELECT * FROM ${table}`)));
+    tables.forEach((table,index)=>records[table]=exported[index].results);
+    if(!M.parseJSON(records.v2_meta.find(r=>r.id==='platform').body).maintenance)fail('维护状态已经改变，请重新开启维护后备份。',409);
+    return json({format:2,createdAt:clock(),migrations:migrationJournal.entries.map(entry=>entry.tag),records});
    }
   }
   if(extensions.read){const value=await extensions.read(request,db,p,row,await stepUp(request,db),clock());if(value!==undefined)return json(value);}
   fail('接口不存在。',404);
  }
  return {async fetch(request,env){try{
-  const actor=who(request),url=new URL(request.url);if(!env.DB)fail('数据库未连接。',503);
+  const actor=who(request),url=new URL(request.url);if(!env.DB)fail('数据库未连接。',503);await limit(request,env.DB);
   if(url.pathname.startsWith('/api/admin/register/')||url.pathname.startsWith('/api/admin/authenticate/')||['/api/admin/status','/api/admin/logout'].includes(url.pathname)){
    const {p}=await initialize(request,env.DB),a=p.accounts[actor];if(!['owner','admin'].includes(a?.role)||a.status!=='active')fail('没有管理员权限。',403);
-   return legacyFactory({credentialKey:a.role==='owner'?'owner':'admin:'+actor}).fetch(request,env);
+   const response=await legacyFactory({credentialKey:a.role==='owner'?'owner':'admin:'+actor}).fetch(request,env);await security(request,env.DB,response.status);return response;
   }
   if(request.method==='POST'){
    if(request.headers.get('origin')!==origin||!request.headers.get('content-type')?.startsWith('application/json'))fail('请求来源无效。',403);
@@ -146,5 +163,5 @@ export function createV2Service({page='',applyCommand,legacyFactory,bootstrapOwn
   if(!['/','/player','/admin','/index.html'].includes(url.pathname))return new Response('Not found',{status:404});
   const {p,row}=await initialize(request,env.DB),boot=await snapshot(request,env.DB,p,row),encoded=M.stringify(boot).replaceAll('<','\\u003c');
   return new Response(page.replace('/* SERVER_BOOTSTRAP */',`window.__CASINO_BOOTSTRAP__=${encoded};`),{headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'private, no-store','X-Frame-Options':'SAMEORIGIN','X-Content-Type-Options':'nosniff','Permissions-Policy':'publickey-credentials-create=(self), publickey-credentials-get=(self)'}});
- }catch(error){return json({error:error.status?error.message:'操作未完成，请刷新重试。'},error.status||500);}}};
+ }catch(error){await security(request,env.DB,error.status||500).catch(()=>{});return json({error:error.status?error.message:'操作未完成，请刷新重试。'},error.status||500);}}};
 }

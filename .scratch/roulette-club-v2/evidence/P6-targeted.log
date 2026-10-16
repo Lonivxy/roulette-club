@@ -1,0 +1,58 @@
+✔ normal rounds grant five XP capped at 100 per Shanghai day, and daily claims cannot repeat (22.56ms)
+✔ Shanghai resets cover Monday, month and year boundaries; seven-day rewards cycle without duplicate cosmetics (3.8719ms)
+✔ a quest keeps its period reward version and cannot be claimed again after definition edits (1.9009ms)
+✔ event quests count only settlements inside their own window and expire unclaimed rewards (1.2882ms)
+✔ V2 HTTP binds accounts and never leaks another player private state (696.8023ms)
+✔ definition configuration rejects reserved keys and prevents reopening a claimed task under another period (40.4654ms)
+✔ V2 atomic rewards replay once and simultaneous new claims grant only once (50.3475ms)
+✔ V2 sandbox wins cannot alter formal wallet or progression and require step-up (59.8905ms)
+✔ V2 permanent journal and exact balances survive transfers, retries, suspension and privacy changes (68.321ms)
+✔ V2 preserves a large old snapshot during bounded initialization and records opening funds without inventing XP (66.5228ms)
+✔ V2 blackjack locks only its owner, while maintenance freezes interest and backup exports exact data (82.6911ms)
+✔ admin corrections append compensating records rather than editing history (37.3781ms)
+✔ V2 profile edits and completed games grant cosmetic achievements without changing another player (63.7914ms)
+✔ quest claims race atomically, expire at Shanghai midnight and roll back every effect on database failure (72.4637ms)
+✔ collection ownership, disabled items and all equipment slots enforce exactly three distinct featured badges (123.0861ms)
+✔ leaderboards sort arbitrarily large amounts exactly and retain competition ranks after search and privacy filtering (63.2657ms)
+✔ private clubs handle concurrent invite acceptance, revocation, expiry, transfer and leaving without leaking other clubs (111.9771ms)
+✔ weekly club challenge counts formal activity only and prevents duplicate claims after leaving and rejoining (456.9391ms)
+✔ admin analytics exclude sandbox activity and count a placed roulette stake as reserved assets (34.369ms)
+✔ archiving retains player history and audit, and requires club owners to resolve ownership first (50.5946ms)
+✔ sensitive endpoints rate-limit and retain security events visible only to verified administrators (50.4961ms)
+✔ V2 real WebAuthn credentials and role authorization remain scoped to each invited administrator (769.9114ms)
+✔ server rejects anonymous identity, foreign origins and all unverified management commands (10.7463ms)
+✔ genuine ES256 WebAuthn enrollment unlocks HttpOnly admin session; logout relocks management (12.0001ms)
+✔ database persists one hundred players across service reloads with administrator-only creation (359.9149ms)
+✔ passkey login verifies real signatures, consumes the challenge and binds sessions to the platform identity (15.084ms)
+✔ wrong origins, missing local user verification, invalid signatures and expired challenges never unlock admin (18.8201ms)
+✔ server commands are idempotent and concurrent gifts preserve the total chips (14.2069ms)
+✔ server keeps roulette stakes until play, chooses the outcome and credits a jackpot only once (13.0093ms)
+✔ legacy import requires passkey admin and refuses to overwrite subsequent server activity (16.6995ms)
+✔ server persists the new bank and shark interest once at their respective real-time boundaries (10.915ms)
+✔ negative-mode balances persist in D1, never refill an unfinished stake and never settle a replay twice (10.4665ms)
+✔ one-click repayment settles latest bank and shark interest and ignores duplicate requests (10.2942ms)
+✔ one-click peer repayment validates its borrower and preserves the lender transfer in D1 (11.2233ms)
+✔ Plinko and dice settle in D1 once, retain their server results and reject invalid wagers (11.9196ms)
+(node:33464) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/66408/Documents/Codex/2026-10-15/files-pasted-by-the-user-doctype/outputs/roulette-club/dist/server/index.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to \\?\C:\Users\66408\Documents\Codex\2026-10-15\files-pasted-by-the-user-doctype\outputs\roulette-club\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ new arcade commands cannot bypass a pending blackjack hand or spend more than the recovery allowance (11.519ms)
+✔ PLAYER contains player finance while management forms are confined to ADMIN (3.994ms)
+✔ built Worker serves PLAYER and ADMIN with server bootstrap and denies management without authentication (84.3238ms)
+✔ remote browser engine uses server state for game, gifts and administrator balances (36.1587ms)
+✔ remote browser preserves old local data until an authenticated import completes (12.0411ms)
+✔ ADMIN screen enrolls through WebAuthn, adjusts a chosen player only after verification and locks on logout (14.4271ms)
+✔ 100-digit admin adjustments, roulette wins, gifts and receipts persist exactly through D1 and Worker reload (20.1595ms)
+✔ remote engine hydrates 100-digit bootstrap and API results and sends exact All In without duplicate credit (28.9714ms)
+✔ lottery purchases are saved in D1 once, preserve fixed prices and cannot inject a payout (30.5712ms)
+✔ lottery draws retain server-determined outcomes and respect funds, player isolation and pending blackjack (13.1794ms)
+✔ remote lottery bootstrap, paid jackpot and server history survive browser synchronization (13.1609ms)
+ℹ tests 46
+ℹ suites 0
+ℹ pass 46
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2414.563
