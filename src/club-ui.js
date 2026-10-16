@@ -68,7 +68,7 @@ function createCasinoClub(roulette) {
             button.addEventListener('click', () => v2 ? setView('profile/'+p.id) : switchPlayer(p.id));
             const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'club-action secondary danger';
             remove.textContent = pendingDelete === p.id ? (v2 ? '再次点击确认归档（保留审计）' : '再次点击确认永久删除（含余额）') : (v2 ? '归档' : '删除');
-            remove.disabled = viewLocked() || engine.data.users.length === 1 || !admin?.unlocked;
+            remove.disabled = viewLocked() || !v2 && engine.data.users.length === 1 || !admin?.unlocked;
             remove.addEventListener('click', async () => {
                 if (!admin?.unlocked) { toast('请先使用 Windows Hello 解锁管理入口。',true); return; }
                 if (pendingDelete !== p.id) { pendingDelete = p.id; render(); return; }
@@ -94,7 +94,7 @@ function createCasinoClub(roulette) {
         features?.render();
     }
     function refresh() { engine.save(); render(); }
-    function paintView() {
+    function paintView(route = window.location.hash.slice(1)) {
         $('number-modal').classList.add('hidden'); $('number-modal').classList.remove('flex');
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
         $('market-view').hidden = view !== 'market';
@@ -111,7 +111,7 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('.club-roulette-hud, #roulette-controls, #hint-pill, #status-banner, #canvas-container').forEach(el => {
             if (view === 'roulette') el.style.removeProperty('display'); else el.style.display = 'none';
         });
-        features?.paint(view, window.location.hash.slice(1));
+        features?.paint(view, route);
         render();
     }
     function setView(next) {
@@ -120,8 +120,7 @@ function createCasinoClub(roulette) {
         if (engine.platform?.mode === 'sandbox' && !['roulette','slots','blackjack','plinko','dice','lottery','admin'].includes(next)) { toast('请先退出管理员沙盒。',true); return; }
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
-        paintView();
-        features?.paint(view, route);
+        paintView(route);
         try { window.history.replaceState(null, '', '#' + route); } catch { /* Local file previews still work. */ }
     }
     function switchPlayer(id) {

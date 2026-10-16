@@ -4928,7 +4928,7 @@ function createCasinoClub(roulette) {
             button.addEventListener('click', () => v2 ? setView('profile/'+p.id) : switchPlayer(p.id));
             const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'club-action secondary danger';
             remove.textContent = pendingDelete === p.id ? (v2 ? '\u518D\u6B21\u70B9\u51FB\u786E\u8BA4\u5F52\u6863\uFF08\u4FDD\u7559\u5BA1\u8BA1\uFF09' : '\u518D\u6B21\u70B9\u51FB\u786E\u8BA4\u6C38\u4E45\u5220\u9664\uFF08\u542B\u4F59\u989D\uFF09') : (v2 ? '\u5F52\u6863' : '\u5220\u9664');
-            remove.disabled = viewLocked() || engine.data.users.length === 1 || !admin?.unlocked;
+            remove.disabled = viewLocked() || !v2 && engine.data.users.length === 1 || !admin?.unlocked;
             remove.addEventListener('click', async () => {
                 if (!admin?.unlocked) { toast('\u8BF7\u5148\u4F7F\u7528 Windows Hello \u89E3\u9501\u7BA1\u7406\u5165\u53E3\u3002',true); return; }
                 if (pendingDelete !== p.id) { pendingDelete = p.id; render(); return; }
@@ -4954,7 +4954,7 @@ function createCasinoClub(roulette) {
         features?.render();
     }
     function refresh() { engine.save(); render(); }
-    function paintView() {
+    function paintView(route = window.location.hash.slice(1)) {
         $('number-modal').classList.add('hidden'); $('number-modal').classList.remove('flex');
         $('slots-view').hidden = view !== 'slots'; $('bank-view').hidden = view !== 'bank';
         $('market-view').hidden = view !== 'market';
@@ -4971,7 +4971,7 @@ function createCasinoClub(roulette) {
         document.querySelectorAll('.club-roulette-hud, #roulette-controls, #hint-pill, #status-banner, #canvas-container').forEach(el => {
             if (view === 'roulette') el.style.removeProperty('display'); else el.style.display = 'none';
         });
-        features?.paint(view, window.location.hash.slice(1));
+        features?.paint(view, route);
         render();
     }
     function setView(next) {
@@ -4980,8 +4980,7 @@ function createCasinoClub(roulette) {
         if (engine.platform?.mode === 'sandbox' && !['roulette','slots','blackjack','plinko','dice','lottery','admin'].includes(next)) { toast('\u8BF7\u5148\u9000\u51FA\u7BA1\u7406\u5458\u6C99\u76D2\u3002',true); return; }
         if (viewLocked()) { toast('Finish the current round before changing tables.', true); return; }
         view = next;
-        paintView();
-        features?.paint(view, route);
+        paintView(route);
         try { window.history.replaceState(null, '', '#' + route); } catch { /* Local file previews still work. */ }
     }
     function switchPlayer(id) {

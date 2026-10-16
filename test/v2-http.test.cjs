@@ -109,3 +109,16 @@ test('quest claims race atomically, expire at Shanghai midnight and roll back ev
  state=await (await t.request('/api/state')).json();assert.equal(state.revision,before.revision);assert.equal(state.platform.progress.xp,55);assert.equal(state.platform.progress.lastDaily,null);
  assert.equal((await t.command('reward.claim')).status,200);
 });
+test('collection ownership, disabled items and all equipment slots enforce exactly three distinct featured badges',async()=>{
+ const t=await fixture();await t.owner();await t.request('/api/state',{actor:'friend'});await t.command('admin.bind',['friend','jamie'],{step:true});
+ const badges=['badge-a','badge-b','badge-c','badge-d'];for(const id of badges){
+  assert.equal((await t.command('admin.item',[{id,name:id,description:'A collectible',kind:'badge',rarity:'rare',enabled:true}],{step:true})).status,200);
+  assert.equal((await t.command('admin.definition',[{id:'award-'+id,name:id,kind:'achievement',period:'all',condition:'games',target:1,itemIds:[id],enabled:true}],{step:true})).status,200);
+ }
+ await t.command('dice',[1,'small',null]);assert.equal((await t.command('inventory.equip',['badges',badges.slice(0,3)])).status,200);
+ assert.equal((await t.command('inventory.equip',['badges',badges])).status,400);assert.equal((await t.command('inventory.equip',['badges',[badges[0],badges[0]]])).status,400);
+ assert.equal((await t.command('inventory.equip',['badges',[badges[0]]],{actor:'friend'})).status,403);assert.equal((await t.command('inventory.equip',['frame',badges[0]])).status,403);
+ assert.equal((await t.command('inventory.equip',['frame','frame-starter'])).status,200);assert.equal((await t.command('inventory.equip',['frame',null])).status,200);
+ await t.command('admin.item',[{id:badges[0],name:'Paused',description:'retained',kind:'badge',rarity:'rare',enabled:false}],{step:true});
+ assert.equal((await t.command('inventory.equip',['badges',[badges[0]]])).status,403);const state=await (await t.request('/api/state')).json();assert.ok(state.platform.inventory.some(i=>i.itemId===badges[0]));
+});

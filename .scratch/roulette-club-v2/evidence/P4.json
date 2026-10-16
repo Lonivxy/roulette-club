@@ -1,0 +1,8 @@
+{
+  "accepted": true,
+  "exitCode": 0,
+  "commands": ["node --test test/v2-http.test.cjs test/v2-ui.test.cjs", "npm run build", "npm test"],
+  "results": "206 tests passed. Inventory controls expose category/rarity/ownership filtering, details/preview and acquisition source/time. API tests enforce ownership, slot compatibility, disabled item retention, unequipping and at most three distinct badges, including cross-account denial.",
+  "logs": ["P4-tests.log", "P4-build.log"],
+  "limitations": "Real-browser visual/responsive acceptance remains in P7."
+}
