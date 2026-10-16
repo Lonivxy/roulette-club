@@ -231,7 +231,7 @@ test('built Worker serves PLAYER and ADMIN with server bootstrap and denies mana
         assert.equal(response.status,200);const page=await response.text();assert.ok(page.includes('window.__CASINO_BOOTSTRAP__='));assert.ok(!page.includes('/* SERVER_BOOTSTRAP */'));
         assert.equal(response.headers.get('Cache-Control'),'private, no-store');
     }
-    assert.equal((await worker.fetch(new Request(t.ORIGIN+'/api/command',{method:'POST',headers:{'oai-authenticated-user-id':'owner-site-user',Origin:t.ORIGIN,'Content-Type':'application/json'},body:JSON.stringify({id:crypto.randomUUID(),command:'adminAdjust',args:['alex','add',1],playerId:'alex'})}),{DB:t.DB})).status,403);
+    for(const [protocol,status]of [[1,409],[2,403]])assert.equal((await worker.fetch(new Request(t.ORIGIN+'/api/command',{method:'POST',headers:{'oai-authenticated-user-id':'owner-site-user',Origin:t.ORIGIN,'Content-Type':'application/json','X-Club-Protocol':String(protocol)},body:JSON.stringify({id:crypto.randomUUID(),command:'adminAdjust',args:['alex','add',1],playerId:'alex'})}),{DB:t.DB})).status,status);
 });
 
 test('remote browser engine uses server state for game, gifts and administrator balances',async()=>{
@@ -291,9 +291,11 @@ test('100-digit admin adjustments, roulette wins, gifts and receipts persist exa
     const raw=t.sql.prepare('SELECT snapshot FROM casino_state WHERE id=?').get('club').snapshot;assert.equal(M.parseJSON(raw).users[1].balance,H*20n+1000n);
     const built=(await import('../dist/server/index.js')).default;
     const response=await built.fetch(new Request(t.ORIGIN+'/api/state',{headers:{'oai-authenticated-user-id':'owner-site-user'}}),{DB:t.DB});
-    data=await read(response);assert.equal(data.data.users[0].balance,H*4n+1000n);
+    data=await read(response);assert.equal(data.data.users.length,0);assert.equal(data.platform.maintenance,true);
+    const bound=await built.fetch(new Request(t.ORIGIN+'/api/command',{method:'POST',headers:{'oai-authenticated-user-id':'owner-site-user',Origin:t.ORIGIN,'Content-Type':'application/json','X-Club-Protocol':'2',Cookie:[...t.jar].map(([k,v])=>k+'='+v).join('; ')},body:JSON.stringify({id:crypto.randomUUID(),command:'admin.bind',args:['owner-site-user','alex']})}),{DB:t.DB});
+    data=await read(bound);assert.equal(data.data.users.length,1);assert.equal(data.data.users[0].balance,H*4n+1000n);assert.equal(data.platform.progress.xp,0);
     const page=await built.fetch(new Request(t.ORIGIN+'/player',{headers:{'oai-authenticated-user-id':'owner-site-user'}}),{DB:t.DB});
-    assert.equal(page.status,200);assert.ok((await page.text()).includes(String(H*20n+1000n)));
+    assert.equal(page.status,200);const html=await page.text();assert.ok(html.includes(String(H*4n+1000n)));assert.ok(!html.includes(String(H*20n+1000n)));
     await t.request('/api/admin/logout',{body:{}});assert.equal((await t.cmd('adminAdjust',['alex','add',String(H)])).status,403);
 });
 
