@@ -25,13 +25,13 @@ Generated from issue Status fields. Update with scripts/task-board.cjs. Never ti
   - [x] [15 — 精确余额榜、隐私及并列排名](issues/15.md) — done
   - [x] [16 — 私有俱乐部、邀请与成员操作](issues/16.md) — done
   - [x] [17 — 团队挑战、贡献及活动](issues/17.md) — done
-- [ ] **P6 — ADMIN V2**
-  - [ ] [18 — 账户状态、角色与有原因的余额调整](issues/18.md) — in-progress
-  - [ ] [19 — 奖励、任务、成就、等级和收藏配置](issues/19.md) — pending
-  - [ ] [20 — 俱乐部管理、审计与健康信息](issues/20.md) — pending
-  - [ ] [21 — 事件统计及经济分析](issues/21.md) — pending
+- [x] **P6 — ADMIN V2**
+  - [x] [18 — 账户状态、角色与有原因的余额调整](issues/18.md) — done
+  - [x] [19 — 奖励、任务、成就、等级和收藏配置](issues/19.md) — done
+  - [x] [20 — 俱乐部管理、审计与健康信息](issues/20.md) — done
+  - [x] [21 — 事件统计及经济分析](issues/21.md) — done
 - [ ] **P7 — 验收与上线**
-  - [ ] [22 — 完整回归、负载与真实画面验收](issues/22.md) — pending
+  - [ ] [22 — 完整回归、负载与真实画面验收](issues/22.md) — in-progress
   - [ ] [23 — 维护、备份、回退演练](issues/23.md) — pending
   - [ ] [24 — 私有发布及资金核对](issues/24.md) — pending
   - [ ] [25 — 变更记录及最终交接](issues/25.md) — pending
