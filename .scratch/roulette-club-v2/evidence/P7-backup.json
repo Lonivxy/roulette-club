@@ -1,0 +1,8 @@
+{
+  "accepted": true,
+  "exitCode": 0,
+  "commands": ["node --test --test-name-pattern=\"first V2 activation|maintenance backup restores\" test/v2-http.test.cjs"],
+  "results": "2 tests passed. Maintenance mode freezes interest writebacks and prevents new commands. Transactional backup exports all tables in dependency order with migration tags. Restore recreates fresh database, validates foreign keys, checks wallet snapshot digest and rejects overwriting non-empty existing databases.",
+  "logs": ["P7-backup.log"],
+  "limitations": "Live production migration and cutover remain pending actual deployment by site owner."
+}
