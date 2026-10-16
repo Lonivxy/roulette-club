@@ -1,0 +1,11 @@
+{
+  "accepted": true,
+  "exitCode": 0,
+  "commands": [
+    "npm run build",
+    "node --test test/worker-passkey.test.cjs test/v2-remote.test.cjs"
+  ],
+  "results": "27 tests passed. Built dist bundles validated against exact protocol 2, WebAuthn passkey step-up, D1 storage reload, 100-digit precision arithmetic, and isolated player hydration. Project configuration appgprj_6ad0475c33308191b8992cbcf265bc3c preserved in .openai/hosting.json and dist/.openai/hosting.json.",
+  "logs": ["P7-deploy-checks.log"],
+  "limitations": "Production deployment bundle is built and ready in dist/; live cutover requires owner authentication and execution on OpenAI Sites platform."
+}

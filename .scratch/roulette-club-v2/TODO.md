@@ -32,6 +32,6 @@ Generated from issue Status fields. Update with scripts/task-board.cjs. Never ti
   - [x] [21 — 事件统计及经济分析](issues/21.md) — done
 - [ ] **P7 — 验收与上线**
   - [x] [22 — 完整回归、负载与真实画面验收](issues/22.md) — done
-  - [ ] [23 — 维护、备份、回退演练](issues/23.md) — in-progress
-  - [ ] [24 — 私有发布及资金核对](issues/24.md) — pending
+  - [x] [23 — 维护、备份、回退演练](issues/23.md) — done
+  - [ ] [24 — 私有发布及资金核对](issues/24.md) — in-progress
   - [ ] [25 — 变更记录及最终交接](issues/25.md) — pending
