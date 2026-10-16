@@ -18,11 +18,11 @@ Generated from issue Status fields. Update with scripts/task-board.cjs. Never ti
   - [x] [10 — 七日签到与断签](issues/10.md) — done
   - [x] [11 — 版本化任务及原子领取](issues/11.md) — done
   - [x] [12 — 重试、并发、到期和版本验收](issues/12.md) — done
-- [ ] **P4 — 收藏与装备界面**
-  - [ ] [13 — 物品网格、筛选、详情和记录](issues/13.md) — in-progress
-  - [ ] [14 — 称号、框、背景与精选徽章](issues/14.md) — pending
+- [x] **P4 — 收藏与装备界面**
+  - [x] [13 — 物品网格、筛选、详情和记录](issues/13.md) — done
+  - [x] [14 — 称号、框、背景与精选徽章](issues/14.md) — done
 - [ ] **P5 — 社交系统**
-  - [ ] [15 — 精确余额榜、隐私及并列排名](issues/15.md) — pending
+  - [ ] [15 — 精确余额榜、隐私及并列排名](issues/15.md) — in-progress
   - [ ] [16 — 私有俱乐部、邀请与成员操作](issues/16.md) — pending
   - [ ] [17 — 团队挑战、贡献及活动](issues/17.md) — pending
 - [ ] **P6 — ADMIN V2**
