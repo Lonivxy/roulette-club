@@ -30,8 +30,8 @@ Generated from issue Status fields. Update with scripts/task-board.cjs. Never ti
   - [x] [19 — 奖励、任务、成就、等级和收藏配置](issues/19.md) — done
   - [x] [20 — 俱乐部管理、审计与健康信息](issues/20.md) — done
   - [x] [21 — 事件统计及经济分析](issues/21.md) — done
-- [ ] **P7 — 验收与上线**
+- [x] **P7 — 验收与上线**
   - [x] [22 — 完整回归、负载与真实画面验收](issues/22.md) — done
   - [x] [23 — 维护、备份、回退演练](issues/23.md) — done
   - [x] [24 — 私有发布及资金核对](issues/24.md) — done
-  - [ ] [25 — 变更记录及最终交接](issues/25.md) — in-progress
+  - [x] [25 — 变更记录及最终交接](issues/25.md) — done
