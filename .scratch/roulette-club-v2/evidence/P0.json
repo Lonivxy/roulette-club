@@ -1,0 +1,11 @@
+{
+  "exitCode": 0,
+  "accepted": true,
+  "checks": [
+    "186 baseline tests pass",
+    "node --check scripts/task-board.cjs passes",
+    "25 self-contained issue cards with dependencies",
+    "backup and restore procedure recorded; production backup belongs to cutover"
+  ],
+  "baseline": "5043a49faa4966a21fb696e7a0f99e35ee23f986"
+}
