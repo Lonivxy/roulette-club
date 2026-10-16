@@ -1,0 +1,1 @@
+Issues live as separate Markdown files under .scratch/roulette-club-v2/issues/. Status is authoritative. scripts/task-board.cjs generates TODO, checks dependencies/evidence and maintains checkpoints. One implementer; do not start a second issue while one is in progress.

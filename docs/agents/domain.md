@@ -1,0 +1,1 @@
+Single-context project: read CONTEXT.md for domain vocabulary and .scratch/roulette-club-v2/SPEC.md for behavior. Read relevant docs/adr decisions before modifying authorization, accounting or persistence.
