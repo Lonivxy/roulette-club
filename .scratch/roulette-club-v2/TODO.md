@@ -14,12 +14,12 @@ Generated from issue Status fields. Update with scripts/task-board.cjs. Never ti
   - [x] [07 — 分组导航、资料及隐私设置](issues/07.md) — done
   - [x] [08 — XP、等级、对局统计](issues/08.md) — done
   - [x] [09 — 成就、称号及物品所有权](issues/09.md) — done
-- [ ] **P3 — 签到与任务**
-  - [ ] [10 — 七日签到与断签](issues/10.md) — in-progress
-  - [ ] [11 — 版本化任务及原子领取](issues/11.md) — pending
-  - [ ] [12 — 重试、并发、到期和版本验收](issues/12.md) — pending
+- [x] **P3 — 签到与任务**
+  - [x] [10 — 七日签到与断签](issues/10.md) — done
+  - [x] [11 — 版本化任务及原子领取](issues/11.md) — done
+  - [x] [12 — 重试、并发、到期和版本验收](issues/12.md) — done
 - [ ] **P4 — 收藏与装备界面**
-  - [ ] [13 — 物品网格、筛选、详情和记录](issues/13.md) — pending
+  - [ ] [13 — 物品网格、筛选、详情和记录](issues/13.md) — in-progress
   - [ ] [14 — 称号、框、背景与精选徽章](issues/14.md) — pending
 - [ ] **P5 — 社交系统**
   - [ ] [15 — 精确余额榜、隐私及并列排名](issues/15.md) — pending
